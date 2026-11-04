@@ -20,8 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Set environment variables for Chromium, Puppeteer and Remotion
-ENV NODE_ENV=production \
-    PORT=6868 \
+ENV PORT=6868 \
     SERVER_PORT=6869 \
     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     CHROMIUM_PATH=/usr/bin/chromium \
@@ -36,8 +35,8 @@ COPY apps/web/package.json ./apps/web/
 COPY apps/server/package.json ./apps/server/
 COPY engines/remotion/package.json ./engines/remotion/
 
-# Install dependencies (fallback to npm install if lockfile has platform-specific differences)
-RUN npm ci || npm install
+# Install ALL dependencies including devDependencies needed for TypeScript and Next build
+RUN npm ci --include=dev || npm install --include=dev
 
 # Copy application source code
 COPY . .
@@ -47,6 +46,9 @@ RUN npm run build
 
 # Ensure runtime directories exist
 RUN mkdir -p .runtime/tmp .runtime/models apps/server/data video-projects outputs
+
+# Set production mode for runtime
+ENV NODE_ENV=production
 
 # Expose Web port (Coolify routes traffic to port 6868)
 EXPOSE 6868
