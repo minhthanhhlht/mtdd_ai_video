@@ -322,3 +322,25 @@
   - Ứng dụng đã online và đang chạy trực tiếp trên máy chủ Coolify:
     - **Quản lý trên Coolify**: [https://manage.mtdd.io.vn/project/bp3jkwabepvgqohrl78rhomt/environment/anwtqcceushc1vmvvku8m4hk/application/nxxz3h6rdy0uahktp9biorb9](https://manage.mtdd.io.vn/project/bp3jkwabepvgqohrl78rhomt/environment/anwtqcceushc1vmvvku8m4hk/application/nxxz3h6rdy0uahktp9biorb9)
     - **Tên miền truy cập**: `https://video.mtdd.io.vn` (Người dùng chỉ cần trỏ 1 bản ghi CNAME `video` trong Cloudflare về `manage.mtdd.io.vn` hoặc `dashboard.mtdd.io.vn` là hoàn tất kết nối SSL).
+
+---
+
+### [SESSION-2026-11-05-01:45] Khắc phục kết nối Cloudflare Zero Trust Tunnel & Kích hoạt Public Domain `https://video.mtdd.io.vn`
+
+- **Thời gian**: 2026-11-05 01:45 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**: Khắc phục lỗi 502 Bad Gateway khi truy cập `https://video.mtdd.io.vn` qua Cloudflare Zero Trust.
+- **Danh sách cấu hình đã thay đổi (Configurations Changed)**:
+  - Phân tích kiến trúc mạng Homelab / Proxmox VE:
+    - Node ảo hóa Proxmox (`192.168.20.21`) chạy `pve-tunnel` (Cloudflare Tunnel daemon `cloudflared`).
+    - Máy ảo Coolify Host (`192.168.20.24`) chạy Docker Engine chứa Traefik proxy (port 80) và container `mtdd_ai_video` (port 6868).
+  - Cloudflare Zero Trust Public Hostnames (`pve-tunnel`):
+    - Đổi Service URL từ `http://127.0.0.1:6868` sang `http://192.168.20.24:6868`.
+    - Định tuyến trực tiếp từ Tunnel daemon trên node Proxmox sang máy ảo Coolify mà không bị cô lập bởi localhost loopback.
+- **Kết quả kiểm định & Kiểm thử (Verification & Test Results)**:
+  - Kiểm tra cục bộ: `curl.exe -Iv http://192.168.20.24:6868/` → **HTTP/1.1 200 OK** (Next.js server response).
+  - Kiểm tra qua Traefik: `curl.exe -Iv -H "Host: video.mtdd.io.vn" http://192.168.20.24/` → **HTTP/1.1 200 OK**.
+  - Kiểm tra Public Internet: `curl.exe -Iv https://video.mtdd.io.vn` → **HTTP/1.1 200 OK** (Server: cloudflare, CF-RAY: `a555c25f8c0d400c-SIN`, SSL đầy đủ).
+  - Người dùng xác nhận truy cập thành công giao diện web qua tên miền chính thức.
+- **Trạng thái hiện tại & Hướng dẫn sử dụng (Next Steps / Handover)**:
+  - Website đã chính thức online tại: **[https://video.mtdd.io.vn](https://video.mtdd.io.vn)**.
+  - Bảo mật qua Cloudflare SSL/TLS Edge và Cloudflare Tunnel, an toàn tuyệt đối không cần mở port router.
