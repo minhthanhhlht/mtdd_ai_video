@@ -289,3 +289,36 @@
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Web UI (port 6868) đang chạy và hiển thị trực tiếp logo "MTDD AI".
   - Toàn bộ giao diện đã đồng bộ nhận diện thương hiệu MTDD AI.
+
+
+---
+
+### [SESSION-2026-11-05-00:35] Triển khai thành công ứng dụng lên nền tảng Coolify (Production Deployment)
+
+- **Thời gian**: 2026-11-05 00:35 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**: Deploy dự án lên Coolify tại https://manage.mtdd.io.vn/.
+- **Danh sách tệp tin đã tạo & thay đổi (Files Changed)**:
+  - `Dockerfile`: Xây dựng Docker image chuẩn production dựa trên `node:22-bookworm-slim`, cài đặt đầy đủ `ffmpeg`, `chromium`, `fonts-noto-cjk`, `fonts-noto-color-emoji`, `fonts-freefont-ttf`, build tools C++ cho `better-sqlite3`. Cài đặt dependencies với `--include=dev` để đảm bảo TypeScript và Next.js build thành công trước khi chuyển sang runtime production.
+  - `.dockerignore`: Loại trừ toàn bộ các thư mục tạm, node_modules local, .runtime, .env, dist nhằm tối ưu hóa build context và chống lộ bí mật.
+  - Cấu hình hạ tầng trên Coolify (`https://manage.mtdd.io.vn`):
+    - Project: **MTDD AI Video** (`bp3jkwabepvgqohrl78rhomt`).
+    - Environment: `production` (`anwtqcceushc1vmvvku8m4hk`).
+    - Application: **mtdd_ai_video** (`nxxz3h6rdy0uahktp9biorb9`).
+    - Persistent Volumes:
+      - `aiev-data` -> `/app/apps/server/data` (lưu trữ SQLite DB).
+      - `aiev-video-projects` -> `/app/video-projects` (lưu trữ video projects).
+      - `aiev-outputs` -> `/app/outputs` (lưu trữ video render hoàn thiện).
+    - Environment Variables: Đồng bộ an toàn các API keys (`OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `AIEV_API_TOKEN`, `SERVER_PORT=6869`).
+    - Ports Exposes: Port `6868` (Web Next.js đóng vai trò gateway duy nhất, proxy `/api/*` và `/media/*` vào backend :6869).
+    - Domains / FQDN: `http://nxxz3h6rdy0uahktp9biorb9.42.119.173.18.sslip.io,https://video.mtdd.io.vn`.
+- **Kết quả kiểm định & Kiểm thử (Verification & Test Results)**:
+  - Docker Image Build: **Thành công 100% (Build time ~96s)**.
+  - Container Runtime: **Started & Running**.
+  - Container Log Output:
+    - `[web] Ready in 1042ms at http://0.0.0.0:6868`
+    - `[server] AI Edit Video backend chạy tại http://localhost:6869`
+    - `[server] Repo root: /app`
+- **Trạng thái hiện tại & Hướng dẫn sử dụng (Next Steps / Handover)**:
+  - Ứng dụng đã online và đang chạy trực tiếp trên máy chủ Coolify:
+    - **Quản lý trên Coolify**: [https://manage.mtdd.io.vn/project/bp3jkwabepvgqohrl78rhomt/environment/anwtqcceushc1vmvvku8m4hk/application/nxxz3h6rdy0uahktp9biorb9](https://manage.mtdd.io.vn/project/bp3jkwabepvgqohrl78rhomt/environment/anwtqcceushc1vmvvku8m4hk/application/nxxz3h6rdy0uahktp9biorb9)
+    - **Tên miền truy cập**: `https://video.mtdd.io.vn` (Người dùng chỉ cần trỏ 1 bản ghi CNAME `video` trong Cloudflare về `manage.mtdd.io.vn` hoặc `dashboard.mtdd.io.vn` là hoàn tất kết nối SSL).
