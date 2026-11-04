@@ -1094,6 +1094,7 @@ export const en: Record<string, string> = {
   "conn.role.edit": "Video editing",
   "conn.role.chat": "Chat",
   "conn.role.image": "Image generation",
+  "conn.role.stt": "Speech-to-text",
   "conn.connected-sub": "Connected · Subscription",
   "conn.connected-key": "Connected · API key",
   "conn.get-key": "Get a key here",

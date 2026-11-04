@@ -34,9 +34,9 @@
 
 :root {
   /* Brand */
-  --primary: #ed3c47;
-  --primary-hover: #d62e3a;
-  --primary-soft: #fdedef;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-soft: #eff6ff;
   --secondary: #ff7849;
 
   /* Surface */
@@ -92,9 +92,9 @@
 }
 
 [data-theme="dark"] {
-  --primary: #ed3c47;
-  --primary-hover: #f25560;
-  --primary-soft: #3a1d20;
+  --primary: #3b82f6;
+  --primary-hover: #60a5fa;
+  --primary-soft: #172554;
   --secondary: #ff7849;
 
   --bg: #131417;
@@ -270,6 +270,34 @@ html[data-panel="collapsed"] {
 /* ============ Component classes (hex chỉ được phép ở file này) ============ */
 
 @layer components {
+/* Logo thương hiệu dạng chữ (MTDD AI) */
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  user-select: none;
+}
+.brand-logo-name {
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  line-height: 1;
+}
+.brand-logo-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
 .btn {
   display: inline-flex;
   align-items: center;

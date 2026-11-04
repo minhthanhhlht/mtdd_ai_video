@@ -168,11 +168,14 @@ export function AiModelBlock({
   const { providers } = useProviders();
   const claude = providers?.find((p) => p.id === "claude");
   const gemini = providers?.find((p) => p.id === "gemini");
+  const openrouter = providers?.find((p) => p.id === "openrouter");
   const { models: liveModels, load: loadClaudeModels } = useClaudeModels();
   // Chưa fetch live → tạm dùng danh sách tĩnh từ /api/providers
-  const models = liveModels ?? claudeModels(claude);
+  const cModels = liveModels ?? claudeModels(claude);
+  const orModels = openrouter?.models ?? [];
+  const allKnownModels = [...cModels, ...orModels];
   // Model đã lưu không (chưa) nằm trong danh sách → vẫn hiển thị bằng id thô
-  const modelMissing = model !== "" && !models.some((m) => m.id === model);
+  const modelMissing = model !== "" && !allKnownModels.some((m) => m.id === model);
 
   return (
     <Panel
@@ -181,8 +184,20 @@ export function AiModelBlock({
         // "Claude" phải đứng ngay trước huy hiệu: một mình chữ "Đã kết nối"
         // cạnh tiêu đề nhóm "AI thực hiện" thì không nói được là CÁI GÌ đang
         // kết nối. Bản cũ có chữ này, chuyển sang Panel thì rơi mất.
-        claude && (
-          <span className="flex items-center gap-2">
+        (claude || openrouter) && (
+          <span className="flex items-center gap-3">
+            {openrouter && (
+              <span className="flex items-center gap-1">
+                <span className="text-meta font-medium">OpenRouter</span>
+                {openrouter.connected ? (
+                  <Badge tone="success" label={t("conn.connected-key")} />
+                ) : (
+                  <Badge tone="muted" label={t("model.not-connected")} />
+                )}
+              </span>
+            )}
+            {claude && (
+              <span className="flex items-center gap-1">
             <span className="text-meta font-medium">Claude</span>
             {claude.connected ? (
               <Badge
@@ -196,11 +211,13 @@ export function AiModelBlock({
             ) : (
               <Badge tone="danger" label={t("model.not-connected")} />
             )}
+              </span>
+            )}
           </span>
         )
       }
     >
-      {claude && !claude.connected && (
+      {claude && !claude.connected && !openrouter?.connected && (
         <p className="flex items-start gap-2 text-sm font-medium text-[var(--danger)]">
           <AlertTriangle size={14} strokeWidth={2} className="mt-0.5 shrink-0" />
           {t("model.claude-warning")}
@@ -217,11 +234,22 @@ export function AiModelBlock({
             onChange={(e) => onModelChange(e.target.value)}
           >
             {modelMissing && <option value={model}>{model}</option>}
-            {models.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
+            {orModels.length > 0 && (
+              <optgroup label="OpenRouter (Gemini Pro, DeepSeek...)">
+                {orModels.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            <optgroup label="Claude (Anthropic)">
+              {cModels.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label}
+                </option>
+              ))}
+            </optgroup>
           </select>
         </Field>
         <Field label={t("model.effort")} htmlFor="ai-effort">
@@ -285,11 +313,14 @@ export function AiModelInlineRow({
   const { providers } = useProviders();
   const claude = providers?.find((p) => p.id === "claude");
   const gemini = providers?.find((p) => p.id === "gemini");
+  const openrouter = providers?.find((p) => p.id === "openrouter");
   const { models: liveModels, load: loadClaudeModels } = useClaudeModels();
   // Chưa fetch live → tạm dùng danh sách tĩnh từ /api/providers
-  const models = liveModels ?? claudeModels(claude);
+  const cModels = liveModels ?? claudeModels(claude);
+  const orModels = openrouter?.models ?? [];
+  const allKnownModels = [...cModels, ...orModels];
   // Model đã lưu không (chưa) nằm trong danh sách → vẫn hiển thị bằng id thô
-  const modelMissing = model !== "" && !models.some((m) => m.id === model);
+  const modelMissing = model !== "" && !allKnownModels.some((m) => m.id === model);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -304,11 +335,22 @@ export function AiModelInlineRow({
         onChange={(e) => onModelChange(e.target.value)}
       >
         {modelMissing && <option value={model}>{model}</option>}
-        {models.map((m) => (
-          <option key={m.id} value={m.id}>
-            {m.label}
-          </option>
-        ))}
+        {orModels.length > 0 && (
+          <optgroup label="OpenRouter (Gemini Pro, DeepSeek...)">
+            {orModels.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </optgroup>
+        )}
+        <optgroup label="Claude (Anthropic)">
+          {cModels.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.label}
+            </option>
+          ))}
+        </optgroup>
       </select>
       <select
         className="input w-auto"
@@ -323,13 +365,22 @@ export function AiModelInlineRow({
           </option>
         ))}
       </select>
-      {claude && !claude.connected && (
+      {claude && !claude.connected && !openrouter?.connected && (
         <span
           className="inline-flex items-center gap-1 text-meta font-medium text-[var(--danger)]"
           title={t("model.claude-warning-short")}
         >
           <AlertTriangle size={13} strokeWidth={2} className="shrink-0" />
           {t("model.claude-not-connected")}
+        </span>
+      )}
+      {openrouter?.connected && (
+        <span
+          className="inline-flex items-center gap-1 text-meta text-[var(--text-muted)]"
+          title="OpenRouter"
+        >
+          <Info size={13} strokeWidth={2} className="shrink-0" />
+          OpenRouter
         </span>
       )}
       {gemini && (

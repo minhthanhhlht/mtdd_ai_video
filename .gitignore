@@ -130,3 +130,6 @@ __pycache__/
 *.py[cod]
 /gateways/chatgpt/data/
 /gateways/chatgpt/config.json
+
+# Local agent configuration
+.agents/

@@ -161,9 +161,9 @@ Cấm `text-[10px]`, `text-[11px]`, `text-[13px]`, `text-[15px]`, `text-base`, `
 
 | Token | Light | Vai trò |
 |---|---|---|
-| `--primary` | `#ed3c47` | Màu chính, nút primary |
-| `--primary-hover` | `#d62e3a` | Hover/active của primary |
-| `--primary-soft` | `#fdedef` | Nền nhạt màu chính (badge, highlight) |
+| `--primary` \| `#2563eb` \| Màu chính, nút primary |
+| `--primary-hover` \| `#1d4ed8` \| Hover/active của primary |
+| `--primary-soft` \| `#eff6ff` \| Nền nhạt màu chính (badge, highlight) |
 | `--secondary` | `#ff7849` | Màu phụ, accent |
 | `--bg` | `#ffffff` | Nền trang |
 | `--bg-subtle` | `#f6f6f7` | Nền phụ (sidebar, khu vực lồng nhau) |

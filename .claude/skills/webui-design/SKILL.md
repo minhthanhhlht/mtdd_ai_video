@@ -66,9 +66,9 @@ Every color goes through a CSS custom property declared in `:root` and `[data-th
 ```css
 :root {
   /* Brand */
-  --primary: #ed3c47;
-  --primary-hover: #d62e3a;
-  --primary-soft: #fdedef;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-soft: #eff6ff;
   --secondary: #ff7849;
 
   /* Surface */
@@ -99,9 +99,9 @@ Every color goes through a CSS custom property declared in `:root` and `[data-th
 }
 
 [data-theme="dark"] {
-  --primary: #ed3c47;          /* brand color stays the same */
-  --primary-hover: #f25560;    /* in dark, hover goes LIGHTER, not darker */
-  --primary-soft: #3a1d20;
+  --primary: #3b82f6;          /* brand color stays the same */
+  --primary-hover: #60a5fa;    /* in dark, hover goes LIGHTER, not darker */
+  --primary-soft: #172554;
   --secondary: #ff7849;
 
   --bg: #131417;

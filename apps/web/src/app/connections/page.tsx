@@ -89,18 +89,23 @@ const ROLE_LABELS: Record<string, string> = {
   edit: "conn.role.edit",
   chat: "conn.role.chat",
   image: "conn.role.image",
+  stt: "conn.role.stt",
 };
 
 const PROVIDER_ICONS: Record<ConnectionInfo["id"], LucideIcon> = {
   claude: Sparkles,
   gemini: ImageIcon,
   openai: Bot,
+  openrouter: Globe,
+  soniox: Globe,
 };
 
 const KEY_PLACEHOLDERS: Record<ConnectionInfo["id"], string> = {
   claude: "sk-ant-...",
   gemini: "AIza...",
   openai: "sk-...",
+  openrouter: "sk-or-v1-...",
+  soniox: "...",
 };
 
 function StatusBadge({ conn }: { conn: ConnectionInfo }) {

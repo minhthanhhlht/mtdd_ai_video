@@ -15,7 +15,7 @@ import { chatgptGatewayInstalled } from "../imageProviders/runtime.js";
  */
 
 interface ConnectionInfo {
-  id: "claude" | "gemini" | "openai" | "soniox";
+  id: "claude" | "gemini" | "openai" | "soniox" | "openrouter";
   label: string;
   roles: string[];
   connected: boolean;
@@ -58,6 +58,7 @@ function listConnections(): ConnectionInfo[] {
   const geminiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || "";
   const openaiKey = process.env.OPENAI_API_KEY || "";
   const sonioxKey = process.env.SONIOX_API_KEY || "";
+  const openrouterKey = process.env.OPENROUTER_API_KEY || "";
   const oauth = claudeOauthPresent();
 
   return [
@@ -130,6 +131,22 @@ function listConnections(): ConnectionInfo[] {
         masked: sonioxKey ? maskKey(sonioxKey) : null,
       },
       keyHelpUrl: "https://console.soniox.com",
+    },
+    {
+      id: "openrouter",
+      label: "OpenRouter (Gemini Pro, DeepSeek, Claude...)",
+      roles: ["edit", "chat"],
+      connected: !!openrouterKey,
+      source: openrouterKey ? "api-key" : null,
+      note: openrouterKey
+        ? "Đã kết nối bằng API key OpenRouter - có thể dùng Gemini 2.5 Pro, DeepSeek V3/R1, Claude Sonnet cho AI Editor."
+        : "Chưa kết nối - nhập OPENROUTER_API_KEY để dùng Gemini 2.5 Pro, DeepSeek, Claude cho AI Editor mà không cần tài khoản Claude Pro.",
+      key: {
+        envVar: "OPENROUTER_API_KEY",
+        present: !!openrouterKey,
+        masked: openrouterKey ? maskKey(openrouterKey) : null,
+      },
+      keyHelpUrl: "https://openrouter.ai/keys",
     },
   ];
 }
@@ -214,10 +231,12 @@ router.put("/:provider/key", (req, res) => {
     claude: "ANTHROPIC_API_KEY",
     openai: "OPENAI_API_KEY",
     soniox: "SONIOX_API_KEY",
+    openrouter: "OPENROUTER_API_KEY",
   };
   const envVar = ENV_VARS[provider];
   if (!envVar) {
-    throw new HttpError(404, "PROVIDER_NOT_FOUND", `Không hỗ trợ provider "${provider}"`);
+
+  throw new HttpError(404, "PROVIDER_NOT_FOUND", `Không hỗ trợ provider "${provider}"`);
   }
 
   // Làm sạch chuỗi người dùng dán vào: bỏ khoảng trắng, dấu nháy bao quanh,
@@ -379,6 +398,33 @@ router.post("/:provider/test", async (req, res) => {
           r.status === 401 || r.status === 403
             ? `Soniox từ chối key (HTTP ${r.status}) - kiểm tra lại key ở console.soniox.com.`
             : `Soniox trả lỗi HTTP ${r.status}: ${detail || r.statusText}`,
+      });
+    }
+    return;
+  }
+
+  if (provider === "openrouter") {
+    const key = process.env.OPENROUTER_API_KEY;
+    if (!key) {
+      res.json({ ok: false, message: "Chưa có OPENROUTER_API_KEY." });
+      return;
+    }
+    const r = await fetch("https://openrouter.ai/api/v1/auth/key", {
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    if (r.ok) {
+      const data = (await r.json().catch(() => ({}))) as {
+        data?: { limit?: number; usage?: number; label?: string };
+      };
+      const label = data.data?.label ? ` (${data.data.label})` : "";
+      res.json({
+        ok: true,
+        message: `Key OpenRouter hoạt động${label} - sẵn sàng dùng Gemini Pro, DeepSeek, Claude.`,
+      });
+    } else {
+      res.json({
+        ok: false,
+        message: `OpenRouter từ chối key (HTTP ${r.status}) - kiểm tra lại key tại openrouter.ai/keys.`,
       });
     }
     return;

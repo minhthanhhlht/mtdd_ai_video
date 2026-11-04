@@ -40,6 +40,18 @@ export const CLAUDE_MODELS = [
 
 export const CLAUDE_MODEL_IDS: string[] = CLAUDE_MODELS.map((m) => m.id);
 
+export const OPENROUTER_MODELS = [
+  { id: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro (Google)" },
+  { id: "google/gemini-2.0-flash-001", label: "Gemini 2.0 Flash (Nhanh & Rẻ)" },
+  { id: "deepseek/deepseek-chat", label: "DeepSeek V3 (Siêu tiết kiệm)" },
+  { id: "deepseek/deepseek-r1", label: "DeepSeek R1 (Suy luận sâu)" },
+  { id: "anthropic/claude-3.5-sonnet", label: "Claude 3.5 Sonnet (OpenRouter)" },
+  { id: "anthropic/claude-3.7-sonnet", label: "Claude 3.7 Sonnet (OpenRouter)" },
+  { id: "openai/gpt-4o", label: "GPT-4o (OpenAI)" },
+];
+
+export const OPENROUTER_MODEL_IDS: string[] = OPENROUTER_MODELS.map((m) => m.id);
+
 /** Mức effort của Agent SDK - expose thành "mode" trên UI: Nhanh/Chuẩn/Sâu */
 export const EFFORT_LEVELS = ["low", "medium", "high"];
 
@@ -241,6 +253,12 @@ async function fetchLiveClaudeModels(): Promise<{
  * Model Claude hợp lệ: trong danh sách tĩnh, trong cache live, hoặc id dạng
  * claude-* (model đã lưu từ danh sách live trước khi server restart).
  */
+function isValidModel(id: string): boolean {
+  if (OPENROUTER_MODEL_IDS.includes(id)) return true;
+  if (/^[a-z0-9_-]+\/[a-z0-9_.-]+$/i.test(id)) return true;
+  return isValidClaudeModel(id);
+}
+
 function isValidClaudeModel(id: string): boolean {
   if (CLAUDE_MODEL_IDS.includes(id)) return true;
   if (liveClaudeModelsCache?.list.some((m) => m.id === id)) return true;
@@ -258,7 +276,7 @@ export function parseModelEffort(body: Record<string, unknown>): {
 } {
   const out: { model?: string; effort?: string } = {};
   if ("model" in body && body.model !== undefined && body.model !== null && body.model !== "") {
-    if (typeof body.model !== "string" || !isValidClaudeModel(body.model)) {
+    if (typeof body.model !== "string" || !isValidModel(body.model)) {
       throw new HttpError(
         400,
         "INVALID_MODEL",
@@ -281,7 +299,7 @@ export function parseModelEffort(body: Record<string, unknown>): {
 }
 
 interface Provider {
-  id: "claude" | "gemini";
+  id: "claude" | "gemini" | "openrouter";
   label: string;
   connected: boolean;
   source: "oauth" | "api-key" | null;
@@ -342,7 +360,17 @@ router.get("/", (_req, res) => {
       "Đã phát hiện Antigravity/gemini-cli - auth IDE không dùng được cho API tạo ảnh, cần GEMINI_API_KEY trong .env";
   }
 
-  res.json({ providers: [claude, gemini] });
+  const openrouterKey = (process.env.OPENROUTER_API_KEY ?? "").trim();
+  const openrouter: Provider = {
+    id: "openrouter",
+    label: "OpenRouter (Gemini Pro, DeepSeek, Claude...)",
+    connected: Boolean(openrouterKey),
+    source: openrouterKey ? "api-key" : null,
+    roles: ["edit", "chat"],
+    models: OPENROUTER_MODELS,
+  };
+
+  res.json({ providers: [claude, gemini, openrouter] });
 });
 
 // GET /api/providers/gemini/image-models - danh sách model ảnh MỚI NHẤT (live từ Google, cache 1h)
@@ -354,6 +382,11 @@ router.get("/gemini/image-models", async (_req, res) => {
 // (API key: live từ Anthropic, cache 10'; gói Claude: hỏi Agent SDK, cache 6h)
 router.get("/claude/models", async (_req, res) => {
   res.json(await fetchLiveClaudeModels());
+});
+
+// GET /api/providers/openrouter/models - danh sách model OpenRouter khả dụng
+router.get("/openrouter/models", (_req, res) => {
+  res.json({ source: "static", models: OPENROUTER_MODELS });
 });
 
 export default router;

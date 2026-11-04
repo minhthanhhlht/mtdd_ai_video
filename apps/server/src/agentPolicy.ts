@@ -28,7 +28,13 @@ const SECRET_ENV_RE = /(API_KEY|_TOKEN|_SECRET|PASSWORD|PASSWD|COOKIE|CREDENTIAL
  * Ngoại lệ: CLI Claude Code cần chính các khóa này để xác thực. Chúng không lọt
  * xuống Bash nhờ CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1 (CLI tự gỡ khỏi tiến trình con).
  */
-const CLAUDE_AUTH_ENV = new Set(["ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_AUTH_TOKEN"]);
+const CLAUDE_AUTH_ENV = new Set([
+  "ANTHROPIC_API_KEY",
+  "CLAUDE_CODE_OAUTH_TOKEN",
+  "ANTHROPIC_AUTH_TOKEN",
+  "OPENROUTER_API_KEY",
+  "ANTHROPIC_BASE_URL",
+]);
 
 /** Tool không bao giờ dùng trong phiên dựng video (kênh ra mạng) */
 const BLOCKED_TOOLS = new Set(["WebFetch", "WebSearch"]);
@@ -97,6 +103,13 @@ export function agentEnv(): Record<string, string | undefined> {
   for (const [k, v] of Object.entries(childEnv())) {
     if (SECRET_ENV_RE.test(k) && !CLAUDE_AUTH_ENV.has(k.toUpperCase())) continue;
     env[k] = v;
+  }
+  // OpenRouter: khi có OPENROUTER_API_KEY và không có ANTHROPIC_API_KEY,
+  // định tuyến Claude Agent SDK qua OpenRouter Anthropic Messages API
+  if (process.env.OPENROUTER_API_KEY && !process.env.ANTHROPIC_API_KEY) {
+    env.ANTHROPIC_BASE_URL = process.env.ANTHROPIC_BASE_URL || "https://openrouter.ai/api";
+    env.ANTHROPIC_AUTH_TOKEN = process.env.OPENROUTER_API_KEY;
+    env.ANTHROPIC_API_KEY = "";
   }
   // CLI tự gỡ khóa Anthropic/cloud khỏi môi trường của Bash, hook, MCP stdio
   env.CLAUDE_CODE_SUBPROCESS_ENV_SCRUB = "1";

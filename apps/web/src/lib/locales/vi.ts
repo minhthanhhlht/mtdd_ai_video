@@ -1094,6 +1094,7 @@ export const vi: Record<string, string> = {
   "conn.role.edit": "Edit video",
   "conn.role.chat": "Chat",
   "conn.role.image": "Tạo ảnh",
+  "conn.role.stt": "Bóc lời STT",
   "conn.connected-sub": "Đã kết nối · Subscription",
   "conn.connected-key": "Đã kết nối · API key",
   "conn.get-key": "Lấy key tại đây",

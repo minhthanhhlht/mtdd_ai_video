@@ -101,7 +101,8 @@ export function hasClaudeAuth(): boolean {
   if (
     process.env.ANTHROPIC_API_KEY ||
     process.env.CLAUDE_CODE_OAUTH_TOKEN ||
-    process.env.ANTHROPIC_AUTH_TOKEN
+    process.env.ANTHROPIC_AUTH_TOKEN ||
+    process.env.OPENROUTER_API_KEY
   ) {
     return true;
   }
@@ -111,6 +112,11 @@ export function hasClaudeAuth(): boolean {
   if (fs.existsSync(path.join(configDir, ".credentials.json"))) return true;
   // macOS: Claude Code lưu OAuth trong Keychain, KHÔNG có .credentials.json
   return darwinKeychainHasClaudeCreds();
+}
+
+/** Có xác thực OpenRouter (OPENROUTER_API_KEY) để chạy Claude Agent SDK đa provider không */
+export function hasOpenRouterAuth(): boolean {
+  return Boolean(process.env.OPENROUTER_API_KEY?.trim());
 }
 
 // Cache kết quả tra Keychain 60s - health poll mỗi 30s, không spawn security liên tục

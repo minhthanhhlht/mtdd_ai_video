@@ -516,7 +516,7 @@ export interface ProviderModel {
 }
 
 export interface Provider {
-  id: "claude" | "gemini";
+  id: "claude" | "gemini" | "openrouter";
   label: string;
   connected: boolean;
   /** oauth = subscription Claude Code; api-key = key trong .env. */
@@ -539,7 +539,7 @@ export interface ConnectionKeyInfo {
 
 /** Một provider trên trang Kết nối - GET /api/connections. */
 export interface ConnectionInfo {
-  id: "claude" | "gemini" | "openai";
+  id: "claude" | "gemini" | "openai" | "soniox" | "openrouter";
   label: string;
   roles: string[];
   connected: boolean;
