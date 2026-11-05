@@ -6,6 +6,41 @@
 
 ---
 
+### [SESSION-2026-11-05-17:15] Xuất Trọn Bộ File Ảnh PNG Đa Kích Thước Cho Text Logo "MTDD AI"
+
+- **Thời gian**: 2026-11-05 17:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**: "Hiện tại text logo đã ổn. T muốn bạn làm cho t việc này. T muốn bạn tạo cho tôi ảnh các kích thước dạng png để t có thể sử dụng cho sau này từ text MTDD AI mà bạn đã tạo nhé. Text logo hiện tại đã ok k cần sửa t chỉ bảo bạn tạo thêm các kích thước ảnh dạng png của text logo đó thôi"
+- **Giải pháp kỹ thuật**:
+  - Giữ nguyên 100% text logo chuẩn trên web UI (`.brand-logo-name` + `.brand-logo-badge` với font Inter 800 `-0.03em` và badge `#2563eb`).
+  - Xây dựng công cụ tự động hóa `scripts/generate-brand-pngs.mjs`:
+    - Nhúng trực tiếp font Inter nguyên bản từ `@fontsource/inter` dạng base64 Data URI để đảm bảo render chính xác 100% typography mà không phụ thuộc font hệ thống hay mạng.
+    - Dùng Headless Chrome kết xuất master 4K (3840x960) cho logo ngang và 2K (2048x2048) cho icon vuông với nền trong suốt tuyệt đối (`--default-background-color=00000000`).
+    - Dùng thư viện `sharp` với bộ lọc lấy mẫu Lanczos3 để downscale xuống toàn bộ các dải kích thước tiêu chuẩn, chống vỡ hạt và khử răng cưa mượt mà.
+  - Tạo đầy đủ các biến thể màu sắc và tỷ lệ:
+    - **Logo ngang (Horizontal Wordmark)**:
+      - Bản Sáng (Light Theme - Transparent bg): 4K (3840x960), 2K (1920x480), Large (1200x300), Medium (800x200), Standard (400x100), Compact (200x50).
+      - Bản Tối (Dark Theme - Transparent bg): 4K (3840x960), 2K (1920x480), Large (1200x300), Medium (800x200), Standard (400x100), Compact (200x50).
+      - Watermark Toàn Trắng (All-White Watermark - Transparent bg): 4K (3840x960), 2K (1920x480), Large (1200x300), Medium (800x200), Standard (400x100), Compact (200x50).
+      - Bản Nền Đặc (Solid Backgrounds): Solid Light (#ffffff) và Solid Dark (#101113) từ 4K đến Compact.
+    - **Biểu tượng vuông / App Icon / Avatar (Square Icons)**:
+      - 4 biến thể (Blue Primary, Dark Mode, Light Mode, Transparent) ở 8 kích thước chuẩn: 2048x2048, 1024x1024, 512x512, 256x256, 128x128, 64x64, 32x32, 16x16.
+  - Lưu trữ đồng bộ tại cả `assets/brand/` (kho tài nguyên mã nguồn) và `apps/web/public/brand/` (phục vụ xem/tải trực tiếp từ web `https://video.mtdd.io.vn/brand/<filename>`).
+  - Viết tài liệu hướng dẫn tra cứu chi tiết tại `assets/brand/README.md`.
+- **Danh sách tệp tin đã tạo & thay đổi (Files Changed)**:
+  - `scripts/generate-brand-pngs.mjs`: Script kết xuất tự động toàn bộ ảnh thương hiệu.
+  - `assets/brand/README.md`: Bảng tra cứu danh mục, kích thước và mục đích sử dụng.
+  - `assets/brand/`: 62 file PNG chuẩn thương hiệu.
+  - `apps/web/public/brand/`: 62 file PNG được ánh xạ cho web tĩnh, cập nhật `favicon.png`, `logo-duong-ban.png`, `logo-am-ban.png`.
+- **Kết quả kiểm định & Kiểm thử (Verification & Test Results)**:
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ**.
+  - `node apps/web/scripts/check-i18n.mjs` → **Đầy đủ 2.244 key**.
+  - `npm run typecheck` → **Pass 100% (server, web, remotion)**.
+  - `npm run build` → **Compiled successfully**.
+- **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
+  - Đẩy commit lên `origin main` và triển khai Coolify theo RULE 15.
+
+---
+
 ### [SESSION-2026-11-05-15:45] Khắc Phục Lỗi "malformed response (HTTP 200)" & Cập Nhật Model DeepSeek R1
 
 - **Thời gian**: 2026-11-05 15:45 (Múi giờ +07:00)
