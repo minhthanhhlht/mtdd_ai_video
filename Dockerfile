@@ -36,17 +36,18 @@ COPY apps/server/package.json ./apps/server/
 COPY engines/remotion/package.json ./engines/remotion/
 
 # Install dependencies and clean cache immediately in the SAME layer to save disk space
-RUN (npm ci --include=dev || npm install --include=dev) \
+RUN (npm ci --include=dev --no-audit --no-fund || npm install --include=dev --no-audit --no-fund) \
     && npm cache clean --force \
-    && rm -rf /root/.npm /tmp/*
+    && rm -rf /root/.npm /tmp/* \
+    && (find node_modules/better-sqlite3/prebuilds -type f ! -name "linux-x64.node" -delete 2>/dev/null || true)
 
 # Copy application source code
 COPY . .
 
-# Build server and web application, clean build temp
+# Build server and web application, clean build temp & cache
 RUN npm run build \
     && npm cache clean --force \
-    && rm -rf /root/.npm /tmp/*
+    && rm -rf /root/.npm /tmp/* apps/web/.next/cache
 
 # Ensure runtime directories exist
 RUN mkdir -p .runtime/tmp .runtime/models apps/server/data video-projects outputs
