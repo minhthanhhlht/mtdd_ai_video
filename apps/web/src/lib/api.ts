@@ -969,6 +969,12 @@ async function request<T>(path: string, init?: RequestInit, retried = false): Pr
   const token = await ensureToken();
   const headers = new Headers(init?.headers);
   if (token) headers.set("x-aiev-token", token);
+  try {
+    const userSession = typeof window !== "undefined" ? window.localStorage.getItem("aiev_session_token") : null;
+    if (userSession) headers.set("x-user-session", userSession);
+  } catch {
+    /* bỏ qua */
+  }
 
   let res: Response;
   try {
@@ -4548,3 +4554,65 @@ export const startEditorHandoff = (
     /** Revision `ai-before` cho nút "Hoàn tác" - null = server không chụp được */
     beforeRev: string | null;
   }>(`${projectPath(projectId)}/editor/handoff`, body);
+
+// ======================== Auth & User Management APIs ========================
+
+export type UserRole = "admin" | "editor" | "viewer";
+
+export interface UserInfo {
+  id: string;
+  username: string;
+  name: string;
+  role: UserRole;
+  isActive: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuthSessionResponse {
+  authenticated: boolean;
+  user: UserInfo | null;
+  role?: UserRole;
+}
+
+export interface LoginResponse {
+  ok: boolean;
+  user: UserInfo;
+  token: string;
+  expiresAt: string;
+}
+
+export const login = (body: {
+  username: string;
+  password: string;
+  rememberMe?: boolean;
+}) => post<LoginResponse>("/api/auth/login", body);
+
+export const logout = () => post<{ ok: boolean }>("/api/auth/logout", {});
+
+export const getMe = () => request<AuthSessionResponse>("/api/auth/me");
+
+export const listUsers = () => request<{ users: UserInfo[] }>("/api/users");
+
+export const createUser = (body: {
+  username: string;
+  name: string;
+  password: string;
+  role: UserRole;
+}) => post<{ user: UserInfo }>("/api/users", body);
+
+export const updateUser = (
+  id: string,
+  body: {
+    name?: string;
+    role?: UserRole;
+    isActive?: number;
+    password?: string;
+  }
+) => jsonBody<{ user: UserInfo }>(`/api/users/${encodeURIComponent(id)}`, "PATCH", body);
+
+export const deleteUser = (id: string) =>
+  request<{ ok: boolean }>(`/api/users/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+

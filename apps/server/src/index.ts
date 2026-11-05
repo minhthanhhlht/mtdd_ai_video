@@ -15,7 +15,7 @@ import { autoResumeStartup } from "./agent.js";
 import { scanAutoCuts, patchAutoCut } from "./autoCutMeta.js";
 import { patchTranslateVideo, scanTranslateVideos } from "./translateVideoMeta.js";
 import { scanImageProjects, writeImageMeta } from "./imageMeta.js";
-import { failStaleRunningJobs, hasActiveJobForProject } from "./db.js";
+import { failStaleRunningJobs, hasActiveJobForProject, getSession } from "./db.js";
 import { addSseClient } from "./events.js";
 import {
   HttpError,
@@ -26,6 +26,8 @@ import {
 } from "./util.js";
 import { isKnownUploadToken, isValidUploadToken } from "./routes/uploadSession.js";
 
+import authRouter, { extractSessionToken } from "./routes/auth.js";
+import usersRouter from "./routes/users.js";
 import healthRouter from "./routes/health.js";
 import overviewRouter from "./routes/overview.js";
 import metricsRouter from "./routes/metrics.js";
@@ -217,10 +219,49 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     next();
     return;
   }
+  // Các endpoint auth công khai
+  if (
+    req.path === "/api/auth/login" ||
+    req.path === "/api/auth/logout" ||
+    req.path === "/api/auth/me"
+  ) {
+    next();
+    return;
+  }
   if (req.path === "/api/health" || req.path.startsWith("/api/health/")) {
     next();
     return;
   }
+
+  // 1. Kiểm tra phiên đăng nhập người dùng (User Session)
+  const userSessionToken = extractSessionToken(req);
+  if (userSessionToken) {
+    const session = getSession(userSessionToken);
+    if (session) {
+      // Gắn thông tin session vào req
+      (req as Request & { userSession?: typeof session }).userSession = session;
+
+      // Cưỡng chế phân quyền cho Viewer: Viewer chỉ được GET / HEAD / OPTIONS
+      if (
+        session.role === "viewer" &&
+        req.method !== "GET" &&
+        req.method !== "HEAD" &&
+        req.method !== "OPTIONS"
+      ) {
+        res.status(403).json({
+          error: {
+            code: "FORBIDDEN_VIEWER",
+            message: "Tài khoản Người xem (Viewer) chỉ có quyền xem, không thể chỉnh sửa hoặc xuất video.",
+          },
+        });
+        return;
+      }
+
+      next();
+      return;
+    }
+  }
+
   if (isLocalRequest(req)) {
     next();
     return;
@@ -246,7 +287,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     return;
   }
   res.status(401).json({
-    error: { code: "UNAUTHORIZED", message: "Thiếu hoặc sai token truy cập" },
+    error: { code: "UNAUTHORIZED", message: "Yêu cầu đăng nhập hoặc thiếu token truy cập" },
   });
 });
 
@@ -273,6 +314,8 @@ app.post("/api/session", (req: Request, res: Response) => {
 app.get("/api/events", addSseClient);
 
 app.use("/api/health", healthRouter);
+app.use("/api/auth", authRouter);
+app.use("/api/users", usersRouter);
 app.use("/api/overview", overviewRouter);
 app.use("/api/metrics", metricsRouter);
 // Kiểm tra môi trường + cài phần còn thiếu (không đặt dưới /api/health vì

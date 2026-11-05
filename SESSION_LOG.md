@@ -6,6 +6,52 @@
 
 ---
 
+### [SESSION-2026-11-05-10:05] Triển khai Trang Đăng nhập, Ghi nhớ đăng nhập (30 ngày) & Phân quyền Người dùng (RBAC)
+
+- **Thời gian**: 2026-11-05 10:05 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**: "Hãy tạo trang đăng nhập có nút ghi nhớ đăng nhập và các tài khoản có phân quyền nhé."
+- **Danh sách tệp tin đã thay đổi (Files Changed)**:
+  - `apps/server/src/authCrypto.ts`: Module bảo mật Node `crypto` (`scryptSync`, `timingSafeEqual`) để băm/kiểm tra mật khẩu với muối 16 byte và sinh session token 64 ký tự hex.
+  - `apps/server/src/db.ts`: Tạo 2 bảng SQLite `users` và `user_sessions`, tự động seed 3 tài khoản ban đầu (`admin`, `editor`, `viewer`), bổ sung các helper DB CRUD người dùng và phiên đăng nhập.
+  - `apps/server/src/routes/auth.ts`: Endpoints `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`. Quản lý cookie HttpOnly `aiev_user_session` (hạn 30 ngày nếu chọn Remember Me, 24 giờ nếu bỏ chọn).
+  - `apps/server/src/routes/users.ts`: Router RESTful CRUD tài khoản dành riêng cho Admin (`GET /`, `POST /`, `PATCH /:id`, `DELETE /:id`).
+  - `apps/server/src/index.ts`: Bổ sung middleware xác thực người dùng, bảo vệ quyền viewer (chặn các phương thức sửa đổi dữ liệu POST/PUT/PATCH/DELETE bằng lỗi 403 Forbidden), tích hợp router `/api/auth` và `/api/users`.
+  - `apps/web/src/lib/api.ts`: Tự động gắn header `x-user-session`, định nghĩa types và các hàm API xác thực & quản lý tài khoản.
+  - `apps/web/src/lib/authContext.tsx`: `AuthProvider` & hook `useAuth()` quản lý trạng thái phiên đăng nhập, quyền hạn (`isAdmin`, `isEditor`, `isViewer`, `canEdit`).
+  - `apps/web/src/app/layout.tsx`: Bọc ứng dụng trong `<AuthProvider>`.
+  - `apps/web/src/app/login/page.tsx`: Giao diện đăng nhập chuẩn Design System với nút checkbox "Ghi nhớ đăng nhập (30 ngày)", xem/ẩn mật khẩu, banner thông báo lỗi chuẩn primitive.
+  - `apps/web/src/app/users/page.tsx`: Giao diện Quản lý thành viên & Phân quyền dành cho Admin (danh sách người dùng, modal thêm tài khoản, modal chỉnh sửa quyền/mật khẩu, khóa/mở tài khoản, xóa tài khoản).
+  - `apps/web/src/components/Shell.tsx`: Kiểm tra đăng nhập (tự động chuyển hướng `/login?redirect=...`), hiển thị thông tin tài khoản & nút Đăng xuất trên topbar, chỉ hiển thị mục Quản lý thành viên khi là Admin.
+  - `apps/web/src/lib/locales/vi.ts` & `apps/web/src/lib/locales/en.ts`: Bổ sung đầy đủ 50+ key dịch song ngữ cho trang đăng nhập và quản lý thành viên.
+- **Chi tiết các thay đổi kỹ thuật (Implementation Details)**:
+  - Phân tầng RBAC 3 bậc:
+    1. `admin`: Toàn quyền quản trị, thêm/sửa/xóa thành viên, đổi cấu hình server, sản xuất video.
+    2. `editor`: Toàn quyền sản xuất video (Text to video, Auto-cut, Translate, Narration, Assets, Styles, Editor), không thể quản lý tài khoản thành viên.
+    3. `viewer`: Chỉ xem danh sách dự án, xem trước (preview) và tải video đã render hoàn thành; cấm tạo mới, chỉnh sửa, render hay gọi AI.
+  - Cơ chế phiên làm việc (Session):
+    - Khi tích chọn "Ghi nhớ đăng nhập": Thời gian sống phiên là **30 ngày**.
+    - Khi không tích: Thời gian sống phiên là **24 giờ**.
+    - Token lưu trữ an toàn trong SQLite `user_sessions`, gửi qua Cookie HttpOnly `aiev_user_session` và header `x-user-session` từ `localStorage`.
+  - Tài khoản khởi tạo sẵn mặc định:
+    - `admin` / `mtdd@admin2026` (Quản trị viên)
+    - `editor` / `mtdd@editor2026` (Biên tập viên)
+    - `viewer` / `mtdd@viewer2026` (Khách xem)
+  - Bảo toàn tương thích ngược ("Do No Harm" - RULE 14): Loopback nội bộ (`isLocalRequest`), token máy chủ (`x-aiev-token`) và route upload mobile QR (`/api/lan-upload/*`) tiếp tục hoạt động mà không bị gián đoạn.
+- **Kết quả kiểm định & Kiểm thử (Verification & Test Results)**:
+  - `npm run typecheck` → **Pass 100%** (apps/server, apps/web, engines/remotion).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ (0 lỗi)**.
+  - `node apps/web/scripts/check-i18n.mjs` → **Đầy đủ 2.238 keys (0 missing)**.
+  - `npm run build` → **Thành công (Static Prerender /login & /users, Turbopack)**.
+  - API Verification trực tiếp:
+    - Đăng nhập `admin` / `mtdd@admin2026` → HTTP 200 OK, trả về token thời hạn 30 ngày.
+    - `GET /api/auth/me` với token → HTTP 200 OK, xác thực đúng quyền `admin`.
+    - Thử nghiệm đăng nhập sai mật khẩu → HTTP 401 Unauthorized.
+    - Truy cập web proxy `http://127.0.0.1:6868/login` → HTTP 200 OK.
+- **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
+  - Hệ thống đang chạy ở chế độ production với bản build mới nhất (`npm run start`).
+  - Người dùng có thể truy cập `https://video.mtdd.io.vn` hoặc `http://localhost:6868` để đăng nhập bằng một trong 3 tài khoản: `admin`, `editor`, `viewer`.
+
+
 ### [SESSION-2026-11-04-21:32] Thiết lập môi trường máy mới & Cài đặt công cụ MCP Test Browser
 
 - **Thời gian**: 2026-11-04 21:32 (Múi giờ +07:00)

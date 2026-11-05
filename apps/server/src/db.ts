@@ -3,6 +3,7 @@ import fs from "node:fs";
 import Database from "better-sqlite3";
 import { paths } from "./config.js";
 import { nowIso } from "./util.js";
+import { hashPassword } from "./authCrypto.js";
 
 // DB chỉ lưu jobs + chat; meta.json trên đĩa là nguồn sự thật về project.
 fs.mkdirSync(paths.dataDir, { recursive: true });
@@ -45,7 +46,49 @@ db.exec(`
     createdAt TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON chat_messages (sessionId, id);
+
+  CREATE TABLE IF NOT EXISTS users (
+    id           TEXT PRIMARY KEY,
+    username     TEXT UNIQUE NOT NULL,
+    name         TEXT NOT NULL,
+    passwordHash TEXT NOT NULL,
+    role         TEXT NOT NULL DEFAULT 'editor',
+    isActive     INTEGER NOT NULL DEFAULT 1,
+    createdAt    TEXT NOT NULL,
+    updatedAt    TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
+
+  CREATE TABLE IF NOT EXISTS user_sessions (
+    token        TEXT PRIMARY KEY,
+    userId       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role         TEXT NOT NULL,
+    rememberMe   INTEGER NOT NULL DEFAULT 0,
+    expiresAt    TEXT NOT NULL,
+    createdAt    TEXT NOT NULL,
+    lastActiveAt TEXT NOT NULL,
+    userAgent    TEXT,
+    ip           TEXT
+  );
+  CREATE INDEX IF NOT EXISTS idx_sessions_expires ON user_sessions (expiresAt);
+  CREATE INDEX IF NOT EXISTS idx_sessions_user ON user_sessions (userId);
 `);
+
+// Khởi tạo tài khoản ban đầu nếu bảng users đang trống
+try {
+  const countRow = db.prepare("SELECT count(*) as c FROM users").get() as { c: number } | undefined;
+  if (!countRow || countRow.c === 0) {
+    const initTime = nowIso();
+    const insertUser = db.prepare(
+      "INSERT INTO users (id, username, name, passwordHash, role, isActive, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, 1, ?, ?)"
+    );
+    insertUser.run("usr_admin", "admin", "Quản trị viên MTDD", hashPassword("mtdd@admin2026"), "admin", initTime, initTime);
+    insertUser.run("usr_editor", "editor", "Biên tập viên", hashPassword("mtdd@editor2026"), "editor", initTime, initTime);
+    insertUser.run("usr_viewer", "viewer", "Người xem", hashPassword("mtdd@viewer2026"), "viewer", initTime, initTime);
+  }
+} catch (err) {
+  console.error("[db] Lỗi khởi tạo tài khoản ban đầu:", err);
+}
 
 // Migration: DB tạo trước khi có cột projectId trong chat_sessions
 try {
@@ -755,4 +798,227 @@ export function listChatMessages(
       "SELECT role, kind, content, createdAt FROM chat_messages WHERE sessionId = ? ORDER BY id ASC",
     )
     .all(sessionId) as Array<Pick<ChatMessageRow, "role" | "kind" | "content" | "createdAt">>;
+}
+
+// ============================ Người dùng & Phiên đăng nhập (Auth & RBAC) ============================
+
+export type UserRole = "admin" | "editor" | "viewer";
+
+export interface UserRow {
+  id: string;
+  username: string;
+  name: string;
+  passwordHash: string;
+  role: UserRole;
+  isActive: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SafeUser = Omit<UserRow, "passwordHash">;
+
+export interface SessionRow {
+  token: string;
+  userId: string;
+  role: UserRole;
+  rememberMe: number;
+  expiresAt: string;
+  createdAt: string;
+  lastActiveAt: string;
+  userAgent?: string | null;
+  ip?: string | null;
+}
+
+export interface ActiveSessionWithUser extends SessionRow {
+  user: SafeUser;
+}
+
+export function listUsers(): SafeUser[] {
+  return db
+    .prepare(
+      "SELECT id, username, name, role, isActive, createdAt, updatedAt FROM users ORDER BY createdAt ASC"
+    )
+    .all() as SafeUser[];
+}
+
+export function getUserById(id: string): UserRow | null {
+  return (db.prepare("SELECT * FROM users WHERE id = ?").get(id) as UserRow | undefined) ?? null;
+}
+
+export function getUserByUsername(username: string): UserRow | null {
+  return (
+    (db.prepare("SELECT * FROM users WHERE lower(username) = lower(?)").get(username) as
+      | UserRow
+      | undefined) ?? null
+  );
+}
+
+export function createUser(data: {
+  id: string;
+  username: string;
+  name: string;
+  passwordHash: string;
+  role: UserRole;
+  isActive?: number;
+}): SafeUser {
+  const now = nowIso();
+  const isActive = data.isActive ?? 1;
+  db.prepare(
+    "INSERT INTO users (id, username, name, passwordHash, role, isActive, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+  ).run(data.id, data.username.toLowerCase().trim(), data.name.trim(), data.passwordHash, data.role, isActive, now, now);
+
+  return {
+    id: data.id,
+    username: data.username.toLowerCase().trim(),
+    name: data.name.trim(),
+    role: data.role,
+    isActive,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+export function updateUser(
+  id: string,
+  patch: {
+    name?: string;
+    role?: UserRole;
+    isActive?: number;
+    passwordHash?: string;
+  }
+): SafeUser | null {
+  const existing = getUserById(id);
+  if (!existing) return null;
+
+  const now = nowIso();
+  const name = patch.name !== undefined ? patch.name.trim() : existing.name;
+  const role = patch.role !== undefined ? patch.role : existing.role;
+  const isActive = patch.isActive !== undefined ? patch.isActive : existing.isActive;
+  const passwordHash = patch.passwordHash !== undefined ? patch.passwordHash : existing.passwordHash;
+
+  db.prepare(
+    "UPDATE users SET name = ?, role = ?, isActive = ?, passwordHash = ?, updatedAt = ? WHERE id = ?"
+  ).run(name, role, isActive, passwordHash, now, id);
+
+  // Nếu vai trò thay đổi, cập nhật luôn các phiên đang hoạt động của user
+  if (patch.role !== undefined && patch.role !== existing.role) {
+    db.prepare("UPDATE user_sessions SET role = ? WHERE userId = ?").run(patch.role, id);
+  }
+
+  // Nếu user bị khóa (isActive = 0), hủy toàn bộ phiên đang đăng nhập
+  if (patch.isActive === 0) {
+    db.prepare("DELETE FROM user_sessions WHERE userId = ?").run(id);
+  }
+
+  return {
+    id: existing.id,
+    username: existing.username,
+    name,
+    role,
+    isActive,
+    createdAt: existing.createdAt,
+    updatedAt: now,
+  };
+}
+
+export function deleteUser(id: string): boolean {
+  const res = db.prepare("DELETE FROM users WHERE id = ?").run(id);
+  return res.changes > 0;
+}
+
+export function createSession(data: {
+  token: string;
+  userId: string;
+  role: UserRole;
+  rememberMe: boolean;
+  expiresAt: string;
+  userAgent?: string;
+  ip?: string;
+}): SessionRow {
+  const now = nowIso();
+  const rememberMe = data.rememberMe ? 1 : 0;
+  db.prepare(
+    "INSERT INTO user_sessions (token, userId, role, rememberMe, expiresAt, createdAt, lastActiveAt, userAgent, ip) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+  ).run(
+    data.token,
+    data.userId,
+    data.role,
+    rememberMe,
+    data.expiresAt,
+    now,
+    now,
+    data.userAgent ?? null,
+    data.ip ?? null
+  );
+
+  return {
+    token: data.token,
+    userId: data.userId,
+    role: data.role,
+    rememberMe,
+    expiresAt: data.expiresAt,
+    createdAt: now,
+    lastActiveAt: now,
+    userAgent: data.userAgent ?? null,
+    ip: data.ip ?? null,
+  };
+}
+
+export function getSession(token: string): ActiveSessionWithUser | null {
+  const now = nowIso();
+  const row = db
+    .prepare(
+      `SELECT s.token, s.userId, s.role, s.rememberMe, s.expiresAt, s.createdAt, s.lastActiveAt, s.userAgent, s.ip,
+              u.username, u.name, u.role as userRole, u.isActive, u.createdAt as userCreatedAt, u.updatedAt as userUpdatedAt
+       FROM user_sessions s
+       JOIN users u ON s.userId = u.id
+       WHERE s.token = ? AND s.expiresAt > ? AND u.isActive = 1`
+    )
+    .get(token, now) as
+    | (SessionRow & {
+        username: string;
+        name: string;
+        userRole: UserRole;
+        isActive: number;
+        userCreatedAt: string;
+        userUpdatedAt: string;
+      })
+    | undefined;
+
+  if (!row) return null;
+
+  return {
+    token: row.token,
+    userId: row.userId,
+    role: row.userRole, // Lấy role mới nhất từ bảng users
+    rememberMe: row.rememberMe,
+    expiresAt: row.expiresAt,
+    createdAt: row.createdAt,
+    lastActiveAt: row.lastActiveAt,
+    userAgent: row.userAgent,
+    ip: row.ip,
+    user: {
+      id: row.userId,
+      username: row.username,
+      name: row.name,
+      role: row.userRole,
+      isActive: row.isActive,
+      createdAt: row.userCreatedAt,
+      updatedAt: row.userUpdatedAt,
+    },
+  };
+}
+
+export function touchSession(token: string): void {
+  db.prepare("UPDATE user_sessions SET lastActiveAt = ? WHERE token = ?").run(nowIso(), token);
+}
+
+export function deleteSession(token: string): void {
+  db.prepare("DELETE FROM user_sessions WHERE token = ?").run(token);
+}
+
+export function cleanupExpiredSessions(): number {
+  const now = nowIso();
+  const res = db.prepare("DELETE FROM user_sessions WHERE expiresAt <= ?").run(now);
+  return res.changes;
 }

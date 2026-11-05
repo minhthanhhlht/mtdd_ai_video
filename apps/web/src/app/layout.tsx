@@ -10,6 +10,7 @@ import { Shell } from "@/components/Shell";
 import { StaleChunkGuard } from "@/components/StaleChunkGuard";
 import { LanguageProvider } from "@/lib/i18n";
 import { EventsProvider } from "@/lib/useEvents";
+import { AuthProvider } from "@/lib/authContext";
 
 export const metadata: Metadata = {
   title: "AI Edit Video - MTDD AI",
@@ -38,9 +39,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: TOKEN_URL_SCRIPT + THEME_SCRIPT }} />
         <StaleChunkGuard />
         <LanguageProvider>
-          <EventsProvider>
-            <Shell>{children}</Shell>
-          </EventsProvider>
+          <AuthProvider>
+            <EventsProvider>
+              <Shell>{children}</Shell>
+            </EventsProvider>
+          </AuthProvider>
         </LanguageProvider>
       </body>
     </html>

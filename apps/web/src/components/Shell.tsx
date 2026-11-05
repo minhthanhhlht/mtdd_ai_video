@@ -48,10 +48,14 @@ import {
   Scissors,
   ScrollText,
   Settings2,
+  Users,
+  LogOut,
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/lib/authContext";
+import { Badge } from "@/components/Badge";
 import {
   createContext,
   useCallback,
@@ -157,6 +161,9 @@ function isActive(pathname: string, href: string): boolean {
 }
 
 function pageTitle(pathname: string): string {
+  if (pathname === "/users" || pathname.startsWith("/users/")) {
+    return "nav.users";
+  }
   const item = NAV.filter((n) => isActive(pathname, n.href)).sort(
     (a, b) => b.href.length - a.href.length
   )[0];
@@ -277,6 +284,16 @@ const noop = () => {};
 export function Shell({ children }: { children: ReactNode }) {
   const { t } = useT();
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, loading: authLoading, isAdmin, logout } = useAuth();
+
+  const isPublicRoute = pathname === "/login" || pathname.startsWith("/m/");
+
+  useEffect(() => {
+    if (!authLoading && !user && !isPublicRoute) {
+      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
+    }
+  }, [authLoading, user, isPublicRoute, pathname, router]);
 
   // Trang nào đang khai báo panel phải (null = không có) - chỉ giữ tiêu đề dạng
   // chuỗi để setState không kéo theo ReactNode và gây render vòng.
@@ -388,11 +405,25 @@ export function Shell({ children }: { children: ReactNode }) {
     [slot, register, reveal]
   );
 
-  // Trang mobile /m/<id> (điện thoại quét QR upload) - layout riêng tối giản,
-  // không header/sidebar của dashboard.
-  if (pathname === "/m" || pathname.startsWith("/m/")) {
+  if (isPublicRoute) {
     return <>{children}</>;
   }
+
+  if (authLoading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-[var(--bg)] text-meta text-[var(--text-muted)]">
+        {t("shell.auth-checking")}
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
+  const navItems = isAdmin
+    ? [...NAV, { href: "/users", label: "nav.users", icon: Users }]
+    : NAV;
 
   // Nhãn dài dùng cho aria-label/tooltip; nhãn ngắn là chữ hiện cạnh icon trong
   // rail (rail chỉ rộng 220px, câu dài bị cắt cụt thành "Thu gọn thanh điề…").
@@ -462,6 +493,28 @@ export function Shell({ children }: { children: ReactNode }) {
             <BackendStatus />
             <LanguageToggle />
             <ThemeToggle />
+            {user && (
+              <div className="flex items-center gap-2 pl-2 border-l border-[var(--border)]">
+                <div className="hidden sm:flex flex-col items-end leading-none">
+                  <span className="text-sm font-semibold max-w-[120px] truncate" title={user.name}>
+                    {user.name}
+                  </span>
+                  <span className="text-xs text-[var(--text-muted)] capitalize">
+                    {t(`users.role-${user.role}`)}
+                  </span>
+                </div>
+                <Button
+                  variant="secondary"
+                  small
+                  onClick={() => logout()}
+                  title={t("shell.logout")}
+                  aria-label={t("shell.logout")}
+                >
+                  <LogOut size={14} aria-hidden="true" />
+                  <span className="hidden md:inline">{t("shell.logout")}</span>
+                </Button>
+              </div>
+            )}
           </div>
         </header>
 
@@ -509,7 +562,7 @@ export function Shell({ children }: { children: ReactNode }) {
               className="flex flex-col gap-1"
               aria-label={t("shell.nav-aria")}
             >
-              {NAV.map(({ href, label, icon: Icon }) => {
+              {navItems.map(({ href, label, icon: Icon }) => {
                 const text = t(label);
                 return (
                   <Link
