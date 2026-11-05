@@ -16,10 +16,9 @@
     "typecheck": "npm run typecheck -w apps/server && npm run typecheck -w apps/web && npm run typecheck -w engines/remotion",
     "deploy:coolify": "node scripts/deploy-coolify.mjs"
   },
-  "devDependencies": {
-    "concurrently": "^10.0.6"
-  },
+  "devDependencies": {},
   "dependencies": {
+    "concurrently": "^10.0.6",
     "hyperframes": "^0.8.197"
   },
   "engines": {

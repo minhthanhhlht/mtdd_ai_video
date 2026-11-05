@@ -1,27 +1,49 @@
-FROM node:22-bookworm-slim
+# Stage 1: Build stage
+FROM node:22-bookworm-slim AS builder
 
-# Install system dependencies:
-# - ffmpeg, ffprobe for video and audio processing
-# - chromium and fonts for Remotion rendering & HyperFrames HTML scene capture
-# - python3, make, g++, gcc for better-sqlite3 native C++ compilation
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \
-    chromium \
-    fonts-noto-cjk \
-    fonts-noto-color-emoji \
-    fonts-freefont-ttf \
-    fonts-dejavu-core \
     python3 \
     make \
     g++ \
     gcc \
     ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY apps/web/package.json ./apps/web/
+COPY apps/server/package.json ./apps/server/
+COPY engines/remotion/package.json ./engines/remotion/
+
+RUN (npm ci --include=dev --no-audit --no-fund || npm install --include=dev --no-audit --no-fund) \
+    && npm cache clean --force \
+    && rm -rf /root/.npm /tmp/* \
+    && (find node_modules/better-sqlite3/prebuilds -type f ! -name "linux-x64.node" -delete 2>/dev/null || true)
+
+COPY . .
+
+RUN npm run build \
+    && npm prune --omit=dev \
+    && npm cache clean --force \
+    && rm -rf apps/web/.next/cache /root/.npm /tmp/*
+
+# Stage 2: Minimal runtime image
+FROM node:22-bookworm-slim AS runner
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    chromium \
+    fonts-noto-color-emoji \
+    fonts-freefont-ttf \
+    fonts-dejavu-core \
+    ca-certificates \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Set environment variables for Chromium, Puppeteer and Remotion
 ENV PORT=6868 \
     SERVER_PORT=6869 \
+    NODE_ENV=production \
     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     CHROMIUM_PATH=/usr/bin/chromium \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
@@ -29,34 +51,10 @@ ENV PORT=6868 \
 
 WORKDIR /app
 
-# Copy dependency manifests
-COPY package.json package-lock.json ./
-COPY apps/web/package.json ./apps/web/
-COPY apps/server/package.json ./apps/server/
-COPY engines/remotion/package.json ./engines/remotion/
+COPY --from=builder /app ./
 
-# Install dependencies and clean cache immediately in the SAME layer to save disk space
-RUN (npm ci --include=dev --no-audit --no-fund || npm install --include=dev --no-audit --no-fund) \
-    && npm cache clean --force \
-    && rm -rf /root/.npm /tmp/* \
-    && (find node_modules/better-sqlite3/prebuilds -type f ! -name "linux-x64.node" -delete 2>/dev/null || true)
-
-# Copy application source code
-COPY . .
-
-# Build server and web application, clean build temp & cache
-RUN npm run build \
-    && npm cache clean --force \
-    && rm -rf /root/.npm /tmp/* apps/web/.next/cache
-
-# Ensure runtime directories exist
 RUN mkdir -p .runtime/tmp .runtime/models apps/server/data video-projects outputs
 
-# Set production mode for runtime
-ENV NODE_ENV=production
-
-# Expose Web port (Coolify routes traffic to port 6868)
 EXPOSE 6868
 
-# Start both backend and web dashboard
 CMD ["npm", "run", "start"]
