@@ -6,6 +6,36 @@
 
 ---
 
+### [SESSION-2026-11-05-13:30] Khắc phục Lỗi Upload Ảnh/Video: Ủy Quyền Cho Phiên Đăng Nhập & Đồng Bộ CORS Session Token
+
+- **Thời gian**: 2026-11-05 13:30 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**: "khi t upload ảnh hoặc video trong video project thì báo lỗi Link upload đã hết hạn - mở lại mã QR trên máy tính. hãy kiểm tra và sửa nó"
+- **Danh sách tệp tin đã thay đổi (Files Changed)**:
+  - `apps/server/src/routes/assets.ts`:
+    - Bổ sung xác thực phiên người dùng RBAC (`userSession`) qua `extractSessionToken(req)` và `body.token`.
+    - Phân quyền: Chặn tài khoản Viewer với mã lỗi `403 FORBIDDEN_VIEWER` ("Tài khoản Người xem chỉ có quyền xem, không thể upload file").
+    - Tài khoản Admin và Editor được coi là `hasAuthorizedSession = true` → Bỏ qua yêu cầu quét mã QR upload (`UPLOAD_TOKEN_INVALID`), cho phép tải file trực tiếp từ giao diện máy tính.
+    - Duy trì 100% tính tương thích ngược cho việc quét mã QR tải từ điện thoại (`/m/[id]`) khi không có phiên người dùng đăng nhập.
+  - `apps/server/src/index.ts`:
+    - Cập nhật middleware CORS: Chấp thuận các headers `x-user-session`, `authorization` cùng cấu hình `Access-Control-Allow-Credentials: true`.
+    - Hỗ trợ CORS tự động cho cùng tên miền qua reverse proxy/Coolify (`isSameHost`).
+  - `apps/web/src/lib/api.ts`:
+    - Bổ sung helper `getUserSessionToken()` và `applyUserSessionHeaders(headers)` để đính kèm session token vào mọi request fetch (`x-user-session`, `authorization: Bearer <token>`) và bật `credentials: "include"`.
+    - Cập nhật hàm `uploadAsset`: Đính kèm token phiên vào form data `token` đề phòng trường hợp proxy lọc header multipart.
+    - Đồng bộ `applyUserSessionHeaders` cho các hàm gọi fetch trực tiếp: `generateSkill`, `previewTtsVoice`, `previewClonedVoice`, `dubPreviewTranslateVideo`, `saveTimelineOnLeave`, `closePhoneSessionOnUnload`.
+- **Chi tiết các thay đổi kỹ thuật (Implementation Details)**:
+  - **Nguyên nhân gốc rễ**: Tuyến `POST /api/assets` trước đây chỉ cho qua mà không hỏi token QR trong trường hợp `isLocalRequest(req)` hoặc `hasMasterToken(req)`. Khi triển khai trên domain công cộng (`video.mtdd.io.vn`) hoặc qua reverse proxy, `isLocalRequest` trả về `false`, và hệ thống đăng nhập tài khoản RBAC sử dụng session token trong SQLite thay vì master token đơn lẻ (`AIEV_API_TOKEN`). Do web UI tải từ máy tính không tạo ra token QR tạm thời, request upload bị hiểu nhầm là phiên upload từ điện thoại thiếu token QR và ném ra lỗi 403 `UPLOAD_TOKEN_INVALID`.
+  - **Biện pháp xử lý**: Kết nối hệ thống RBAC User Session vào tuyến upload assets: Kiểm tra phiên đăng nhập hợp lệ (role admin/editor), chỉ kích hoạt kiểm tra token QR tạm thời đối với khách vãng lai quét mã QR từ điện thoại.
+- **Kết quả kiểm định & Kiểm thử (Verification & Test Results)**:
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ**.
+  - `node apps/web/scripts/check-i18n.mjs` → **Đầy đủ 2.244 keys (0 missing)**.
+  - `npm run typecheck` → **Pass 100% (cả apps/server, apps/web, engines/remotion)**.
+  - `npm run build` → **Compiled successfully**.
+- **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
+  - Tuân thủ RULE 15: Commit, đẩy lên `origin main` và kích hoạt deploy lên Coolify.
+
+---
+
 ### [SESSION-2026-11-05-11:05] Bổ sung Xác Nhận Mật Khẩu Mới & Nút Ẩn/Hiện Mật Khẩu Trong Quản Lý Thành Viên
 
 - **Thời gian**: 2026-11-05 11:05 (Múi giờ +07:00)

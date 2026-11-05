@@ -965,24 +965,44 @@ async function isAccessTokenRejected(res: Response): Promise<boolean> {
   }
 }
 
+export function getUserSessionToken(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return (
+      window.sessionStorage.getItem("aiev_session_token") ||
+      window.localStorage.getItem("aiev_session_token") ||
+      null
+    );
+  } catch {
+    return null;
+  }
+}
+
+export function applyUserSessionHeaders(headers: Headers | Record<string, string>): void {
+  const sessionToken = getUserSessionToken();
+  if (!sessionToken) return;
+  if (headers instanceof Headers) {
+    if (!headers.has("x-user-session")) headers.set("x-user-session", sessionToken);
+    if (!headers.has("authorization")) headers.set("authorization", `Bearer ${sessionToken}`);
+  } else {
+    if (!headers["x-user-session"]) headers["x-user-session"] = sessionToken;
+    if (!headers["authorization"]) headers["authorization"] = `Bearer ${sessionToken}`;
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit, retried = false): Promise<T> {
   const token = await ensureToken();
   const headers = new Headers(init?.headers);
   if (token) headers.set("x-aiev-token", token);
-  try {
-    const userSession =
-      typeof window !== "undefined"
-        ? window.sessionStorage.getItem("aiev_session_token") ||
-          window.localStorage.getItem("aiev_session_token")
-        : null;
-    if (userSession) headers.set("x-user-session", userSession);
-  } catch {
-    /* bỏ qua */
-  }
+  applyUserSessionHeaders(headers);
 
   let res: Response;
   try {
-    res = await fetch(withUploadToken(path), { ...init, headers });
+    res = await fetch(withUploadToken(path), {
+      credentials: "include",
+      ...init,
+      headers,
+    });
   } catch {
     throw new ApiError(
       "network",
@@ -1434,13 +1454,16 @@ export async function generateSkill(
 ): Promise<SkillGenerateResult> {
   let res: Response;
   const token = await ensureToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(token ? { "x-aiev-token": token } : {}),
+  };
+  applyUserSessionHeaders(headers);
   try {
     res = await fetch(`${serverOrigin()}/api/skills/generate`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { "x-aiev-token": token } : {}),
-      },
+      headers,
+      credentials: "include",
       body: JSON.stringify(input),
     });
   } catch {
@@ -1557,6 +1580,8 @@ export const uploadAsset = (
   // SSE `upload` progress lọc được theo project
   form.append("scope", scope);
   if (projectId) form.append("projectId", projectId);
+  const sessionToken = getUserSessionToken();
+  if (sessionToken) form.append("token", sessionToken);
   form.append("file", file);
   return request<FileInfo>(`${serverOrigin()}/api/assets`, { method: "POST", body: form });
 };
@@ -2006,10 +2031,12 @@ export function closePhoneSessionOnUnload(uploadToken: string | null, stopAuto: 
   const token = apiToken;
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) headers["x-aiev-token"] = token;
+  applyUserSessionHeaders(headers);
   if (uploadToken) {
     void fetch(`/api/upload-session/${encodeURIComponent(uploadToken)}`, {
       method: "DELETE",
       headers,
+      credentials: "include",
       keepalive: true,
     }).catch(() => {});
   }
@@ -2017,6 +2044,7 @@ export function closePhoneSessionOnUnload(uploadToken: string | null, stopAuto: 
     void fetch("/api/tunnel/stop", {
       method: "POST",
       headers,
+      credentials: "include",
       body: JSON.stringify({ onlyAuto: true }),
       keepalive: true,
     }).catch(() => {});
@@ -3346,12 +3374,14 @@ export async function previewTtsVoice(input: {
   const token = await ensureToken();
   const headers = new Headers({ "Content-Type": "application/json" });
   if (token) headers.set("x-aiev-token", token);
+  applyUserSessionHeaders(headers);
 
   let res: Response;
   try {
     res = await fetch(withUploadToken("/api/tts/preview"), {
       method: "POST",
       headers,
+      credentials: "include",
       body: JSON.stringify(input),
     });
   } catch {
@@ -3397,6 +3427,7 @@ export async function previewClonedVoice(input: {
   const token = await ensureToken();
   const headers = new Headers({ "Content-Type": "application/json" });
   if (token) headers.set("x-aiev-token", token);
+  applyUserSessionHeaders(headers);
 
   let res: Response;
   try {
@@ -3405,6 +3436,7 @@ export async function previewClonedVoice(input: {
       {
         method: "POST",
         headers,
+        credentials: "include",
         body: JSON.stringify({ uiLang: input.uiLang }),
       }
     );
@@ -3873,6 +3905,7 @@ export async function dubPreviewTranslateVideo(
   const token = await ensureToken();
   const headers = new Headers({ "Content-Type": "application/json" });
   if (token) headers.set("x-aiev-token", token);
+  applyUserSessionHeaders(headers);
 
   let res: Response;
   try {
@@ -3880,7 +3913,7 @@ export async function dubPreviewTranslateVideo(
       withUploadToken(
         `/api/translate-video/${encodeURIComponent(id)}/dub-preview`
       ),
-      { method: "POST", headers, body: JSON.stringify(input ?? {}) }
+      { method: "POST", headers, credentials: "include", body: JSON.stringify(input ?? {}) }
     );
   } catch {
     throw new ApiError(
@@ -4386,9 +4419,11 @@ export function saveTimelineOnLeave(
   if (opts.dryRun) return { keepalive, promise: null };
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (apiToken) headers["x-aiev-token"] = apiToken;
+  applyUserSessionHeaders(headers);
   const promise = fetch(withUploadToken(`${projectPath(projectId)}/timeline`), {
     method: "PUT",
     headers,
+    credentials: "include",
     body,
     keepalive,
   });

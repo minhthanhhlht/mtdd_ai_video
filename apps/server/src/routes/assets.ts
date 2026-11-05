@@ -7,6 +7,8 @@ import { paths } from "../config.js";
 import { broadcast } from "../events.js";
 import { listProjectAssets, projectDirOf, projectExists } from "../meta.js";
 import { isKnownUploadToken, isValidUploadToken } from "./uploadSession.js";
+import { extractSessionToken } from "./auth.js";
+import { getSession } from "../db.js";
 import {
   HttpError,
   ensureDir,
@@ -227,7 +229,33 @@ router.post("/", uploadProgress, upload.single("file"), (req, res) => {
     // Sai/thiếu → 403, file tạm đã nhận bị xóa ở catch bên dưới.
     // Dashboard mở qua tunnel mang TOKEN CHÍNH - đã là chủ máy, không phải
     // bắt quét thêm mã QR (token chính vốn mở được cả agent lẫn xóa project).
-    if (!isLocalRequest(req) && !hasMasterToken(req)) {
+    // Kiểm tra quyền phiên đăng nhập người dùng (User Session)
+    const userSession =
+      (req as Request & { userSession?: ReturnType<typeof getSession> }).userSession ??
+      (() => {
+        const token =
+          extractSessionToken(req) ||
+          (typeof body.token === "string" ? body.token : null) ||
+          qs(req.query.userSession);
+        return token ? getSession(token) : null;
+      })();
+
+    // Viewer không có quyền upload
+    if (userSession && userSession.role === "viewer") {
+      throw new HttpError(
+        403,
+        "FORBIDDEN_VIEWER",
+        "Tài khoản Người xem (Viewer) chỉ có quyền xem, không thể upload file."
+      );
+    }
+
+    const hasAuthorizedSession = Boolean(
+      userSession && (userSession.role === "admin" || userSession.role === "editor")
+    );
+
+    // Dashboard mở qua tunnel/domain mang TOKEN CHÍNH hoặc PHIÊN ĐĂNG NHẬP (admin/editor)
+    // - đã là người dùng hợp lệ, không phải bắt quét thêm mã QR.
+    if (!isLocalRequest(req) && !hasMasterToken(req) && !hasAuthorizedSession) {
       const token = qs(body.token) || qs(req.query.k);
       // Token gắn với đúng project khi scope=project; scope khác chỉ cần token
       // của một phiên còn hiệu lực (phiên nào cũng do người dùng vừa mở QR).

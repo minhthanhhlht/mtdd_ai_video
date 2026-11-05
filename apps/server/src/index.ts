@@ -138,11 +138,19 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
 // trên điện thoại upload file lớn gọi thẳng backend, không qua proxy Next)
 app.use((req: Request, res: Response, next: NextFunction) => {
   const origin = req.headers.origin;
-  if (origin && isAllowedWebOrigin(origin)) {
+  const forwardedHost = (req.headers["x-forwarded-host"] as string | undefined)?.split(",")[0]?.trim();
+  const host = forwardedHost || req.headers.host;
+  const isSameHost = origin && host && (origin === `https://${host}` || origin === `http://${host}`);
+
+  if (origin && (isAllowedWebOrigin(origin) || isSameHost)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-aiev-token");
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, x-aiev-token, x-user-session, authorization"
+    );
+    res.setHeader("Access-Control-Allow-Credentials", "true");
   }
   if (req.method === "OPTIONS") {
     res.status(204).end();
