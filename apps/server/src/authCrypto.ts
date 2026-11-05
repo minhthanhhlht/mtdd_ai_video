@@ -39,3 +39,4 @@ export function verifyPassword(password: string, storedHash: string): boolean {
 export function generateSessionToken(): string {
   return crypto.randomBytes(32).toString("hex");
 }
+

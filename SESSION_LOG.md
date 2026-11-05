@@ -6,6 +6,30 @@
 
 ---
 
+### [SESSION-2026-11-05-10:10] Thiết lập RULE 15: Tự động Git Push & Triển khai Production lên Coolify
+
+- **Thời gian**: 2026-11-05 10:10 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**: "Thêm rule sau khi sửa hoặc thêm tính năng nào đó xong bạn hãy push lên git và deploy nó lên coolify luôn nhé"
+- **Danh sách tệp tin đã thay đổi (Files Changed)**:
+  - `rules/15-git-coolify-deploy/RULE.md`: Bộ quy tắc mới quy định tính bắt buộc toàn cục: Mọi phiên sửa lỗi hoặc thêm tính năng sau khi vượt qua kiểm định (Typecheck, Design System, i18n, Build) và ghi nhật ký `SESSION_LOG.md` phải tự động thực hiện commit, push lên nhánh `main` và kích hoạt deploy lên máy chủ Coolify.
+  - `rules/README.md`: Bổ sung Rule 15 vào bảng phân hệ và cập nhật Checklist trước khi bàn giao (bước 8 Git Push & bước 9 Coolify Deploy).
+  - `GEMINI.md`: Cập nhật bộ luật cốt lõi của Antigravity/Gemini (Điều 16) và cập nhật khối lệnh kiểm tra bắt buộc trước khi bàn giao.
+  - `scripts/deploy-coolify.mjs`: Script tiện ích gọi Coolify REST API v1 (`POST /api/v1/deploy?uuid=...`) để kích hoạt triển khai container cho ứng dụng `nxxz3h6rdy0uahktp9biorb9`, có chế độ `--wait` theo dõi tiến trình build đến khi hoàn tất.
+  - `package.json`: Bổ sung lệnh `npm run deploy:coolify`.
+  - `.env`: Bổ sung các thông số môi trường kết nối máy chủ Coolify (`COOLIFY_API_URL`, `COOLIFY_API_TOKEN`, `COOLIFY_APP_UUID`).
+- **Chi tiết các thay đổi kỹ thuật (Implementation Details)**:
+  - Quy chuẩn hóa quy trình CI/CD thủ công của Agent thành quy tắc thép: Không để code bị đọng lại ở môi trường dev cục bộ, đảm bảo phiên bản trên GitHub và phiên bản đang chạy trên container production (`https://video.mtdd.io.vn`) luôn đồng nhất từng commit.
+  - Tích hợp xác thực Bearer token thông qua API của Coolify, đảm bảo tiến trình build container được kích hoạt an toàn.
+- **Kết quả kiểm định & Kiểm thử (Verification & Test Results)**:
+  - `npm run typecheck` → **Pass 100%**.
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ**.
+  - `node apps/web/scripts/check-i18n.mjs` → **Đầy đủ keys**.
+  - Coolify API Trigger → Kích hoạt thành công bản build container production trên máy chủ `https://manage.mtdd.io.vn`.
+- **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
+  - Bộ quy tắc RULE 15 đã có hiệu lực ngay lập tức. Mọi phiên tiếp theo của Agent bắt buộc phải chạy `git push origin main` và `npm run deploy:coolify` trước khi hoàn tất phản hồi.
+
+---
+
 ### [SESSION-2026-11-05-10:05] Triển khai Trang Đăng nhập, Ghi nhớ đăng nhập (30 ngày) & Phân quyền Người dùng (RBAC)
 
 - **Thời gian**: 2026-11-05 10:05 (Múi giờ +07:00)

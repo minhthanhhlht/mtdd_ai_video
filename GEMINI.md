@@ -80,6 +80,10 @@
     - Kiểm thử hồi quy kép: Test tính năng mới VÀ test lại tính năng cũ liên quan.
     - Cấm đập đi xây lại code đang chạy ổn định.
 
+16. **Tự động đẩy Git & Triển khai Coolify (BẮT BUỘC)**: [`rules/15-git-coolify-deploy/RULE.md`](file:///d:/AI/mtdd_ai_video/rules/15-git-coolify-deploy/RULE.md)
+    - Sau khi hoàn thành tính năng/sửa lỗi, kiểm định đạt chuẩn và cập nhật nhật ký, BẮT BUỘC phải `git push origin main` và kích hoạt deploy lên Coolify (`npm run deploy:coolify`).
+    - Tuyệt đối không để tồn đọng code cục bộ hay để máy chủ production lệch phiên bản so với kho mã nguồn.
+
 ---
 
 ## Lệnh kiểm tra bắt buộc trước khi bàn giao:
@@ -90,4 +94,9 @@ node apps/web/scripts/check-i18n.mjs
 npm run build
 # Kiểm thử hồi quy tính năng cũ (Rule 14)
 # Ghi nhận nhật ký vào SESSION_LOG.md (Rule 13)
+# Đẩy code lên GitHub & Triển khai Coolify (Rule 15):
+git add .
+git commit -m "..."
+git push origin main
+npm run deploy:coolify
 ```

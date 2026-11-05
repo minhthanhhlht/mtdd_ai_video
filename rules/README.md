@@ -32,6 +32,7 @@
 | **12** | **Kiểm thử & Đảm bảo chất lượng** | [`rules/12-testing-qa/RULE.md`](file:///d:/AI/mtdd_ai_video/rules/12-testing-qa/RULE.md) | Ma trận kiểm tra bắt buộc theo loại thay đổi, thiết kế test theo hành vi/hợp đồng, QA giao diện chuẩn 1440x900, soi video thực tế. |
 | **13** | **Nhật ký phiên làm việc** | [`rules/13-session-logging/RULE.md`](file:///d:/AI/mtdd_ai_video/rules/13-session-logging/RULE.md) | Bắt buộc ghi nhận mọi thay đổi, file sửa, kết quả test và hướng dẫn phiên sau vào `SESSION_LOG.md`. |
 | **14** | **Phòng chống hỏng tính năng cũ** | [`rules/14-regression-prevention/RULE.md`](file:///d:/AI/mtdd_ai_video/rules/14-regression-prevention/RULE.md) | Phân tích tác động lan truyền (blast radius), bảo toàn tương thích ngược, kiểm thử hồi quy kép (test cả mới lẫn cũ), cấm đập đi xây lại tùy tiện. |
+| **15** | **Tự động đẩy Git & Deploy Coolify** | [`rules/15-git-coolify-deploy/RULE.md`](file:///d:/AI/mtdd_ai_video/rules/15-git-coolify-deploy/RULE.md) | Tự động `git push origin main` và kích hoạt triển khai production lên Coolify (`npm run deploy:coolify`) sau mỗi lần hoàn thành tính năng hoặc sửa lỗi. |
 
 ---
 
@@ -65,6 +66,14 @@ npm run build
 # 6. Kiểm thử hồi quy: Thử lại các tính năng CŨ liên quan, đảm bảo không bị gãy vỡ (Rule 14)
 
 # 7. BẮT BUỘC: Ghi nhận nhật ký phiên làm việc vào SESSION_LOG.md (Rule 13)
+
+# 8. BẮT BUỘC: Đẩy mã nguồn lên Git remote (Rule 15)
+git add .
+git commit -m "..."
+git push origin main
+
+# 9. BẮT BUỘC: Kích hoạt triển khai lên máy chủ Coolify (Rule 15)
+npm run deploy:coolify
 ```
 
 ---
