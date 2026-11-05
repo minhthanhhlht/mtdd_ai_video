@@ -6,6 +6,33 @@
 
 ---
 
+### [SESSION-2026-11-05-19:35] Cập Nhật Đồng Bộ Favicon Mới Chuẩn MTDD AI Vào Ứng Dụng
+
+- **Thời gian**: 2026-11-05 19:35 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**: "hãy thay ảnh favicon bạn vừa tạo và dự án nhé"
+- **Nguyên nhân kỹ thuật & Kiến trúc**:
+  - Ứng dụng Next.js sử dụng hằng số `FAVICON` được nướng trực tiếp dạng base64 Data URI vào `apps/web/src/lib/brand.ts` để hiển thị tức thì không qua network request.
+  - Sau khi tạo các file PNG thương hiệu MTDD AI ở phiên trước, `apps/web/scripts/build-brand.mjs` cần được kích hoạt để tái tạo hằng số `FAVICON` mới vào bundle.
+  - Ngoài ra, để hỗ trợ toàn diện các trình duyệt tự động gọi `/favicon.ico` hay màn hình chính di động (iOS Safari, Android PWA), cần bổ sung:
+    1. File `apps/web/public/favicon.ico` đa phân giải (16x16, 32x32, 48x48) chuẩn ICO.
+    2. Cập nhật `metadata.icons` trong `apps/web/src/app/layout.tsx` khai báo đầy đủ `icon` (Data URI + favicon.ico + favicon.png), `shortcut` và `apple` (512x512).
+- **Danh sách tệp tin đã thay đổi (Files Changed)**:
+  - `apps/web/src/lib/brand.ts`: Cập nhật hằng số `FAVICON`, `LOGO_LIGHT`, `LOGO_DARK` thành base64 của biểu tượng MTDD AI mới.
+  - `apps/web/src/app/layout.tsx`: Cập nhật `metadata.icons` khai báo favicon đa kích cỡ và apple touch icon.
+  - `apps/web/public/favicon.ico`: Sinh file `.ico` chuẩn đa phân giải 16x16, 32x32, 48x48.
+  - `assets/brand/favicon.ico`: Lưu bản sao favicon.ico vào kho tài nguyên.
+  - `scripts/generate-brand-pngs.mjs`: Tích hợp tự động sinh `favicon.ico` và tự động chạy `build-brand.mjs` cho các lần chạy sau.
+  - `assets/brand/README.md`: Bổ sung tài liệu chuẩn cấu hình favicon & web app icons.
+- **Kết quả kiểm định & Kiểm thử (Verification & Test Results)**:
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ**.
+  - `node apps/web/scripts/check-i18n.mjs` → **Đầy đủ 2.244 key**.
+  - `npm run typecheck` → **Pass 100% (server, web, remotion)**.
+  - `npm run build` → **Compiled successfully (Turbopack, Next.js static & dynamic routes)**.
+- **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
+  - Commit, đẩy lên `origin main` và kích hoạt deploy lên Coolify theo RULE 15.
+
+---
+
 ### [SESSION-2026-11-05-17:15] Xuất Trọn Bộ File Ảnh PNG Đa Kích Thước Cho Text Logo "MTDD AI"
 
 - **Thời gian**: 2026-11-05 17:15 (Múi giờ +07:00)

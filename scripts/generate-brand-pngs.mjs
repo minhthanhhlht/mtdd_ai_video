@@ -373,6 +373,44 @@ body { background: #ffffff; width: 2048px; height: 2048px; }
     path.join(publicBrandDir, 'logo-am-ban.png')
   );
 
+  // Tạo file favicon.ico đa phân giải (16, 32, 48)
+  const icoSizes = [16, 32, 48];
+  const icoBuffers = [];
+  const blueIconMaster = tempMasterPaths['master-square-blue.png'];
+  for (const s of icoSizes) {
+    const buf = await sharp(blueIconMaster)
+      .resize(s, s, { kernel: sharp.kernel.lanczos3 })
+      .png({ compressionLevel: 9 })
+      .toBuffer();
+    icoBuffers.push({ size: s, buf });
+  }
+  const icoHeader = Buffer.alloc(6);
+  icoHeader.writeUInt16LE(0, 0);
+  icoHeader.writeUInt16LE(1, 2);
+  icoHeader.writeUInt16LE(icoBuffers.length, 4);
+
+  let icoOffset = 6 + 16 * icoBuffers.length;
+  const icoDirEntries = [];
+  for (const item of icoBuffers) {
+    const entry = Buffer.alloc(16);
+    entry.writeUInt8(item.size, 0);
+    entry.writeUInt8(item.size, 1);
+    entry.writeUInt8(0, 2);
+    entry.writeUInt8(0, 3);
+    entry.writeUInt16LE(1, 4);
+    entry.writeUInt16LE(32, 6);
+    entry.writeUInt32LE(item.buf.length, 8);
+    entry.writeUInt32LE(icoOffset, 12);
+    icoDirEntries.push(entry);
+    icoOffset += item.buf.length;
+  }
+  const finalIco = Buffer.concat([icoHeader, ...icoDirEntries, ...icoBuffers.map((p) => p.buf)]);
+  fs.writeFileSync(path.join(repoRoot, 'apps', 'web', 'public', 'favicon.ico'), finalIco);
+  fs.writeFileSync(path.join(assetsBrandDir, 'favicon.ico'), finalIco);
+
+  // Nướng base64 data URI vào apps/web/src/lib/brand.ts
+  execSync('node apps/web/scripts/build-brand.mjs', { stdio: 'inherit', cwd: repoRoot });
+
   // Dọn dẹp master temps
   for (const p of Object.values(tempMasterPaths)) {
     if (fs.existsSync(p)) fs.unlinkSync(p);

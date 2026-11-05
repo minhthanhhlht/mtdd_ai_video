@@ -15,10 +15,17 @@ import { AuthProvider } from "@/lib/authContext";
 export const metadata: Metadata = {
   title: "AI Edit Video - MTDD AI",
   description: "Edit video tự động bằng AI",
-  // Data URI biên dịch vào bundle chứ không trỏ tới /brand/favicon.png: chép đè
-  // file trong public/ không đổi được favicon của ứng dụng nữa. Xem
-  // scripts/build-brand.mjs.
-  icons: { icon: FAVICON },
+  icons: {
+    icon: [
+      { url: FAVICON, type: "image/png" },
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/brand/favicon.png", type: "image/png", sizes: "64x64" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: [
+      { url: "/brand/mtdd-ai-icon-blue-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+  },
 };
 
 /** Chống FOUC: áp data-theme trước khi paint. Mặc định light. */

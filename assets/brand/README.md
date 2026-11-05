@@ -104,10 +104,21 @@ Các kích thước có sẵn cho từng phong cách:
 
 ---
 
-## 3. Cách tái tạo hoặc mở rộng kích thước mới
+## 3. Favicon & Web App Icons
+
+Ứng dụng web được cấu hình đồng bộ favicon qua các chuẩn sau:
+- **Favicon nhúng bundle (`FAVICON`)**: Base64 data URI được nướng trực tiếp vào bundle qua `apps/web/src/lib/brand.ts` để hiển thị tức thì không phụ thuộc network.
+- **`favicon.ico` chuẩn đa phân giải**: File `apps/web/public/favicon.ico` chứa đồng thời 3 kích thước 16x16, 32x32 và 48x48 cho mọi trình duyệt và bookmark.
+- **`favicon.png`**: `apps/web/public/brand/favicon.png` (64x64) cho các trình duyệt hiện đại.
+- **Apple Touch Icon**: `apps/web/public/brand/mtdd-ai-icon-blue-512x512.png` cho màn hình chính iOS/iPadOS và Android PWA.
+
+---
+
+## 4. Cách tái tạo hoặc mở rộng kích thước mới
 
 Nếu trong tương lai cần kết xuất thêm kích thước hoặc định dạng khác, chạy lệnh:
 ```bash
 node scripts/generate-brand-pngs.mjs
 ```
 Script này tự động sử dụng Headless Chrome và thư viện `sharp` để xuất tất cả các biến thể với độ phân giải và chất lượng cao nhất.
+
