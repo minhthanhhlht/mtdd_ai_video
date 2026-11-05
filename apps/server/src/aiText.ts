@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import { query } from "@anthropic-ai/claude-agent-sdk";
+import { agentEnv, isOpenRouterModel } from "./agentPolicy.js";
 import { hasClaudeAuth, repoRoot } from "./config.js";
 import { addTokenUsage } from "./db.js";
 import { HttpError } from "./util.js";
@@ -31,7 +32,16 @@ export async function generateText(input: {
   /** Model Claude cụ thể - bỏ trống để dùng mặc định của SDK */
   model?: string | null;
 }): Promise<AiTextResult> {
-  if (!hasClaudeAuth()) {
+  const isRouter = isOpenRouterModel(input.model);
+  const openrouterKey = (process.env.OPENROUTER_API_KEY ?? "").trim();
+  if (isRouter && !openrouterKey) {
+    throw new HttpError(
+      503,
+      "NO_OPENROUTER_KEY",
+      `Chưa có OPENROUTER_API_KEY để chạy model "${input.model}". Vui lòng cấu hình OPENROUTER_API_KEY.`,
+    );
+  }
+  if (!isRouter && !hasClaudeAuth()) {
     throw new HttpError(
       503,
       "NO_CLAUDE_AUTH",
@@ -46,6 +56,7 @@ export async function generateText(input: {
     allowedTools: [],
     settingSources: [],
     permissionMode: "default",
+    env: agentEnv(input.model),
   };
   if (input.model) options.model = input.model;
 

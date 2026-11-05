@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { query, type Query } from "@anthropic-ai/claude-agent-sdk";
 import { hasClaudeAuth, paths, repoRoot } from "./config.js";
-import { agentEnv, checkAgentToolUse } from "./agentPolicy.js";
+import { agentEnv, checkAgentToolUse, isOpenRouterModel } from "./agentPolicy.js";
 import * as db from "./db.js";
 import { broadcast } from "./events.js";
 import { normOutput, readMeta } from "./meta.js";
@@ -420,12 +420,37 @@ function draftGateResumeMessage(sessionId: string): string | null {
  * Không bao giờ throw; mọi lỗi đẩy qua SSE kind "error".
  * opts.continueRun = lượt auto-resume: GIỮ NGUYÊN runStartedAt + đếm resumeAttempts.
  */
+function resolveModelAlias(model?: string | null): string | undefined {
+  if (!model) return undefined;
+  if (model === "anthropic/claude-3.5-sonnet" || model === "anthropic/claude-3.7-sonnet") {
+    return "anthropic/claude-sonnet-4.5";
+  }
+  if (model === "google/gemini-2.0-flash-001") {
+    return "google/gemini-2.5-flash";
+  }
+  return model;
+}
+
 export async function runAgent(
   sessionId: string,
   message: string,
   opts: { continueRun?: boolean } = {},
 ): Promise<void> {
-  if (!hasClaudeAuth()) {
+  const session = db.getChatSession(sessionId);
+  const isRouter = isOpenRouterModel(session?.model);
+  const openrouterKey = (process.env.OPENROUTER_API_KEY ?? "").trim();
+
+  if (isRouter && !openrouterKey) {
+    emit({
+      sessionId,
+      kind: "error",
+      error: `Chưa có OPENROUTER_API_KEY để chạy model "${session?.model}". Vui lòng nhập API key tại trang Kết nối (hoặc file .env) rồi thử lại.`,
+    });
+    emit({ sessionId, kind: "done", status: "error" });
+    return;
+  }
+
+  if (!isRouter && !hasClaudeAuth()) {
     emit({
       sessionId,
       kind: "error",
@@ -452,8 +477,7 @@ export async function runAgent(
   // Chỉ ghi message vào lịch sử khi lượt chạy THẬT SỰ bắt đầu (đã qua các guard trên)
   db.addChatMessage(sessionId, "user", "text", message);
   db.touchChatSession(sessionId);
-
-  const session = db.getChatSession(sessionId);
+  // session đã được đọc ở guard kiểm tra auth trên
   const sdkSessionId = session?.sdkSessionId ?? null;
 
   // Message mới của user = lượt chạy mới: runStartedAt=now, runFinishedAt=null, resumeAttempts=0.
@@ -489,7 +513,7 @@ export async function runAgent(
     disallowedTools: ["WebFetch", "WebSearch"],
     // Gỡ khóa bí mật (Gemini, AIEV_API_TOKEN...) khỏi môi trường agent: `env`,
     // `printenv`, `node -e process.env` trong Bash không còn gì để rò
-    env: agentEnv(),
+    env: agentEnv(session?.model),
     // "Bash" trần trong allowedTools nghĩa là allowlist settings.json không giới
     // hạn được lệnh nào - lớp chặn thật nằm ở agentPolicy.ts. Deny của hook thắng
     // mọi luật allow; trả {} = không can thiệp, để luật quyền bình thường quyết.
@@ -521,7 +545,8 @@ export async function runAgent(
   };
   if (sdkSessionId) options.resume = sdkSessionId;
   // Model/effort người dùng đã chọn cho phiên (docs/API.md mục AI Providers) - chỉ set khi có
-  if (session?.model) options.model = session.model;
+  const resolvedModel = resolveModelAlias(session?.model);
+  if (resolvedModel) options.model = resolvedModel;
   if (session?.effort) options.effort = session.effort;
 
   let q: Query;
@@ -627,12 +652,15 @@ export async function runAgent(
         }
         const finalText =
           typeof msg.result === "string" && msg.result.length > 0 ? msg.result : textBuffer;
-        if (msg.subtype && msg.subtype !== "success") {
+        const isApiError =
+          typeof msg.result === "string" &&
+          (msg.result.startsWith("API Error:") || msg.result.startsWith("Error:"));
+        if ((msg.subtype && msg.subtype !== "success") || isApiError) {
           hadError = true;
           emit({
             sessionId,
             kind: "error",
-            error: `Agent kết thúc bất thường (${msg.subtype})`,
+            error: isApiError ? (msg.result as string) : `Agent kết thúc bất thường (${msg.subtype})`,
           });
         }
         if (finalText) {

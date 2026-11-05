@@ -98,7 +98,12 @@ const SCRIPT_EXT_RE = /\.(m?js|cjs|ts|mts|py|sh|bash|ps1|psm1|bat|cmd)$/i;
  * Môi trường cho agent: childEnv() (PATH có .runtime/bin - ffmpeg do Doctor tải
  * về - và TEMP trong repo) đã gỡ khóa bí mật. Truyền vào `options.env` của query().
  */
-export function agentEnv(): Record<string, string | undefined> {
+export function isOpenRouterModel(model?: string | null): boolean {
+  if (!model) return false;
+  return model.includes("/");
+}
+
+export function agentEnv(model?: string | null): Record<string, string | undefined> {
   const env: Record<string, string | undefined> = {};
   for (const [k, v] of Object.entries(childEnv())) {
     if (SECRET_ENV_RE.test(k) && !CLAUDE_AUTH_ENV.has(k.toUpperCase())) continue;
@@ -106,10 +111,20 @@ export function agentEnv(): Record<string, string | undefined> {
   }
   // OpenRouter: khi có OPENROUTER_API_KEY và không có ANTHROPIC_API_KEY,
   // định tuyến Claude Agent SDK qua OpenRouter Anthropic Messages API
-  if (process.env.OPENROUTER_API_KEY && !process.env.ANTHROPIC_API_KEY) {
-    env.ANTHROPIC_BASE_URL = process.env.ANTHROPIC_BASE_URL || "https://openrouter.ai/api";
-    env.ANTHROPIC_AUTH_TOKEN = process.env.OPENROUTER_API_KEY;
-    env.ANTHROPIC_API_KEY = "";
+  const isRouterModel = isOpenRouterModel(model);
+  const openrouterKey = (process.env.OPENROUTER_API_KEY ?? "").trim();
+  const hasAnthropic = Boolean(
+    process.env.ANTHROPIC_API_KEY?.trim() || process.env.CLAUDE_CODE_OAUTH_TOKEN?.trim()
+  );
+
+  // OpenRouter: khi model chỉ định là OpenRouter HOẶC máy chỉ có OPENROUTER_API_KEY (không có Anthropic)
+  if (isRouterModel || (!hasAnthropic && openrouterKey)) {
+    if (openrouterKey) {
+      env.ANTHROPIC_BASE_URL = process.env.ANTHROPIC_BASE_URL || "https://openrouter.ai/api";
+      env.ANTHROPIC_AUTH_TOKEN = openrouterKey;
+      env.ANTHROPIC_API_KEY = "";
+      delete env.CLAUDE_CODE_OAUTH_TOKEN;
+    }
   }
   // CLI tự gỡ khóa Anthropic/cloud khỏi môi trường của Bash, hook, MCP stdio
   env.CLAUDE_CODE_SUBPROCESS_ENV_SCRUB = "1";

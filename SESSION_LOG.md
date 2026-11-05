@@ -6,6 +6,43 @@
 
 ---
 
+### [SESSION-2026-11-05-14:30] Sửa Lỗi "Agent gặp lỗi" Khi Sử Dụng Model OpenRouter: Định Tuyến Độc Lập Qua OpenRouter Anthropic Messages API
+
+- **Thời gian**: 2026-11-05 14:30 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**: "khi tôi chọn model của openrouter và bấm bắt đầu edit. Có lỗi hiển thị: Agent gặp lỗi. hãy kiểm tra và sửa nó"
+- **Danh sách tệp tin đã thay đổi (Files Changed)**:
+  - `apps/server/src/agentPolicy.ts`:
+    - Thêm hàm `isOpenRouterModel(model)` để phát hiện chính xác model dạng `provider/model-name` (chứa `/`).
+    - Cập nhật `agentEnv(model)`: Khi model được chọn là OpenRouter (hoặc máy chỉ có `OPENROUTER_API_KEY` mà không có Anthropic), tự động cấu hình các biến môi trường cho Claude Agent SDK: `ANTHROPIC_BASE_URL="https://openrouter.ai/api"`, `ANTHROPIC_AUTH_TOKEN=openrouterKey`, `ANTHROPIC_API_KEY=""` và xóa `CLAUDE_CODE_OAUTH_TOKEN`.
+    - Khắc phục triệt để điều kiện cũ `if (process.env.OPENROUTER_API_KEY && !process.env.ANTHROPIC_API_KEY)` - điều kiện này khiến mọi request dùng OpenRouter bị gửi nhầm về server Anthropic khi cả hai key đều có trong `.env`.
+  - `apps/server/src/agent.ts`:
+    - Thêm hàm `resolveModelAlias(model)` tự động ánh xạ các model đã ngừng hoạt động (retired) trên OpenRouter (`anthropic/claude-3.5-sonnet`, `anthropic/claude-3.7-sonnet` -> `anthropic/claude-sonnet-4.5`; `google/gemini-2.0-flash-001` -> `google/gemini-2.5-flash`).
+    - Kiểm tra xác thực riêng biệt cho OpenRouter: Nếu phiên dùng model OpenRouter mà thiếu `OPENROUTER_API_KEY`, báo lỗi rõ ràng hướng dẫn người dùng thay vì kết thúc bất thường.
+    - Truyền `session?.model` vào `agentEnv(session?.model)` và gắn `resolveModelAlias(session?.model)` vào `options.model`.
+    - Bắt lỗi chi tiết trong luồng `msg.type === "result"`: Nếu `msg.result` bắt đầu bằng `API Error:` hoặc `Error:` hoặc `msg.subtype !== "success"`, trích xuất thông điệp lỗi cụ thể trả về UI SSE.
+  - `apps/server/src/routes/providers.ts`:
+    - Cập nhật danh sách `OPENROUTER_MODELS` đang hoạt động: `google/gemini-2.5-pro`, `google/gemini-2.5-flash`, `deepseek/deepseek-chat`, `deepseek/deepseek-r1`, `anthropic/claude-sonnet-4.5`, `anthropic/claude-sonnet-5`, `openai/gpt-4o`.
+  - `apps/server/src/aiText.ts`:
+    - Cập nhật `generateText`: Hỗ trợ kiểm tra `isOpenRouterModel(input.model)` và nạp `agentEnv(input.model)` vào `options.env`.
+  - `apps/server/src/routes/skills.ts`:
+    - Nạp `agentEnv()` vào `options.env` trong route sinh skill.
+- **Chi tiết các thay đổi kỹ thuật (Implementation Details)**:
+  - **Nguyên nhân gốc rễ**:
+    1. Trong `agentPolicy.ts`, logic kích hoạt OpenRouter bị chặn bởi điều kiện `!process.env.ANTHROPIC_API_KEY`. Do máy chủ có cả 2 keys trong file `.env`, SDK luôn kết nối về Anthropic (`api.anthropic.com`), làm Anthropic từ chối model OpenRouter (ví dụ `google/gemini-2.5-pro`) với lỗi 400 Bad Request ("model not found").
+    2. Một số model ID cũ của OpenRouter như `anthropic/claude-3.5-sonnet` và `3.7-sonnet` đã bị OpenRouter thay thế, dẫn tới lỗi nếu phiên cũ vẫn lưu ID này.
+  - **Biện pháp xử lý**:
+    - Tách biệt hoàn toàn việc kích hoạt theo model: Bất kể máy chủ có hay không có `ANTHROPIC_API_KEY`, chỉ cần người dùng chọn model OpenRouter (`isOpenRouterModel(model)`), SDK sẽ được định tuyến chuẩn xác tới OpenRouter Anthropic Messages API (`https://openrouter.ai/api`).
+    - Tự động chuyển đổi alias cho các phiên làm việc cũ sang model hoạt động tương đương.
+- **Kết quả kiểm định & Kiểm thử (Verification & Test Results)**:
+  - `node apps/web/scripts/check-design-system.mjs` → **Pass (Hệ thống thiết kế sạch)**.
+  - `node apps/web/scripts/check-i18n.mjs` → **Pass (Đủ 2244 keys, 0 missing)**.
+  - `npm run typecheck` → **Pass (Cả server, web, remotion-engine)**.
+  - `npm run build` → **Compiled successfully**.
+- **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
+  - Đẩy commit lên `origin main` và kích hoạt deploy lên Coolify theo RULE 15.
+
+---
+
 ### [SESSION-2026-11-05-13:30] Khắc phục Lỗi Upload Ảnh/Video: Ủy Quyền Cho Phiên Đăng Nhập & Đồng Bộ CORS Session Token
 
 - **Thời gian**: 2026-11-05 13:30 (Múi giờ +07:00)

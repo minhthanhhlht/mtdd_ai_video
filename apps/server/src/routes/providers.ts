@@ -42,11 +42,11 @@ export const CLAUDE_MODEL_IDS: string[] = CLAUDE_MODELS.map((m) => m.id);
 
 export const OPENROUTER_MODELS = [
   { id: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro (Google)" },
-  { id: "google/gemini-2.0-flash-001", label: "Gemini 2.0 Flash (Nhanh & Rẻ)" },
+  { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash (Nhanh & Rẻ)" },
   { id: "deepseek/deepseek-chat", label: "DeepSeek V3 (Siêu tiết kiệm)" },
   { id: "deepseek/deepseek-r1", label: "DeepSeek R1 (Suy luận sâu)" },
-  { id: "anthropic/claude-3.5-sonnet", label: "Claude 3.5 Sonnet (OpenRouter)" },
-  { id: "anthropic/claude-3.7-sonnet", label: "Claude 3.7 Sonnet (OpenRouter)" },
+  { id: "anthropic/claude-sonnet-4.5", label: "Claude Sonnet 4.5 (OpenRouter)" },
+  { id: "anthropic/claude-sonnet-5", label: "Claude Sonnet 5 (OpenRouter)" },
   { id: "openai/gpt-4o", label: "GPT-4o (OpenAI)" },
 ];
 
