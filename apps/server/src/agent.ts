@@ -431,6 +431,16 @@ function resolveModelAlias(model?: string | null): string | undefined {
   return model;
 }
 
+function formatAgentError(raw: string): string {
+  if (raw.includes("402") || raw.includes("exceed your available credits") || raw.includes("credits")) {
+    return `Tài khoản OpenRouter không đủ số dư credits (Lỗi 402: Payment Required). Vui lòng nạp thêm credit tại https://openrouter.ai/credits hoặc chọn model tiết kiệm hơn (như Gemini 2.5 Flash / DeepSeek V3).\nChi tiết: ${raw}`;
+  }
+  if (raw.includes("429") || raw.includes("rate limit")) {
+    return `Model AI đang bị giới hạn tần suất yêu cầu (Rate Limit 429). Vui lòng chờ 1-2 phút rồi thử lại.\nChi tiết: ${raw}`;
+  }
+  return raw;
+}
+
 export async function runAgent(
   sessionId: string,
   message: string,
@@ -657,10 +667,11 @@ export async function runAgent(
           (msg.result.startsWith("API Error:") || msg.result.startsWith("Error:"));
         if ((msg.subtype && msg.subtype !== "success") || isApiError) {
           hadError = true;
+          const rawErr = isApiError ? (msg.result as string) : `Agent kết thúc bất thường (${msg.subtype})`;
           emit({
             sessionId,
             kind: "error",
-            error: isApiError ? (msg.result as string) : `Agent kết thúc bất thường (${msg.subtype})`,
+            error: formatAgentError(rawErr),
           });
         }
         if (finalText) {
@@ -676,10 +687,11 @@ export async function runAgent(
     if (textBuffer && !resultSaved) {
       db.addChatMessage(sessionId, "assistant", "text", textBuffer);
     }
+    const rawErr = err instanceof Error ? err.message : String(err);
     emit({
       sessionId,
       kind: "error",
-      error: err instanceof Error ? err.message : String(err),
+      error: formatAgentError(rawErr),
     });
   } finally {
     running.delete(sessionId);

@@ -6,6 +6,27 @@
 
 ---
 
+### [SESSION-2026-11-05-15:25] Chẩn Đoán Lỗi 402 Out of Credits OpenRouter & Bổ Sung Định Dạng Lỗi Thân Thiện
+
+- **Thời gian**: 2026-11-05 15:25 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**: "Claude Code returned an error result: API Error: 402 This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests settle, or add credits. t dùng model cuae openrouter mà nhỉ sao báo lỗi này nhỉ"
+- **Nguyên nhân kỹ thuật**:
+  - Kiểm tra trực tiếp API credits của OpenRouter (`GET https://openrouter.ai/api/v1/credits`): `total_credits: $5.00`, `total_usage: $4.37`, số dư còn lại chỉ là **$0.629**.
+  - Khi người dùng chọn model đắt/nặng như `google/gemini-2.5-pro` với ngữ cảnh dựng video lớn (prompt ~10-15k tokens + thinking/output tokens tối đa), OpenRouter yêu cầu mức ký quỹ giữ chỗ (reserve buffer) lớn hơn số dư $0.629 nên OpenRouter từ chối với lỗi `402 Payment Required`.
+  - Các model siêu tiết kiệm như `deepseek/deepseek-chat` và `google/gemini-2.5-flash` chỉ cần buffer rất nhỏ (~$0.01 - $0.02) và đã được kiểm thử chạy thành công 100% với số dư hiện tại.
+- **Danh sách tệp tin đã thay đổi (Files Changed)**:
+  - `apps/server/src/agent.ts`:
+    - Bổ sung hàm `formatAgentError(raw)` tự động nhận diện mã lỗi `402` (hết credit) hoặc `429` (rate limit) từ OpenRouter/Anthropic và chuyển thành thông điệp tiếng Việt rõ ràng, kèm hướng dẫn nạp thêm tiền hoặc chọn model rẻ hơn (`Gemini 2.5 Flash`, `DeepSeek V3`).
+- **Kết quả kiểm định & Kiểm thử (Verification & Test Results)**:
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ**.
+  - `node apps/web/scripts/check-i18n.mjs` → **Đầy đủ 2.244 key**.
+  - `npm run typecheck` → **Pass 100%**.
+  - `npm run build` → **Compiled successfully**.
+- **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
+  - Commit và đẩy lên GitHub `main`, kích hoạt deploy lên Coolify theo RULE 15.
+
+---
+
 ### [SESSION-2026-11-05-15:00] Khắc Phục Lỗi "bubblewrap is required" Khi Khởi Động Claude Agent SDK Trên Linux/Docker
 
 - **Thời gian**: 2026-11-05 15:00 (Múi giờ +07:00)
