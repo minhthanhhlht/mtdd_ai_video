@@ -358,11 +358,16 @@ function ScriptModelSelect({
   const { t } = useT();
   const { providers } = useProviders();
   const claude = providers?.find((p) => p.id === "claude");
+  const openrouter = providers?.find((p) => p.id === "openrouter");
   const { models: liveModels, load } = useClaudeModels();
   // Chưa fetch live → tạm dùng danh sách tĩnh từ /api/providers
-  const models = liveModels ?? claude?.models ?? [];
+  const cModels = liveModels ?? claude?.models ?? [];
+  const orModels = openrouter?.models ?? [];
   // Model đã lưu không (chưa) nằm trong danh sách → vẫn hiện bằng id thô
-  const missing = value !== "" && !models.some((m) => m.id === value);
+  const missing =
+    value !== "" &&
+    !cModels.some((m) => m.id === value) &&
+    !orModels.some((m) => m.id === value);
 
   return (
     <Field
@@ -383,11 +388,22 @@ function ScriptModelSelect({
       >
         <option value="">{t("ttv.script-model-default")}</option>
         {missing && <option value={value}>{value}</option>}
-        {models.map((m) => (
-          <option key={m.id} value={m.id}>
-            {m.label}
-          </option>
-        ))}
+        {orModels.length > 0 && (
+          <optgroup label="OpenRouter">
+            {orModels.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </optgroup>
+        )}
+        <optgroup label="Claude">
+          {cModels.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.label}
+            </option>
+          ))}
+        </optgroup>
       </select>
     </Field>
   );

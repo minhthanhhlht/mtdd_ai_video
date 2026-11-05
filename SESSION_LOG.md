@@ -6,6 +6,44 @@
 
 ---
 
+### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
+
+- **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**: "Bạn có thể lấy toàn bộ model của openrouter được không. Hiện tại t chỉ thấy có mấy model thôi"
+- **Nguyên nhân kỹ thuật & Kiến trúc**:
+  - Trước đây, ứng dụng chỉ cấu hình cứng 7 model OpenRouter mẫu trong hằng số `OPENROUTER_MODELS` tại `apps/server/src/routes/providers.ts`.
+  - OpenRouter sở hữu danh mục trực tuyến liên tục cập nhật với hơn 450+ model từ hàng chục nhà cung cấp khác nhau (OpenAI, Google, DeepSeek, Anthropic, Meta Llama, Mistral, Qwen, xAI Grok...).
+  - Việc tải 450+ model nếu không có cơ chế phân loại rõ ràng sẽ gây rối loạn UI/UX trên thẻ `<select>` của trình duyệt. Do đó cần một kiến trúc kết hợp:
+    1. **Tầng Server**: Tích hợp hàm `fetchLiveOpenRouterModels()` truy vấn API chính thức `https://openrouter.ai/api/v1/models` với cơ chế in-memory cache 1 giờ (60 phút) để tối ưu hiệu năng và độ trễ.
+    2. **Phân nhóm thông minh (Optgroup Category Mapping)**: Tự động phân loại 450+ model thành 11 nhóm khoa học:
+       - `⭐ OpenRouter — Nổi bật & Khuyên dùng` (Featured)
+       - `OpenRouter — Miễn phí (Free)` (Các model kết thúc bằng `:free` hoặc chi phí 0đ)
+       - `OpenRouter — Google` (Gemini 2.5 Pro, Flash, v.v.)
+       - `OpenRouter — OpenAI` (GPT-4o, o1, o3-mini...)
+       - `OpenRouter — DeepSeek` (V3, R1...)
+       - `OpenRouter — Anthropic` (Claude 3.5 Sonnet, 3.7 Sonnet...)
+       - `OpenRouter — Meta / Llama` (Llama 3.3 70B...)
+       - `OpenRouter — Mistral`
+       - `OpenRouter — Qwen`
+       - `OpenRouter — xAI (Grok)`
+       - `OpenRouter — Các hãng khác`
+    3. **Mở rộng Regex Validation**: Cập nhật hàm `isValidModel` tại backend hỗ trợ tiền tố dấu ngã `~` và hậu tố nhãn `:free` theo định dạng của OpenRouter (`/^[~a-z0-9_-]+\/[a-z0-9_.:-]+$/i`).
+    4. **Tầng Client & UI**: Bổ sung endpoint `GET /api/providers/openrouter/models`, hook `useOpenRouterModels()` tải lazy khi user tương tác vào select box, và render nhóm `optgroup` đồng bộ trên `AiModelBlock`, `AiModelInlineRow` (ModelPicker) và `ScriptModelSelect` (Text-to-Video).
+- **Danh sách tệp tin đã thay đổi (Files Changed)**:
+  - `apps/server/src/routes/providers.ts`: Bổ sung `fetchLiveOpenRouterModels()`, cache 1 giờ, endpoint `GET /api/providers/openrouter/models`, cập nhật `GET /api/providers` kèm nhãn phân nhóm, và mở rộng regex validation.
+  - `apps/web/src/lib/api.ts`: Cập nhật `ProviderModel` thêm thuộc tính `group?: string`, bổ sung interface `OpenRouterModels` và API helper `getOpenRouterModels()`.
+  - `apps/web/src/components/ModelPicker.tsx`: Bổ sung `useOpenRouterModels()`, helper `groupOpenRouterModels()`, cập nhật `AiModelBlock` và `AiModelInlineRow` render `<optgroup>` theo 11 danh mục.
+  - `apps/web/src/app/text-to-video/[id]/page.tsx`: Cập nhật `ScriptModelSelect` hiển thị đầy đủ cả Claude và OpenRouter models kèm phân nhóm rõ ràng.
+- **Kết quả kiểm định & Kiểm thử (Verification & Test Results)**:
+  - `node apps/web/scripts/check-design-system.mjs` → **Hệ thống thiết kế: sạch (100% tuân thủ token & thang chữ)**.
+  - `node apps/web/scripts/check-i18n.mjs` → **Đủ 2.244 key song ngữ vi/en**.
+  - `npm run typecheck` → **Pass 100% (server, web, remotion-engine)**.
+  - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
+- **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
+  - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
 ### [SESSION-2026-11-05-19:35] Cập Nhật Đồng Bộ Favicon Mới Chuẩn MTDD AI Vào Ứng Dụng
 
 - **Thời gian**: 2026-11-05 19:35 (Múi giờ +07:00)

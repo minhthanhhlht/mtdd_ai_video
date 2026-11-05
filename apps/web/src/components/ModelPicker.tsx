@@ -11,7 +11,7 @@
  */
 
 import { AlertTriangle, Info } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/Badge";
 import { Banner } from "@/components/Banner";
 import { Field } from "@/components/Field";
@@ -19,6 +19,7 @@ import { InfoHint } from "@/components/InfoHint";
 import { Panel } from "@/components/Panel";
 import {
   getClaudeModels,
+  getOpenRouterModels,
   getProviders,
   type AgentEffort,
   type Provider,
@@ -144,6 +145,38 @@ export function useClaudeModels() {
   return { models, load };
 }
 
+/**
+ * Danh sách toàn bộ model OpenRouter live - lazy: fetch khi user chạm vào select Model
+ * lần đầu (load()). Server cache 1 giờ; chưa fetch xong thì UI dùng danh sách từ /api/providers.
+ */
+export function useOpenRouterModels() {
+  const [models, setModels] = useState<ProviderModel[] | null>(null);
+  const startedRef = useRef(false);
+
+  const load = useCallback(async () => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    try {
+      const { models } = await getOpenRouterModels();
+      setModels(models);
+    } catch {
+      startedRef.current = false;
+    }
+  }, []);
+
+  return { models, load };
+}
+
+function groupOpenRouterModels(models: ProviderModel[]): Record<string, ProviderModel[]> {
+  const groups: Record<string, ProviderModel[]> = {};
+  for (const m of models) {
+    const g = m.group || "OpenRouter";
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(m);
+  }
+  return groups;
+}
+
 interface PickerProps {
   model: string;
   effort: AgentEffort;
@@ -170,9 +203,16 @@ export function AiModelBlock({
   const gemini = providers?.find((p) => p.id === "gemini");
   const openrouter = providers?.find((p) => p.id === "openrouter");
   const { models: liveModels, load: loadClaudeModels } = useClaudeModels();
+  const { models: liveOrModels, load: loadOpenRouterModels } = useOpenRouterModels();
+  const loadAllModels = useCallback(() => {
+    loadClaudeModels();
+    loadOpenRouterModels();
+  }, [loadClaudeModels, loadOpenRouterModels]);
+
   // Chưa fetch live → tạm dùng danh sách tĩnh từ /api/providers
   const cModels = liveModels ?? claudeModels(claude);
-  const orModels = openrouter?.models ?? [];
+  const orModels = liveOrModels ?? openrouter?.models ?? [];
+  const groupedOrModels = useMemo(() => groupOpenRouterModels(orModels), [orModels]);
   const allKnownModels = [...cModels, ...orModels];
   // Model đã lưu không (chưa) nằm trong danh sách → vẫn hiển thị bằng id thô
   const modelMissing = model !== "" && !allKnownModels.some((m) => m.id === model);
@@ -230,19 +270,19 @@ export function AiModelBlock({
             className="input"
             value={model}
             disabled={disabled}
-            onFocus={loadClaudeModels}
+            onFocus={loadAllModels}
             onChange={(e) => onModelChange(e.target.value)}
           >
             {modelMissing && <option value={model}>{model}</option>}
-            {orModels.length > 0 && (
-              <optgroup label="OpenRouter (Gemini Pro, DeepSeek...)">
-                {orModels.map((m) => (
+            {Object.entries(groupedOrModels).map(([groupName, groupList]) => (
+              <optgroup key={groupName} label={groupName}>
+                {groupList.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.label}
                   </option>
                 ))}
               </optgroup>
-            )}
+            ))}
             <optgroup label="Claude (Anthropic)">
               {cModels.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -315,9 +355,16 @@ export function AiModelInlineRow({
   const gemini = providers?.find((p) => p.id === "gemini");
   const openrouter = providers?.find((p) => p.id === "openrouter");
   const { models: liveModels, load: loadClaudeModels } = useClaudeModels();
+  const { models: liveOrModels, load: loadOpenRouterModels } = useOpenRouterModels();
+  const loadAllModels = useCallback(() => {
+    loadClaudeModels();
+    loadOpenRouterModels();
+  }, [loadClaudeModels, loadOpenRouterModels]);
+
   // Chưa fetch live → tạm dùng danh sách tĩnh từ /api/providers
   const cModels = liveModels ?? claudeModels(claude);
-  const orModels = openrouter?.models ?? [];
+  const orModels = liveOrModels ?? openrouter?.models ?? [];
+  const groupedOrModels = useMemo(() => groupOpenRouterModels(orModels), [orModels]);
   const allKnownModels = [...cModels, ...orModels];
   // Model đã lưu không (chưa) nằm trong danh sách → vẫn hiển thị bằng id thô
   const modelMissing = model !== "" && !allKnownModels.some((m) => m.id === model);
@@ -331,19 +378,19 @@ export function AiModelInlineRow({
         aria-label={t("model.aria-model")}
         value={model}
         disabled={disabled}
-        onFocus={loadClaudeModels}
+        onFocus={loadAllModels}
         onChange={(e) => onModelChange(e.target.value)}
       >
         {modelMissing && <option value={model}>{model}</option>}
-        {orModels.length > 0 && (
-          <optgroup label="OpenRouter (Gemini Pro, DeepSeek...)">
-            {orModels.map((m) => (
+        {Object.entries(groupedOrModels).map(([groupName, groupList]) => (
+          <optgroup key={groupName} label={groupName}>
+            {groupList.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.label}
               </option>
             ))}
           </optgroup>
-        )}
+        ))}
         <optgroup label="Claude (Anthropic)">
           {cModels.map((m) => (
             <option key={m.id} value={m.id}>

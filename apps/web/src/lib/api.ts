@@ -513,6 +513,7 @@ export type ProviderRole = "edit" | "chat" | "image";
 export interface ProviderModel {
   id: string;
   label: string;
+  group?: string;
 }
 
 export interface Provider {
@@ -1665,6 +1666,18 @@ export interface ClaudeModels {
  */
 export const getClaudeModels = () =>
   request<ClaudeModels>("/api/providers/claude/models");
+
+/** Kết quả GET /api/providers/openrouter/models. */
+export interface OpenRouterModels {
+  source: "openrouter" | "static";
+  models: ProviderModel[];
+}
+
+/**
+ * Danh sách toàn bộ model OpenRouter MỚI NHẤT (live từ OpenRouter API, server cache 1h).
+ */
+export const getOpenRouterModels = () =>
+  request<OpenRouterModels>("/api/providers/openrouter/models");
 
 // ============ Kết nối (API key providers) ============
 

@@ -40,17 +40,178 @@ export const CLAUDE_MODELS = [
 
 export const CLAUDE_MODEL_IDS: string[] = CLAUDE_MODELS.map((m) => m.id);
 
-export const OPENROUTER_MODELS = [
-  { id: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro (Google)" },
-  { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash (Nhanh & Rẻ)" },
-  { id: "deepseek/deepseek-chat", label: "DeepSeek V3 (Siêu tiết kiệm)" },
-  { id: "deepseek/deepseek-r1-0528", label: "DeepSeek R1 (Suy luận sâu)" },
-  { id: "anthropic/claude-sonnet-4.5", label: "Claude Sonnet 4.5 (OpenRouter)" },
-  { id: "anthropic/claude-sonnet-5", label: "Claude Sonnet 5 (OpenRouter)" },
-  { id: "openai/gpt-4o", label: "GPT-4o (OpenAI)" },
+export const OPENROUTER_MODELS: Array<{ id: string; label: string; group?: string }> = [
+  { id: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro (Google)", group: "⭐ OpenRouter — Nổi bật & Khuyên dùng" },
+  { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash (Nhanh & Rẻ)", group: "⭐ OpenRouter — Nổi bật & Khuyên dùng" },
+  { id: "deepseek/deepseek-chat", label: "DeepSeek V3 (Siêu tiết kiệm)", group: "⭐ OpenRouter — Nổi bật & Khuyên dùng" },
+  { id: "deepseek/deepseek-r1-0528", label: "DeepSeek R1 (Suy luận sâu)", group: "⭐ OpenRouter — Nổi bật & Khuyên dùng" },
+  { id: "anthropic/claude-sonnet-4.5", label: "Claude Sonnet 4.5 (OpenRouter)", group: "⭐ OpenRouter — Nổi bật & Khuyên dùng" },
+  { id: "anthropic/claude-sonnet-5", label: "Claude Sonnet 5 (OpenRouter)", group: "⭐ OpenRouter — Nổi bật & Khuyên dùng" },
+  { id: "openai/gpt-4o", label: "GPT-4o (OpenAI)", group: "⭐ OpenRouter — Nổi bật & Khuyên dùng" },
 ];
 
 export const OPENROUTER_MODEL_IDS: string[] = OPENROUTER_MODELS.map((m) => m.id);
+
+// Cache danh sách toàn bộ model OpenRouter live từ API OpenRouter - 1 giờ
+let liveOpenRouterModelsCache: {
+  at: number;
+  list: Array<{ id: string; label: string; group?: string }>;
+} | null = null;
+const OPENROUTER_CACHE_MS = 60 * 60 * 1000;
+
+export async function fetchLiveOpenRouterModels(): Promise<{
+  source: "openrouter" | "static";
+  models: Array<{ id: string; label: string; group?: string }>;
+}> {
+  if (
+    liveOpenRouterModelsCache &&
+    Date.now() - liveOpenRouterModelsCache.at < OPENROUTER_CACHE_MS
+  ) {
+    return { source: "openrouter", models: liveOpenRouterModelsCache.list };
+  }
+
+  try {
+    const headers: Record<string, string> = { Accept: "application/json" };
+    const key = (process.env.OPENROUTER_API_KEY ?? "").trim();
+    if (key) {
+      headers.Authorization = `Bearer ${key}`;
+    }
+
+    const r = await fetch("https://openrouter.ai/api/v1/models", {
+      headers,
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!r.ok) {
+      return { source: "static", models: OPENROUTER_MODELS };
+    }
+
+    const json = (await r.json()) as {
+      data?: Array<{
+        id: string;
+        name?: string;
+        pricing?: { prompt?: string; completion?: string };
+      }>;
+    };
+    const rawList = json.data ?? [];
+    if (rawList.length === 0) {
+      return { source: "static", models: OPENROUTER_MODELS };
+    }
+
+    const FEATURED_SET = new Set([
+      "google/gemini-2.5-pro",
+      "google/gemini-2.5-flash",
+      "deepseek/deepseek-chat",
+      "deepseek/deepseek-r1-0528",
+      "anthropic/claude-sonnet-4.5",
+      "anthropic/claude-sonnet-5",
+      "openai/gpt-4o",
+      "openai/gpt-4o-mini",
+      "meta-llama/llama-3.3-70b-instruct",
+      "qwen/qwen-2.5-72b-instruct",
+      "mistralai/mistral-large-2411",
+      "x-ai/grok-2-1212",
+    ]);
+
+    const featuredGroup: Array<{ id: string; label: string; group?: string }> = [];
+    const freeGroup: Array<{ id: string; label: string; group?: string }> = [];
+    const googleGroup: Array<{ id: string; label: string; group?: string }> = [];
+    const openaiGroup: Array<{ id: string; label: string; group?: string }> = [];
+    const deepseekGroup: Array<{ id: string; label: string; group?: string }> = [];
+    const anthropicGroup: Array<{ id: string; label: string; group?: string }> = [];
+    const metaGroup: Array<{ id: string; label: string; group?: string }> = [];
+    const mistralGroup: Array<{ id: string; label: string; group?: string }> = [];
+    const qwenGroup: Array<{ id: string; label: string; group?: string }> = [];
+    const xaiGroup: Array<{ id: string; label: string; group?: string }> = [];
+    const otherGroup: Array<{ id: string; label: string; group?: string }> = [];
+
+    const curatedLabels: Record<string, string> = {
+      "google/gemini-2.5-pro": "Gemini 2.5 Pro (Google)",
+      "google/gemini-2.5-flash": "Gemini 2.5 Flash (Nhanh & Tiết kiệm)",
+      "deepseek/deepseek-chat": "DeepSeek V3 (Siêu tiết kiệm)",
+      "deepseek/deepseek-r1-0528": "DeepSeek R1 (Suy luận sâu)",
+      "anthropic/claude-sonnet-4.5": "Claude Sonnet 4.5 (Anthropic)",
+      "anthropic/claude-sonnet-5": "Claude Sonnet 5 (Anthropic)",
+      "openai/gpt-4o": "GPT-4o (OpenAI)",
+      "openai/gpt-4o-mini": "GPT-4o Mini (OpenAI)",
+      "meta-llama/llama-3.3-70b-instruct": "Llama 3.3 70B (Meta)",
+      "qwen/qwen-2.5-72b-instruct": "Qwen 2.5 72B (Alibaba)",
+      "mistralai/mistral-large-2411": "Mistral Large 2 (Mistral)",
+      "x-ai/grok-2-1212": "Grok 2 (xAI)",
+    };
+
+    for (const m of rawList) {
+      if (!m.id) continue;
+      const isFree =
+        m.id.endsWith(":free") ||
+        (m.pricing?.prompt === "0" && m.pricing?.completion === "0");
+      const baseLabel = curatedLabels[m.id] ?? m.name ?? m.id;
+      const label = isFree && !baseLabel.includes("[Miễn phí]") ? `[Miễn phí] ${baseLabel}` : baseLabel;
+
+      if (FEATURED_SET.has(m.id)) {
+        featuredGroup.push({ id: m.id, label, group: "⭐ OpenRouter — Nổi bật & Khuyên dùng" });
+        continue;
+      }
+      if (isFree) {
+        freeGroup.push({ id: m.id, label, group: "OpenRouter — Miễn phí (Free)" });
+        continue;
+      }
+      const lower = m.id.toLowerCase();
+      if (lower.startsWith("google/")) {
+        googleGroup.push({ id: m.id, label, group: "OpenRouter — Google" });
+      } else if (lower.startsWith("openai/")) {
+        openaiGroup.push({ id: m.id, label, group: "OpenRouter — OpenAI" });
+      } else if (lower.startsWith("deepseek/")) {
+        deepseekGroup.push({ id: m.id, label, group: "OpenRouter — DeepSeek" });
+      } else if (lower.startsWith("anthropic/")) {
+        anthropicGroup.push({ id: m.id, label, group: "OpenRouter — Anthropic" });
+      } else if (lower.startsWith("meta-llama/") || lower.startsWith("meta/")) {
+        metaGroup.push({ id: m.id, label, group: "OpenRouter — Meta / Llama" });
+      } else if (lower.startsWith("mistralai/")) {
+        mistralGroup.push({ id: m.id, label, group: "OpenRouter — Mistral" });
+      } else if (lower.startsWith("qwen/")) {
+        qwenGroup.push({ id: m.id, label, group: "OpenRouter — Qwen" });
+      } else if (lower.startsWith("x-ai/")) {
+        xaiGroup.push({ id: m.id, label, group: "OpenRouter — xAI (Grok)" });
+      } else {
+        otherGroup.push({ id: m.id, label, group: "OpenRouter — Các hãng khác" });
+      }
+    }
+
+    const sortFn = (a: { label: string }, b: { label: string }) => a.label.localeCompare(b.label);
+    freeGroup.sort(sortFn);
+    googleGroup.sort(sortFn);
+    openaiGroup.sort(sortFn);
+    deepseekGroup.sort(sortFn);
+    anthropicGroup.sort(sortFn);
+    metaGroup.sort(sortFn);
+    mistralGroup.sort(sortFn);
+    qwenGroup.sort(sortFn);
+    xaiGroup.sort(sortFn);
+    otherGroup.sort(sortFn);
+
+    const fullList = [
+      ...featuredGroup,
+      ...freeGroup,
+      ...googleGroup,
+      ...openaiGroup,
+      ...deepseekGroup,
+      ...anthropicGroup,
+      ...metaGroup,
+      ...mistralGroup,
+      ...qwenGroup,
+      ...xaiGroup,
+      ...otherGroup,
+    ];
+
+    if (fullList.length > 0) {
+      liveOpenRouterModelsCache = { at: Date.now(), list: fullList };
+      return { source: "openrouter", models: fullList };
+    }
+    return { source: "static", models: OPENROUTER_MODELS };
+  } catch {
+    return { source: "static", models: OPENROUTER_MODELS };
+  }
+}
 
 /** Mức effort của Agent SDK - expose thành "mode" trên UI: Nhanh/Chuẩn/Sâu */
 export const EFFORT_LEVELS = ["low", "medium", "high"];
@@ -255,7 +416,8 @@ async function fetchLiveClaudeModels(): Promise<{
  */
 function isValidModel(id: string): boolean {
   if (OPENROUTER_MODEL_IDS.includes(id)) return true;
-  if (/^[a-z0-9_-]+\/[a-z0-9_.-]+$/i.test(id)) return true;
+  if (/^[~a-z0-9_-]+\/[a-z0-9_.:-]+$/i.test(id)) return true;
+  if (liveOpenRouterModelsCache?.list.some((m) => m.id === id)) return true;
   return isValidClaudeModel(id);
 }
 
@@ -305,7 +467,7 @@ interface Provider {
   source: "oauth" | "api-key" | null;
   note?: string;
   roles: Array<"edit" | "chat" | "image">;
-  models: Array<{ id: string; label: string }>;
+  models: Array<{ id: string; label: string; group?: string }>;
 }
 
 function homeDir(): string {
@@ -335,7 +497,7 @@ function hasAntigravityInstall(): boolean {
 const router = Router();
 
 // GET /api/providers → { providers: Provider[] }
-router.get("/", (_req, res) => {
+router.get("/", async (_req, res) => {
   const claude: Provider = {
     id: "claude",
     label: "Claude (Anthropic)",
@@ -361,13 +523,14 @@ router.get("/", (_req, res) => {
   }
 
   const openrouterKey = (process.env.OPENROUTER_API_KEY ?? "").trim();
+  const orLive = await fetchLiveOpenRouterModels();
   const openrouter: Provider = {
     id: "openrouter",
     label: "OpenRouter (Gemini Pro, DeepSeek, Claude...)",
     connected: Boolean(openrouterKey),
     source: openrouterKey ? "api-key" : null,
     roles: ["edit", "chat"],
-    models: OPENROUTER_MODELS,
+    models: orLive.models,
   };
 
   res.json({ providers: [claude, gemini, openrouter] });
@@ -384,9 +547,9 @@ router.get("/claude/models", async (_req, res) => {
   res.json(await fetchLiveClaudeModels());
 });
 
-// GET /api/providers/openrouter/models - danh sách model OpenRouter khả dụng
-router.get("/openrouter/models", (_req, res) => {
-  res.json({ source: "static", models: OPENROUTER_MODELS });
+// GET /api/providers/openrouter/models - danh sách model OpenRouter khả dụng (live từ OpenRouter, cache 1h)
+router.get("/openrouter/models", async (_req, res) => {
+  res.json(await fetchLiveOpenRouterModels());
 });
 
 export default router;
