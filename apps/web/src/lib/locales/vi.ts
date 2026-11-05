@@ -3463,5 +3463,11 @@ export const vi: Record<string, string> = {
   "users.field-new-password": "Mật khẩu mới (tùy chọn)",
   "users.hint-leave-blank-password": "Để trống nếu bạn không muốn đổi mật khẩu.",
   "users.placeholder-new-password": "Nhập mật khẩu mới nếu muốn đổi",
+  "users.field-confirm-password": "Xác nhận mật khẩu mới",
+  "users.placeholder-confirm-password": "Nhập lại mật khẩu mới để xác nhận",
+  "users.error-password-mismatch": "Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại.",
+  "users.error-password-min-length": "Mật khẩu mới phải có ít nhất 6 ký tự.",
+  "users.show-password": "Hiện mật khẩu",
+  "users.hide-password": "Ẩn mật khẩu",
   "users.btn-save-submit": "Lưu thay đổi",
 };

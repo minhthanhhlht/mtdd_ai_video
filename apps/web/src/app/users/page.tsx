@@ -1,6 +1,8 @@
 "use client";
 
 import {
+  Eye,
+  EyeOff,
   KeyRound,
   Lock,
   Plus,
@@ -50,6 +52,7 @@ export default function UsersPage() {
   const [newUsername, setNewUsername] = useState("");
   const [newName, setNewName] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [newRole, setNewRole] = useState<UserRole>("editor");
   const [createSubmitting, setCreateSubmitting] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -60,6 +63,9 @@ export default function UsersPage() {
   const [editRole, setEditRole] = useState<UserRole>("editor");
   const [editIsActive, setEditIsActive] = useState(1);
   const [editPassword, setEditPassword] = useState("");
+  const [editConfirmPassword, setEditConfirmPassword] = useState("");
+  const [showEditPassword, setShowEditPassword] = useState(false);
+  const [showEditConfirmPassword, setShowEditConfirmPassword] = useState(false);
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
@@ -116,6 +122,9 @@ export default function UsersPage() {
     setEditRole(u.role);
     setEditIsActive(u.isActive);
     setEditPassword("");
+    setEditConfirmPassword("");
+    setShowEditPassword(false);
+    setShowEditConfirmPassword(false);
     setEditError(null);
   }
 
@@ -123,6 +132,18 @@ export default function UsersPage() {
     e.preventDefault();
     if (!editUser) return;
     setEditError(null);
+
+    if (editPassword || editConfirmPassword) {
+      if (editPassword.length < 6) {
+        setEditError(t("users.error-password-min-length"));
+        return;
+      }
+      if (editPassword !== editConfirmPassword) {
+        setEditError(t("users.error-password-mismatch"));
+        return;
+      }
+    }
+
     setEditSubmitting(true);
     try {
       await updateUser(editUser.id, {
@@ -337,16 +358,31 @@ export default function UsersPage() {
               </Field>
 
               <Field label={t("users.field-password")} htmlFor="new-password" required>
-                <input
-                  id="new-password"
-                  type="password"
-                  className="input w-full"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  minLength={6}
-                />
+                <div className="relative">
+                  <input
+                    id="new-password"
+                    type={showNewPassword ? "text" : "password"}
+                    className="input w-full pr-9"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    minLength={6}
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+                    aria-label={
+                      showNewPassword
+                        ? t("users.hide-password")
+                        : t("users.show-password")
+                    }
+                  >
+                    {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </Field>
 
               <Field label={t("users.field-role")} htmlFor="new-role" required>
@@ -447,15 +483,59 @@ export default function UsersPage() {
                 htmlFor="edit-password"
                 hint={t("users.hint-leave-blank-password")}
               >
-                <input
-                  id="edit-password"
-                  type="password"
-                  className="input w-full"
-                  value={editPassword}
-                  onChange={(e) => setEditPassword(e.target.value)}
-                  placeholder={t("users.placeholder-new-password")}
-                  minLength={6}
-                />
+                <div className="relative">
+                  <input
+                    id="edit-password"
+                    type={showEditPassword ? "text" : "password"}
+                    className="input w-full pr-9"
+                    value={editPassword}
+                    onChange={(e) => setEditPassword(e.target.value)}
+                    placeholder={t("users.placeholder-new-password")}
+                    minLength={6}
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowEditPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+                    aria-label={
+                      showEditPassword
+                        ? t("users.hide-password")
+                        : t("users.show-password")
+                    }
+                  >
+                    {showEditPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </Field>
+
+              <Field
+                label={t("users.field-confirm-password")}
+                htmlFor="edit-confirm-password"
+              >
+                <div className="relative">
+                  <input
+                    id="edit-confirm-password"
+                    type={showEditConfirmPassword ? "text" : "password"}
+                    className="input w-full pr-9"
+                    value={editConfirmPassword}
+                    onChange={(e) => setEditConfirmPassword(e.target.value)}
+                    placeholder={t("users.placeholder-confirm-password")}
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowEditConfirmPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
+                    aria-label={
+                      showEditConfirmPassword
+                        ? t("users.hide-password")
+                        : t("users.show-password")
+                    }
+                  >
+                    {showEditConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </Field>
 
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--border)]">

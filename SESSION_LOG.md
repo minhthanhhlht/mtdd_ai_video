@@ -6,6 +6,38 @@
 
 ---
 
+### [SESSION-2026-11-05-11:05] Bổ sung Xác Nhận Mật Khẩu Mới & Nút Ẩn/Hiện Mật Khẩu Trong Quản Lý Thành Viên
+
+- **Thời gian**: 2026-11-05 11:05 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**: "chỗ chỉnh sửa tài khoản lúc nhập mật khẩu mới hãy thêm nhập lại mật khẩu và có nút ẩn hiện mật khẩu"
+- **Danh sách tệp tin đã thay đổi (Files Changed)**:
+  - `apps/web/src/app/users/page.tsx`:
+    - Thêm state `editConfirmPassword`, `showEditPassword`, `showEditConfirmPassword` cho Modal Chỉnh sửa người dùng; thêm `showNewPassword` cho Modal Thêm người dùng.
+    - Cập nhật hàm `openEdit` để reset trạng thái các trường mật khẩu xác nhận và ẩn/hiện.
+    - Bổ sung xác thực hợp lệ trong `handleUpdate`: nếu có nhập mật khẩu mới, kiểm tra độ dài tối thiểu 6 ký tự (`users.error-password-min-length`) và kiểm tra mật khẩu xác nhận phải trùng khớp (`users.error-password-mismatch`).
+    - Bổ sung nút bấm ẩn/hiện mật khẩu (`Eye`/`EyeOff`) chuẩn token design system cho ô Mật khẩu mới và ô Xác nhận mật khẩu mới (cũng như ô Mật khẩu khi tạo mới).
+  - `apps/web/src/lib/locales/vi.ts`: Thêm các keys song ngữ:
+    - `users.field-confirm-password`: "Xác nhận mật khẩu mới"
+    - `users.placeholder-confirm-password`: "Nhập lại mật khẩu mới để xác nhận"
+    - `users.error-password-mismatch`: "Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại."
+    - `users.error-password-min-length`: "Mật khẩu mới phải có ít nhất 6 ký tự."
+    - `users.show-password`: "Hiện mật khẩu"
+    - `users.hide-password`: "Ẩn mật khẩu"
+  - `apps/web/src/lib/locales/en.ts`: Thêm các bản dịch tiếng Anh tương ứng đồng bộ 100%.
+- **Chi tiết các thay đổi kỹ thuật (Implementation Details)**:
+  - Giữ nguyên triết lý không đổi mật khẩu nếu để trống cả hai ô.
+  - Khi người dùng nhập vào một trong hai ô, hệ thống lập tức yêu cầu nhập đủ cả hai và kiểm tra khớp trước khi gửi lên API cập nhật.
+  - Thiết kế tuân thủ 100% RULE 01: Dùng token màu `text-[var(--text-muted)] hover:text-[var(--text)]`, icon 16px, `aria-label` đầy đủ cho khả năng tiếp cận (a11y).
+- **Kết quả kiểm định & Kiểm thử (Verification & Test Results)**:
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ**.
+  - `node apps/web/scripts/check-i18n.mjs` → **Đầy đủ 2.244 keys (0 missing)**.
+  - `npm run typecheck` → **Pass 100% không lỗi**.
+  - `npm run build` → **Compiled successfully**.
+- **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
+  - Đã commit, push lên `origin main` và kích hoạt deploy lên Coolify theo RULE 15.
+
+---
+
 ### [SESSION-2026-11-05-10:48] Chuẩn hóa Cơ Chế Ghi Nhớ Đăng Nhập (Remember Me vs Session Cookie)
 
 - **Thời gian**: 2026-11-05 10:48 (Múi giờ +07:00)

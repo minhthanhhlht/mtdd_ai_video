@@ -3470,5 +3470,11 @@ export const en: Record<string, string> = {
   "users.field-new-password": "New Password (optional)",
   "users.hint-leave-blank-password": "Leave blank if you do not wish to change the password.",
   "users.placeholder-new-password": "Enter new password if changing",
+  "users.field-confirm-password": "Confirm New Password",
+  "users.placeholder-confirm-password": "Re-enter new password to confirm",
+  "users.error-password-mismatch": "Passwords do not match. Please check again.",
+  "users.error-password-min-length": "New password must be at least 6 characters.",
+  "users.show-password": "Show password",
+  "users.hide-password": "Hide password",
   "users.btn-save-submit": "Save Changes",
 };
