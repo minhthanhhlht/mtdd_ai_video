@@ -3410,15 +3410,15 @@ export const en: Record<string, string> = {
   "login.title": "Sign in to MTDD AI Video",
   "login.subtitle": "Enter your account credentials to enter the workspace",
   "login.username": "Username",
-  "login.username-placeholder": "admin, editor or viewer",
+  "login.username-placeholder": "Enter username",
   "login.password": "Password",
+  "login.password-placeholder": "Enter password",
   "login.show-password": "Show password",
   "login.hide-password": "Hide password",
   "login.remember-me": "Remember me (30 days)",
   "login.submit": "Sign In",
   "login.submitting": "Signing in…",
   "login.error-generic": "Failed to sign in. Please try again.",
-  "login.default-accounts-title": "Ready-to-use initial accounts (default password: mtdd@[role]2026):",
 
   // ===== Users & Roles =====
   "nav.users": "User Management",

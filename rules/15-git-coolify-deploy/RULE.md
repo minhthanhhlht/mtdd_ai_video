@@ -54,3 +54,4 @@ Bất kỳ khi nào kết thúc một yêu cầu tính năng hoặc fix bug, Age
    npm run deploy:coolify
    ```
    Sau khi kích hoạt, kiểm tra phản hồi từ Coolify API xác nhận tiến trình build đã được xếp hàng (`queued` hoặc `in_progress`).
+

@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, EyeOff, Lock, LogIn, ShieldCheck, User } from "lucide-react";
+import { Eye, EyeOff, Lock, LogIn, User } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/Button";
@@ -57,7 +57,7 @@ function LoginForm() {
         <ThemeToggle />
       </div>
 
-      <div className="card w-full max-w-md p-6 flex flex-col gap-4">
+      <div className="card w-full max-w-md p-6 flex flex-col gap-4 shadow-lg">
         {/* Header với logo và tiêu đề */}
         <div className="flex flex-col items-center text-center gap-2">
           <div className="w-12 h-12 rounded-[var(--radius-lg)] bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center">
@@ -80,6 +80,7 @@ function LoginForm() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Field
             label={t("login.username")}
+            htmlFor="login-username"
             required
           >
             <div className="relative">
@@ -87,6 +88,7 @@ function LoginForm() {
                 <User size={16} aria-hidden="true" />
               </span>
               <input
+                id="login-username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -101,6 +103,7 @@ function LoginForm() {
 
           <Field
             label={t("login.password")}
+            htmlFor="login-password"
             required
           >
             <div className="relative">
@@ -108,10 +111,11 @@ function LoginForm() {
                 <Lock size={16} aria-hidden="true" />
               </span>
               <input
+                id="login-password"
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder={t("login.password-placeholder")}
                 className="input w-full pl-9 pr-9"
                 required
                 autoComplete="current-password"
@@ -151,28 +155,6 @@ function LoginForm() {
             <span>{submitting ? t("login.submitting") : t("login.submit")}</span>
           </Button>
         </form>
-
-        {/* Hướng dẫn tài khoản mặc định cho lần đầu đăng nhập */}
-        <div className="border-t border-[var(--border)] pt-3 flex flex-col gap-2">
-          <div className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
-            <ShieldCheck size={14} className="text-[var(--primary)] shrink-0" aria-hidden="true" />
-            <span className="font-semibold">{t("login.default-accounts-title")}</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2 text-xs text-[var(--text-muted)] bg-[var(--bg-subtle)] p-2 rounded-[var(--radius)]">
-            <div>
-              <span className="font-semibold text-[var(--text)]">admin</span>
-              <div className="text-[var(--text-muted)]">Admin</div>
-            </div>
-            <div>
-              <span className="font-semibold text-[var(--text)]">editor</span>
-              <div className="text-[var(--text-muted)]">Editor</div>
-            </div>
-            <div>
-              <span className="font-semibold text-[var(--text)]">viewer</span>
-              <div className="text-[var(--text-muted)]">Viewer</div>
-            </div>
-          </div>
-        </div>
       </div>
     </main>
   );

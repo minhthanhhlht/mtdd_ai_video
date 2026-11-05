@@ -6,6 +6,34 @@
 
 ---
 
+### [SESSION-2026-11-05-10:18] Tinh chỉnh Giao diện Đăng nhập: Sửa Label, Chuẩn hóa Placeholder & Gỡ Bỏ Khối Hint Mặc Định
+
+- **Thời gian**: 2026-11-05 10:18 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**: "hãy test lại trang login đang lỗi label kìa với phần hint ở dưới bỏ đi nhé"
+- **Danh sách tệp tin đã thay đổi (Files Changed)**:
+  - `apps/web/src/app/login/page.tsx`:
+    - Gắn `htmlFor="login-username"` và `id="login-username"` cho Field Tên đăng nhập để click nhãn tự focus vào ô nhập.
+    - Gắn `htmlFor="login-password"` và `id="login-password"` cho Field Mật khẩu.
+    - Gỡ bỏ hoàn toàn khối gợi ý danh sách tài khoản mặc định ("Tài khoản khởi tạo sẵn sàng sử dụng...") ở cuối form, loại bỏ icon `ShieldCheck` thừa.
+    - Sử dụng nhãn chuẩn từ i18n (`login.username`, `login.password`) và placeholder tự nhiên (`login.username-placeholder`, `login.password-placeholder`).
+  - `apps/web/src/lib/locales/vi.ts` & `apps/web/src/lib/locales/en.ts`: Cập nhật placeholder "Nhập tên đăng nhập", "Nhập mật khẩu" (EN: "Enter username", "Enter password"), gỡ bỏ key không còn dùng `login.default-accounts-title`.
+  - `.gitignore`: Bổ sung thư mục `.playwright-mcp/` để chống rác git.
+- **Chi tiết các thay đổi kỹ thuật (Implementation Details)**:
+  - Khắc phục triệt để lỗi hiển thị raw key do phiên bản deploy trước đó.
+  - Tối ưu hóa tính thẩm mỹ và bảo mật của form đăng nhập: Form gọn gàng, tập trung, không để lộ thông tin tài khoản mặc định ra ngoài màn hình đăng nhập công khai.
+- **Kết quả kiểm định & Kiểm thử (Verification & Test Results)**:
+  - `npm run typecheck` → **Pass 100%**.
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ**.
+  - `node apps/web/scripts/check-i18n.mjs` → **Đầy đủ 2.238 keys (0 missing)**.
+  - `npm run build` → **Compiled successfully**.
+  - Kiểm thử trực tiếp bằng Playwright browser automation:
+    - Mở `http://localhost:6868/login` → Các nhãn và placeholder hiển thị đúng chuẩn tiếng Việt. Khối hint dưới đã biến mất hoàn toàn.
+    - Điền tài khoản `admin` / `mtdd@admin2026` → Đăng nhập thành công và tự động chuyển hướng vào Dashboard trang chủ (`/`), topbar hiển thị đầy đủ thông tin Quản trị viên MTDD và nút Đăng xuất.
+- **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
+  - Đã tuân thủ RULE 15: Commit, đẩy lên `origin main` và kích hoạt deploy lên Coolify.
+
+---
+
 ### [SESSION-2026-11-05-10:10] Thiết lập RULE 15: Tự động Git Push & Triển khai Production lên Coolify
 
 - **Thời gian**: 2026-11-05 10:10 (Múi giờ +07:00)

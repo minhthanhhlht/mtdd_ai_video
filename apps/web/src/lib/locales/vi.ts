@@ -3403,15 +3403,15 @@ export const vi: Record<string, string> = {
   "login.title": "Đăng nhập MTDD AI Video",
   "login.subtitle": "Nhập tài khoản để tiếp tục vào không gian làm việc",
   "login.username": "Tên đăng nhập",
-  "login.username-placeholder": "admin, editor hoặc viewer",
+  "login.username-placeholder": "Nhập tên đăng nhập",
   "login.password": "Mật khẩu",
+  "login.password-placeholder": "Nhập mật khẩu",
   "login.show-password": "Hiện mật khẩu",
   "login.hide-password": "Ẩn mật khẩu",
   "login.remember-me": "Ghi nhớ đăng nhập (30 ngày)",
   "login.submit": "Đăng nhập",
   "login.submitting": "Đang đăng nhập…",
   "login.error-generic": "Đăng nhập không thành công. Vui lòng thử lại.",
-  "login.default-accounts-title": "Tài khoản khởi tạo sẵn sàng sử dụng (mật khẩu mặc định: mtdd@[tên]2026):",
 
   // ===== Quản lý thành viên & Phân quyền (Users) =====
   "nav.users": "Quản lý thành viên",
