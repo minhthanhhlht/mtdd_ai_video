@@ -1,4 +1,4 @@
-import { Router, type Request, type Response } from "express";
+import { Router, type CookieOptions, type Request, type Response } from "express";
 import { generateSessionToken, verifyPassword } from "../authCrypto.js";
 import {
   createSession,
@@ -104,23 +104,19 @@ router.post("/login", (req: Request, res: Response): void => {
 
   const secure = isSecureRequest(req);
 
-  // Set cookie phiên user
-  res.cookie(USER_SESSION_COOKIE, token, {
+  // Set cookie phiên user:
+  // - Nếu có tích Ghi nhớ: cookie sống 30 ngày (maxAge).
+  // - Nếu không tích: cookie phiên (Session Cookie), trình duyệt tự hủy khi đóng tab/trình duyệt.
+  const cookieOptions: CookieOptions = {
     httpOnly: true,
     sameSite: "lax",
     secure,
-    maxAge,
     path: "/",
-  });
+    ...(shouldRemember ? { maxAge: DURATION_REMEMBER_MS } : {}),
+  };
 
-  // Đồng thời set cookie aiev_token của backend để các thẻ <img>, <video> hiện tại chạy tốt
-  res.cookie("aiev_token", apiToken(), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure,
-    maxAge,
-    path: "/",
-  });
+  res.cookie(USER_SESSION_COOKIE, token, cookieOptions);
+  res.cookie("aiev_token", apiToken(), cookieOptions);
 
   const safeUser: SafeUser = {
     id: user.id,

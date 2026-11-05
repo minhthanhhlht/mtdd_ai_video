@@ -6,6 +6,28 @@
 
 ---
 
+### [SESSION-2026-11-05-10:48] Chuẩn hóa Cơ Chế Ghi Nhớ Đăng Nhập (Remember Me vs Session Cookie)
+
+- **Thời gian**: 2026-11-05 10:48 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**: "vậy nếu tích thi nhớ đăng nhập thì không cần đăng nhập còn k tích thì sẽ tự động hiện login đúng không"
+- **Danh sách tệp tin đã thay đổi (Files Changed)**:
+  - `apps/server/src/routes/auth.ts`: Khi không tích chọn `rememberMe`, cookie `aiev_user_session` và `aiev_token` được gửi đi dưới dạng **Session Cookie** (không có `maxAge`), giúp trình duyệt tự động hủy cookie ngay khi người dùng đóng trình duyệt. Khi có tích chọn, set `maxAge = 30 ngày`.
+  - `apps/web/src/lib/api.ts`: Hàm gắn header phiên đọc từ `sessionStorage` trước, sau đó fallback về `localStorage`.
+  - `apps/web/src/lib/authContext.tsx`: Khi `rememberMe = true`, lưu token vào `localStorage` (sống 30 ngày); khi `rememberMe = false`, lưu token vào `sessionStorage` (tự động xóa khi đóng tab/trình duyệt).
+- **Chi tiết các thay đổi kỹ thuật (Implementation Details)**:
+  - Phân tách rõ ràng 2 trạng thái:
+    1. **Tích chọn "Ghi nhớ đăng nhập"**: Duy trì phiên trong 30 ngày qua `localStorage` và persistent cookie. Tắt máy, tắt trình duyệt, mở lại vẫn vào thẳng hệ thống mà không cần đăng nhập lại.
+    2. **Không tích chọn**: Phiên tạm thời qua `sessionStorage` và session cookie. Tắt trình duyệt rồi mở lại sẽ lập tức bị hủy phiên và tự động hiển thị màn hình Đăng nhập (`/login`).
+- **Kết quả kiểm định & Kiểm thử (Verification & Test Results)**:
+  - `npm run typecheck` → **Pass 100%**.
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ**.
+  - `node apps/web/scripts/check-i18n.mjs` → **Đầy đủ 2.238 keys**.
+  - `npm run build` → **Compiled successfully**.
+- **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
+  - Đã commit, push lên `origin main` và kích hoạt deploy lên Coolify.
+
+---
+
 ### [SESSION-2026-11-05-10:18] Tinh chỉnh Giao diện Đăng nhập: Sửa Label, Chuẩn hóa Placeholder & Gỡ Bỏ Khối Hint Mặc Định
 
 - **Thời gian**: 2026-11-05 10:18 (Múi giờ +07:00)

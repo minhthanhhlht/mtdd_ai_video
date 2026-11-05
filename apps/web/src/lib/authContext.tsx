@@ -46,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setUser(null);
         try {
+          window.sessionStorage.removeItem(SESSION_TOKEN_KEY);
           window.localStorage.removeItem(SESSION_TOKEN_KEY);
         } catch {
           /* ignore */
@@ -67,7 +68,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await apiLogin({ username, password, rememberMe });
       if (res.ok && res.user) {
         try {
-          window.localStorage.setItem(SESSION_TOKEN_KEY, res.token);
+          if (rememberMe) {
+            window.localStorage.setItem(SESSION_TOKEN_KEY, res.token);
+            window.sessionStorage.removeItem(SESSION_TOKEN_KEY);
+          } else {
+            window.sessionStorage.setItem(SESSION_TOKEN_KEY, res.token);
+            window.localStorage.removeItem(SESSION_TOKEN_KEY);
+          }
         } catch {
           /* ignore */
         }
@@ -86,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       /* ignore */
     } finally {
       try {
+        window.sessionStorage.removeItem(SESSION_TOKEN_KEY);
         window.localStorage.removeItem(SESSION_TOKEN_KEY);
       } catch {
         /* ignore */

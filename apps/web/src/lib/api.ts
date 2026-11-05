@@ -970,7 +970,11 @@ async function request<T>(path: string, init?: RequestInit, retried = false): Pr
   const headers = new Headers(init?.headers);
   if (token) headers.set("x-aiev-token", token);
   try {
-    const userSession = typeof window !== "undefined" ? window.localStorage.getItem("aiev_session_token") : null;
+    const userSession =
+      typeof window !== "undefined"
+        ? window.sessionStorage.getItem("aiev_session_token") ||
+          window.localStorage.getItem("aiev_session_token")
+        : null;
     if (userSession) headers.set("x-user-session", userSession);
   } catch {
     /* bỏ qua */
