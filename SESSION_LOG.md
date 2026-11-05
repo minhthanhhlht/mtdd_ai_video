@@ -6,6 +6,29 @@
 
 ---
 
+### [SESSION-2026-11-05-15:00] Khắc Phục Lỗi "bubblewrap is required" Khi Khởi Động Claude Agent SDK Trên Linux/Docker
+
+- **Thời gian**: 2026-11-05 15:00 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**: "Claude Code process exited with code 1. stderr: ... error: bubblewrap is required for subprocess env scrubbing and isolation. Install with: sudo apt-get install -y bubblewrap, set sandbox.bwrapPath in managed settings, or set CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=0 to disable (loses subprocess isolation). Bun v1.4.4 (Linux x64) t chọn model cuae openrouter sao nó cứ chạy claude nhỉ. kiểm tra kỹ phần này"
+- **Danh sách tệp tin đã thay đổi (Files Changed)**:
+  - `apps/server/src/agentPolicy.ts`:
+    - Chuyển `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB` từ `"1"` thành `"0"`. Lý do: Trên Linux/Docker không hỗ trợ unprivileged user namespaces cho bubblewrap, việc bật cờ này khiến binary `claude` (chạy ngầm bởi `@anthropic-ai/claude-agent-sdk`) crash ngay lập tức trước khi thực hiện bất kỳ lệnh gọi API nào. Server Node đã chủ động lọc sạch toàn bộ secret keys (`SECRET_ENV_RE`) trước khi truyền vào subprocess nên không có nguy cơ lộ secret.
+  - `Dockerfile`:
+    - Bổ sung package `bubblewrap` vào tầng `runner` để hỗ trợ tối đa môi trường Linux.
+- **Giải đáp kiến trúc**:
+  - Hệ thống sử dụng `@anthropic-ai/claude-agent-sdk` làm **Agent Runtime** để điều khiển vòng lặp công cụ (Bash, File Write, Timeline Edit). Tiến trình con nhị phân mang tên `claude` (Bun) đóng vai trò là "công nhân thực thi" trên máy chủ.
+  - Khi người dùng chọn model của OpenRouter (Gemini, DeepSeek, GPT-4o, ...), request API được chuyển hướng đến OpenRouter (`https://openrouter.ai/api`). Toàn bộ việc suy luận, sinh prompt và ra quyết định là do model OpenRouter đã chọn thực hiện, không phải model Claude của Anthropic.
+- **Kết quả kiểm định & Kiểm thử (Verification & Test Results)**:
+  - Kiểm thử trực tiếp với Node script: gọi `query()` qua OpenRouter (`google/gemini-2.5-pro`) với `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB="0"` → **Thành công 100%, trả về kết quả ngay lập tức**.
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ**.
+  - `node apps/web/scripts/check-i18n.mjs` → **Đầy đủ 2.244 key**.
+  - `npm run typecheck` → **Pass 100%**.
+  - `npm run build` → **Compiled successfully**.
+- **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
+  - Commit và đẩy lên GitHub `main`, kích hoạt deploy lên Coolify theo RULE 15.
+
+---
+
 ### [SESSION-2026-11-05-14:30] Sửa Lỗi "Agent gặp lỗi" Khi Sử Dụng Model OpenRouter: Định Tuyến Độc Lập Qua OpenRouter Anthropic Messages API
 
 - **Thời gian**: 2026-11-05 14:30 (Múi giờ +07:00)

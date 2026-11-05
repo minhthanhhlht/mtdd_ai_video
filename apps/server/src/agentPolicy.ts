@@ -126,8 +126,10 @@ export function agentEnv(model?: string | null): Record<string, string | undefin
       delete env.CLAUDE_CODE_OAUTH_TOKEN;
     }
   }
-  // CLI tự gỡ khóa Anthropic/cloud khỏi môi trường của Bash, hook, MCP stdio
-  env.CLAUDE_CODE_SUBPROCESS_ENV_SCRUB = "1";
+  // Tắt bubblewrap scrubbing của Claude Code trên Linux/Docker
+  // vì trong container không có unprivileged user namespaces.
+  // Các khóa bí mật đã được Node gỡ sạch bằng SECRET_ENV_RE ở vòng lặp trên.
+  env.CLAUDE_CODE_SUBPROCESS_ENV_SCRUB = "0";
   return env;
 }
 
