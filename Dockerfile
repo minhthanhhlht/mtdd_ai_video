@@ -35,14 +35,18 @@ COPY apps/web/package.json ./apps/web/
 COPY apps/server/package.json ./apps/server/
 COPY engines/remotion/package.json ./engines/remotion/
 
-# Install ALL dependencies including devDependencies needed for TypeScript and Next build
-RUN npm ci --include=dev || npm install --include=dev
+# Install dependencies and clean cache immediately in the SAME layer to save disk space
+RUN (npm ci --include=dev || npm install --include=dev) \
+    && npm cache clean --force \
+    && rm -rf /root/.npm /tmp/*
 
 # Copy application source code
 COPY . .
 
-# Build server and web application
-RUN npm run build
+# Build server and web application, clean build temp
+RUN npm run build \
+    && npm cache clean --force \
+    && rm -rf /root/.npm /tmp/*
 
 # Ensure runtime directories exist
 RUN mkdir -p .runtime/tmp .runtime/models apps/server/data video-projects outputs
