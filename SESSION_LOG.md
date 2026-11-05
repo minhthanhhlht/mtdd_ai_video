@@ -25,7 +25,8 @@
   - `npm run typecheck` → **Pass 100%**.
   - `npm run build` → **Compiled successfully**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
-  - Commit và đẩy lên GitHub `main`, kích hoạt deploy lên Coolify theo RULE 15.
+  - Đã đẩy commit `aa9497c` lên `origin main` và triển khai hoàn tất lên Coolify (`https://video.mtdd.io.vn`).
+  - Đã kiểm tra trực tiếp: Website phản hồi HTTP 200, bubblewrap error được gỡ bỏ hoàn toàn, Agent sẵn sàng chạy với các model OpenRouter.
 
 ---
 
