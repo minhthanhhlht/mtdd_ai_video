@@ -124,6 +124,9 @@ export function agentEnv(model?: string | null): Record<string, string | undefin
       env.ANTHROPIC_AUTH_TOKEN = openrouterKey;
       env.ANTHROPIC_API_KEY = "";
       delete env.CLAUDE_CODE_OAUTH_TOKEN;
+      // Tắt các header beta thử nghiệm mà OpenRouter / bên thứ ba không hỗ trợ đầy đủ
+      env.CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS = "1";
+      env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1";
     }
   }
   // Tắt bubblewrap scrubbing của Claude Code trên Linux/Docker

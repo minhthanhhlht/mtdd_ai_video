@@ -428,6 +428,9 @@ function resolveModelAlias(model?: string | null): string | undefined {
   if (model === "google/gemini-2.0-flash-001") {
     return "google/gemini-2.5-flash";
   }
+  if (model === "deepseek/deepseek-r1") {
+    return "deepseek/deepseek-r1-0528";
+  }
   return model;
 }
 
@@ -437,6 +440,9 @@ function formatAgentError(raw: string): string {
   }
   if (raw.includes("429") || raw.includes("rate limit")) {
     return `Model AI đang bị giới hạn tần suất yêu cầu (Rate Limit 429). Vui lòng chờ 1-2 phút rồi thử lại.\nChi tiết: ${raw}`;
+  }
+  if (raw.includes("malformed response") || raw.includes("empty or malformed") || raw.includes("intercepting the request")) {
+    return `Nhà cung cấp model trên OpenRouter phản hồi không đúng định dạng hoặc bị ngắt kết nối giữa chừng (thường do máy chủ upstream của model đó tạm thời quá tải hoặc tài khoản sắp hết credits). Vui lòng thử lại với model "DeepSeek V3" hoặc "Gemini 2.5 Flash", hoặc kiểm tra số dư tại https://openrouter.ai/credits.\nChi tiết: ${raw}`;
   }
   return raw;
 }

@@ -44,7 +44,7 @@ export const OPENROUTER_MODELS = [
   { id: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro (Google)" },
   { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash (Nhanh & Rẻ)" },
   { id: "deepseek/deepseek-chat", label: "DeepSeek V3 (Siêu tiết kiệm)" },
-  { id: "deepseek/deepseek-r1", label: "DeepSeek R1 (Suy luận sâu)" },
+  { id: "deepseek/deepseek-r1-0528", label: "DeepSeek R1 (Suy luận sâu)" },
   { id: "anthropic/claude-sonnet-4.5", label: "Claude Sonnet 4.5 (OpenRouter)" },
   { id: "anthropic/claude-sonnet-5", label: "Claude Sonnet 5 (OpenRouter)" },
   { id: "openai/gpt-4o", label: "GPT-4o (OpenAI)" },

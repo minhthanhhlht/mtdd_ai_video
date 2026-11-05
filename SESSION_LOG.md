@@ -6,6 +6,33 @@
 
 ---
 
+### [SESSION-2026-11-05-15:45] Khắc Phục Lỗi "malformed response (HTTP 200)" & Cập Nhật Model DeepSeek R1
+
+- **Thời gian**: 2026-11-05 15:45 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**: "Claude Code returned an error result: API Error: API returned an empty or malformed response (HTTP 200) — check for a proxy or gateway intercepting the request... lỗi khác rồi hay sao ấy hãy kiểm tra nhé"
+- **Nguyên nhân kỹ thuật**:
+  - Claude Code khi gửi request mặc định gắn các header `anthropic-beta` độc quyền (như prompt caching beta, extended output formatting) và các request đo lường telemetry. Khi định tuyến qua các nhà cung cấp bên thứ 3 trên OpenRouter, các model không phải Claude của Anthropic (như DeepSeek, Gemini, v.v.) không hiểu các trường beta này, dẫn đến việc luồng stream bị ngắt giữa chừng và khi Claude Code fallback sang non-streaming retry thì nhận response rỗng/lỗi từ upstream.
+  - Model `deepseek/deepseek-r1` đã bị OpenRouter gỡ bỏ và thay thế bằng `deepseek/deepseek-r1-0528`.
+- **Danh sách tệp tin đã thay đổi (Files Changed)**:
+  - `apps/server/src/agentPolicy.ts`:
+    - Bổ sung `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS = "1"` và `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1"` khi kích hoạt OpenRouter. Cờ này loại bỏ toàn bộ các header beta thử nghiệm không tương thích và tắt các traffic phụ không cần thiết, giúp payload gửi tới OpenRouter luôn ở định dạng chuẩn.
+  - `apps/server/src/agent.ts`:
+    - Thêm ánh xạ `deepseek/deepseek-r1` -> `deepseek/deepseek-r1-0528` trong `resolveModelAlias`.
+    - Mở rộng `formatAgentError` để bắt lỗi `malformed response` / `empty response` và hiển thị giải thích tiếng Việt rõ ràng.
+  - `apps/server/src/routes/providers.ts`:
+    - Cập nhật model ID `deepseek/deepseek-r1` thành `deepseek/deepseek-r1-0528` trong danh sách `OPENROUTER_MODELS`.
+- **Kết quả kiểm định & Kiểm thử (Verification & Test Results)**:
+  - Kiểm thử `deepseek/deepseek-r1-0528` trực tiếp qua API: **HTTP 200 OK**.
+  - Kiểm thử `deepseek/deepseek-chat` và `google/gemini-2.5-flash` với Agent SDK và toàn bộ prompt `CLAUDE.md`: **Chạy thành công**.
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ**.
+  - `node apps/web/scripts/check-i18n.mjs` → **Đầy đủ 2.244 key**.
+  - `npm run typecheck` → **Pass 100%**.
+  - `npm run build` → **Compiled successfully**.
+- **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
+  - Commit, đẩy lên `origin main` và kích hoạt deploy lên Coolify theo RULE 15.
+
+---
+
 ### [SESSION-2026-11-05-15:25] Chẩn Đoán Lỗi 402 Out of Credits OpenRouter & Bổ Sung Định Dạng Lỗi Thân Thiện
 
 - **Thời gian**: 2026-11-05 15:25 (Múi giờ +07:00)
