@@ -41,6 +41,27 @@ async function main() {
   console.log(`[Coolify] Kết nối máy chủ quản lý: ${API_URL}`);
   console.log(`[Coolify] Ứng dụng mục tiêu: ${APP_UUID}`);
 
+  // Tự động dọn dẹp Docker cache/images thừa trên máy chủ trước khi build để tránh tràn ổ cứng
+  try {
+    const srvRes = await fetch(`${API_URL}/api/v1/servers`, {
+      headers: { Authorization: `Bearer ${API_TOKEN}`, Accept: "application/json" },
+    });
+    if (srvRes.ok) {
+      const servers = await srvRes.json();
+      const hostServer = servers.find((s) => s.is_coolify_host) || servers[0];
+      if (hostServer?.uuid) {
+        console.log(`[Coolify] Kích hoạt dọn dẹp Docker trên ${hostServer.name} (${hostServer.uuid})...`);
+        await fetch(`${API_URL}/api/v1/servers/${hostServer.uuid}/docker-cleanup/run`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${API_TOKEN}`, Accept: "application/json" },
+        });
+        await new Promise((r) => setTimeout(r, 6000));
+      }
+    }
+  } catch (err) {
+    console.warn(`[Coolify] Bỏ qua dọn dẹp tự động (${err.message}).`);
+  }
+
   const deployUrl = `${API_URL}/api/v1/deploy?uuid=${encodeURIComponent(APP_UUID)}`;
   const res = await fetch(deployUrl, {
     method: "POST",
