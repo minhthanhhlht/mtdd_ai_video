@@ -39,7 +39,8 @@
   - `npm run typecheck` → **Pass (Cả server, web, remotion-engine)**.
   - `npm run build` → **Compiled successfully**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
-  - Đẩy commit lên `origin main` và kích hoạt deploy lên Coolify theo RULE 15.
+  - Đã đẩy code lên `origin main` (commit `5e8e2e4` và `dd548cd`), triển khai thành công lên Coolify (`https://video.mtdd.io.vn`).
+  - Đã kiểm tra trực tiếp trên production: Tuyến `/api/providers` trả về `connected: true` và danh sách model OpenRouter mới nhất. Khi chọn model OpenRouter (như `google/gemini-2.5-pro`, `deepseek/deepseek-chat`, ...), agent đã có thể kết nối và chạy mượt mà.
 
 ---
 
