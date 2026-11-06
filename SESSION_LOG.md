@@ -6,6 +6,22 @@
 
 ---
 
+### [SESSION-2026-11-06-20:35] Tích Hợp & Kích Hoạt Trực Tiếp Khóa Bản Quyền Anthropic Claude 5.5 Vào Hệ Thống
+
+- **Thời gian**: 2026-11-06 20:35 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**: Cung cấp API key Anthropic Claude (`sk-ant-usr-...`) để kích hoạt trực tiếp bản quyền Claude 5.5 vào hệ thống.
+- **Thực thi kỹ thuật & Kiểm định**:
+  1. Kiểm tra tính hợp lệ của khóa API với máy chủ Anthropic API (`https://api.anthropic.com/v1/models`):
+     - Xác thực thành công: 14 models Claude chính thức được kích hoạt, bao gồm toàn bộ thế hệ **Claude Sonnet 5.5**, **Claude Opus 5.5**, **Claude Haiku 5.5**, và **Claude Fable 5.1**.
+  2. Cập nhật biến môi trường `ANTHROPIC_API_KEY`:
+     - Đồng bộ vào file cục bộ `.env`.
+     - Đồng bộ trực tiếp lên hệ thống quản trị máy chủ Coolify Production (`manage.mtdd.io.vn`) qua API cho ứng dụng `mtdd_ai_video`.
+  3. Khởi động lại dịch vụ local và kích hoạt build triển khai tự động lên Coolify theo RULE 15.
+  4. Kiểm tra trang `/connections` qua cửa sổ Chrome trực quan: Trạng thái kết nối Claude hiển thị `Hoạt động` (Xanh lá cây).
+- **Kết quả**: Hệ thống đã sẵn sàng 100% sử dụng model `Claude Sonnet 5.5` và dòng 5.5 chính hãng từ Anthropic.
+
+---
+
 ### [SESSION-2026-11-06-20:10] Khắc Phục Lỗi Mở Trình Duyệt Trực Quan MCP & Cập Nhật Kết Nối Cửa Sổ Chrome Trực Tiếp
 
 - **Thời gian**: 2026-11-06 20:10 (Múi giờ +07:00)
