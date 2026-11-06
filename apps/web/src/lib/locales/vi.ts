@@ -180,6 +180,8 @@ export const vi: Record<string, string> = {
   "model.claude-warning": "Chưa kết nối Claude - đăng nhập Claude Code (subscription) hoặc thêm ANTHROPIC_API_KEY vào .env rồi khởi động lại server.",
   "model.claude-warning-short": "Đăng nhập Claude Code (subscription) hoặc thêm ANTHROPIC_API_KEY vào .env.",
   "model.claude-not-connected": "Chưa kết nối Claude",
+  "model.free-agent-warning": "Model Miễn phí (Free) không hỗ trợ Tool Calling cho AI Agent và hay bị lỗi nghẽn tải (429). Hãy chọn Gemini 2.5 Flash hoặc DeepSeek V3 để dựng video ổn định.",
+  "model.free-warning-short": "Model Free không hỗ trợ Agent (429)",
   "model.model": "Model",
   "model.effort": "Chế độ",
   "model.gemini-tooltip": "Gemini dùng cho tính năng Tạo ảnh",

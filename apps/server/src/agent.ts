@@ -438,8 +438,11 @@ function formatAgentError(raw: string): string {
   if (raw.includes("402") || raw.includes("exceed your available credits") || raw.includes("credits")) {
     return `Tài khoản OpenRouter không đủ số dư credits (Lỗi 402: Payment Required). Vui lòng nạp thêm credit tại https://openrouter.ai/credits hoặc chọn model tiết kiệm hơn (như Gemini 2.5 Flash / DeepSeek V3).\nChi tiết: ${raw}`;
   }
-  if (raw.includes("429") || raw.includes("rate limit")) {
-    return `Model AI đang bị giới hạn tần suất yêu cầu (Rate Limit 429). Vui lòng chờ 1-2 phút rồi thử lại.\nChi tiết: ${raw}`;
+  if (raw.includes("429") || raw.includes("rate limit") || raw.includes("rate_limit")) {
+    if (raw.includes("Provider returned error") || raw.includes("upstream")) {
+      return `Nhà cung cấp upstream của model trên OpenRouter đang bị quá tải hoặc giới hạn tần suất (Rate Limit 429: Provider returned error). Các model Miễn phí (:free) dùng chung máy chủ công cộng nên rất hay bị nghẽn và không hỗ trợ công cụ (Tools) cho Agent dựng video. Vui lòng chuyển sang model trả phí ổn định và siêu rẻ như "Gemini 2.5 Flash" (google/gemini-2.5-flash) hoặc "DeepSeek V3" (deepseek/deepseek-chat) - chi phí chỉ ~200đ/lần chạy, hoặc thử lại sau vài phút.\nChi tiết: ${raw}`;
+    }
+    return `Model AI đang bị giới hạn tần suất yêu cầu (Rate Limit 429). Vui lòng chờ 1-2 phút rồi thử lại, hoặc chọn model tiết kiệm khác như Gemini 2.5 Flash / DeepSeek V3.\nChi tiết: ${raw}`;
   }
   if (raw.includes("malformed response") || raw.includes("empty or malformed") || raw.includes("intercepting the request")) {
     return `Nhà cung cấp model trên OpenRouter phản hồi không đúng định dạng hoặc bị ngắt kết nối giữa chừng (thường do máy chủ upstream của model đó tạm thời quá tải hoặc tài khoản sắp hết credits). Vui lòng thử lại với model "DeepSeek V3" hoặc "Gemini 2.5 Flash", hoặc kiểm tra số dư tại https://openrouter.ai/credits.\nChi tiết: ${raw}`;
@@ -461,6 +464,18 @@ export async function runAgent(
       sessionId,
       kind: "error",
       error: `Chưa có OPENROUTER_API_KEY để chạy model "${session?.model}". Vui lòng nhập API key tại trang Kết nối (hoặc file .env) rồi thử lại.`,
+    });
+    emit({ sessionId, kind: "done", status: "error" });
+    return;
+  }
+
+  if (isRouter && session?.model?.endsWith(":free")) {
+    const freeErrMsg = `Model miễn phí "${session?.model}" trên OpenRouter không hỗ trợ Tool Calling (công cụ điều khiển) và thường xuyên bị nghẽn máy chủ dùng chung (Rate Limit 429). Để AI Agent có thể thao tác cắt ghép, sửa timeline và render video, vui lòng chọn model có hỗ trợ Agent như "Gemini 2.5 Flash" (google/gemini-2.5-flash) hoặc "DeepSeek V3" (deepseek/deepseek-chat) - chi phí cực rẻ chỉ khoảng ~200đ/lần chạy.`;
+    db.addChatMessage(sessionId, "assistant", "text", freeErrMsg);
+    emit({
+      sessionId,
+      kind: "error",
+      error: freeErrMsg,
     });
     emit({ sessionId, kind: "done", status: "error" });
     return;
@@ -666,7 +681,7 @@ export async function runAgent(
         } catch {
           /* usage là phụ - không để hỏng luồng chính */
         }
-        const finalText =
+        let finalText =
           typeof msg.result === "string" && msg.result.length > 0 ? msg.result : textBuffer;
         const isApiError =
           typeof msg.result === "string" &&
@@ -674,11 +689,13 @@ export async function runAgent(
         if ((msg.subtype && msg.subtype !== "success") || isApiError) {
           hadError = true;
           const rawErr = isApiError ? (msg.result as string) : `Agent kết thúc bất thường (${msg.subtype})`;
+          const formattedErr = formatAgentError(rawErr);
           emit({
             sessionId,
             kind: "error",
-            error: formatAgentError(rawErr),
+            error: formattedErr,
           });
+          finalText = formattedErr;
         }
         if (finalText) {
           db.addChatMessage(sessionId, "assistant", "text", finalText);

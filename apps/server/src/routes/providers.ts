@@ -152,7 +152,7 @@ export async function fetchLiveOpenRouterModels(): Promise<{
         continue;
       }
       if (isFree) {
-        freeGroup.push({ id: m.id, label, group: "OpenRouter — Miễn phí (Free)" });
+        freeGroup.push({ id: m.id, label, group: "OpenRouter — Miễn phí (Free - Chỉ Chat, Không hỗ trợ Agent)" });
         continue;
       }
       const lower = m.id.toLowerCase();

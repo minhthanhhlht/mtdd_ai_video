@@ -180,6 +180,8 @@ export const en: Record<string, string> = {
   "model.claude-warning": "Claude is not connected - sign in to Claude Code (subscription) or add ANTHROPIC_API_KEY to .env, then restart the server.",
   "model.claude-warning-short": "Sign in to Claude Code (subscription) or add ANTHROPIC_API_KEY to .env.",
   "model.claude-not-connected": "Claude not connected",
+  "model.free-agent-warning": "Free models do not support Tool Calling for AI Agent and frequently hit rate limits (429). Please select Gemini 2.5 Flash or DeepSeek V3 for reliable video editing.",
+  "model.free-warning-short": "Free model doesn't support Agent (429)",
   "model.model": "Model",
   "model.effort": "Mode",
   "model.gemini-tooltip": "Gemini is used by the Image generation feature",

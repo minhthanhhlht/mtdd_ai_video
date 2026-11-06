@@ -263,6 +263,12 @@ export function AiModelBlock({
           {t("model.claude-warning")}
         </p>
       )}
+      {model.endsWith(":free") && (
+        <p className="flex items-start gap-2 text-meta font-medium text-[var(--warning)]">
+          <AlertTriangle size={14} strokeWidth={2} className="mt-0.5 shrink-0" />
+          {t("model.free-agent-warning")}
+        </p>
+      )}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Field label={t("model.model")} htmlFor="ai-model">
           <select
@@ -419,6 +425,15 @@ export function AiModelInlineRow({
         >
           <AlertTriangle size={13} strokeWidth={2} className="shrink-0" />
           {t("model.claude-not-connected")}
+        </span>
+      )}
+      {model.endsWith(":free") && (
+        <span
+          className="inline-flex items-center gap-1 text-meta font-medium text-[var(--warning)]"
+          title={t("model.free-agent-warning")}
+        >
+          <AlertTriangle size={13} strokeWidth={2} className="shrink-0" />
+          {t("model.free-warning-short")}
         </span>
       )}
       {openrouter?.connected && (
