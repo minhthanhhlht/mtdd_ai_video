@@ -26,6 +26,7 @@ export const en: Record<string, string> = {
   "common.clear": "Clear",
   "common.selected": "selected",
   "common.search": "Search",
+  "common.or": "Or",
 
   // ===== Navigation (Shell) =====
   "nav.dashboard": "Dashboard",
@@ -1009,6 +1010,16 @@ export const en: Record<string, string> = {
   "skills.delete-desc-1": "Delete skill",
 
   // ===== Create skill with AI =====
+  "skillGen.tab-prompt": "From text prompt",
+  "skillGen.tab-video": "From video link or file",
+  "skillGen.video-url-label": "Sample video URL (TikTok, Reels, Shorts, YouTube)",
+  "skillGen.video-url-placeholder": "https://www.tiktok.com/@... or https://youtube.com/shorts/...",
+  "skillGen.video-file-label": "Or upload an MP4 video file from your computer",
+  "skillGen.video-file-hint": "Supports .mp4, .mov, max 500MB",
+  "skillGen.video-analyze-btn": "Analyze Video & Generate Skill",
+  "skillGen.video-analyzing": "AI Vision is analyzing video & generating skill package (may take 1–2 mins)…",
+  "skillGen.video-missing-source": "Please provide a video URL or select an MP4 file.",
+  "skillGen.video-success": "Successfully generated skill package \"{name}\" with {count} reference frames!",
   "skillGen.review-title": "Review skill draft",
   "skillGen.edit-answers": "Edit answers",
   "skillGen.regenerate": "Regenerate",

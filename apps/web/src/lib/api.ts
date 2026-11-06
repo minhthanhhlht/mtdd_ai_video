@@ -1431,6 +1431,26 @@ export interface SkillGenerateResult {
   tokens: { input: number; output: number };
 }
 
+export interface SkillFromVideoInput {
+  url?: string;
+  file?: File;
+  name?: string;
+  notes?: string;
+  model?: string;
+}
+
+export interface SkillFromVideoResult {
+  name: string;
+  description: string;
+  skillDir: string;
+  frameCount: number;
+  durationSec: number;
+  width: number;
+  height: number;
+  fps: number;
+  summary: string;
+}
+
 /**
  * Lỗi tạo skill bằng AI. 422 BAD_SKILL_OUTPUT kèm `raw` = văn bản gốc AI
  * trả về - UI đưa cho user tự sửa tay rồi lưu.
@@ -1496,6 +1516,82 @@ export async function generateSkill(
     throw new SkillGenerateError(code, message, res.status, raw);
   }
   return (await res.json()) as SkillGenerateResult;
+}
+
+/**
+ * POST /api/skills/from-video
+ * Tạo bộ skill tự động từ URL video hoặc file MP4 bằng AI Vision
+ */
+export async function generateSkillFromVideo(
+  input: SkillFromVideoInput
+): Promise<SkillFromVideoResult> {
+  const token = await ensureToken();
+  const headers: Record<string, string> = {
+    ...(token ? { "x-aiev-token": token } : {}),
+  };
+  applyUserSessionHeaders(headers);
+
+  let res: Response;
+  try {
+    if (input.file) {
+      const formData = new FormData();
+      formData.append("file", input.file);
+      if (input.url) formData.append("url", input.url);
+      if (input.name) formData.append("name", input.name);
+      if (input.notes) formData.append("notes", input.notes);
+      if (input.model) formData.append("model", input.model);
+
+      res = await fetch(`${serverOrigin()}/api/skills/from-video`, {
+        method: "POST",
+        headers,
+        credentials: "include",
+        body: formData,
+      });
+    } else {
+      headers["Content-Type"] = "application/json";
+      res = await fetch(`${serverOrigin()}/api/skills/from-video`, {
+        method: "POST",
+        headers,
+        credentials: "include",
+        body: JSON.stringify({
+          url: input.url,
+          name: input.name,
+          notes: input.notes,
+          model: input.model,
+        }),
+      });
+    }
+  } catch {
+    throw new SkillGenerateError(
+      "network",
+      "Không kết nối được backend (port 6869). Kiểm tra server đã chạy chưa.",
+      0,
+      null
+    );
+  }
+
+  if (!res.ok) {
+    let code = String(res.status);
+    let message = `Lỗi HTTP ${res.status}`;
+    let raw: string | null = null;
+    try {
+      const body = (await res.json()) as {
+        error?: { code: string; message: string; raw?: string };
+        raw?: string;
+      };
+      if (body?.error) {
+        code = body.error.code;
+        message = body.error.message;
+      }
+      const r = body?.raw ?? body?.error?.raw;
+      if (typeof r === "string" && r) raw = r;
+    } catch {
+      // body không phải JSON
+    }
+    throw new SkillGenerateError(code, message, res.status, raw);
+  }
+
+  return (await res.json()) as SkillFromVideoResult;
 }
 
 // ============ Prompt mẫu ============

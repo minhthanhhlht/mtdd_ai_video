@@ -2,14 +2,28 @@ import fs from "node:fs";
 import path from "node:path";
 import { Router } from "express";
 import matter from "gray-matter";
+import multer from "multer";
 import { nanoid } from "nanoid";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { agentEnv } from "../agentPolicy.js";
 import { hasClaudeAuth, paths, repoRoot } from "../config.js";
 import { addTokenUsage } from "../db.js";
 import { HttpError, ensureDir, isKebabCase, toKebabAscii } from "../util.js";
+import { generateSkillFromVideo } from "../videoToSkill.js";
 
 const router = Router();
+
+const skillUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      ensureDir(paths.uploadTmpDir);
+      cb(null, paths.uploadTmpDir);
+    },
+    filename: (_req, _file, cb) => cb(null, `skill-up-${Date.now()}-${Math.round(Math.random() * 1e9)}`),
+  }),
+  limits: { fileSize: 500 * 1024 * 1024 },
+  defParamCharset: "utf8",
+});
 
 function skillDirOf(name: string): string {
   return path.join(paths.skillsDir, name);
@@ -288,6 +302,64 @@ router.post("/generate", async (req, res) => {
   }
 
   res.json({ name: finalName, content, tokens: { input: inTok, output: outTok } });
+});
+
+/**
+ * POST /api/skills/from-video
+ * Tự động tạo bộ Skill từ URL video (TikTok/Reels/YouTube) hoặc file MP4 tải lên bằng AI Vision
+ */
+router.post("/from-video", skillUpload.single("file"), async (req, res) => {
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const url = typeof body.url === "string" ? body.url.trim() : "";
+  const file = req.file;
+
+  if (!url && !file) {
+    throw new HttpError(
+      400,
+      "SOURCE_REQUIRED",
+      "Vui lòng cung cấp link video (YouTube/TikTok/Reels) hoặc tải file video lên",
+    );
+  }
+
+  const skillName = typeof body.name === "string" ? body.name.trim() : undefined;
+  const notes = typeof body.notes === "string" ? body.notes.trim() : undefined;
+  const model = typeof body.model === "string" ? body.model.trim() : undefined;
+
+  let videoSource:
+    | { type: "url"; url: string }
+    | { type: "file"; filePath: string; originalName?: string };
+
+  if (file) {
+    videoSource = {
+      type: "file",
+      filePath: file.path,
+      originalName: file.originalname,
+    };
+  } else {
+    videoSource = {
+      type: "url",
+      url,
+    };
+  }
+
+  try {
+    const result = await generateSkillFromVideo({
+      videoSource,
+      skillName,
+      notes,
+      model,
+    });
+    res.json(result);
+  } finally {
+    // Xóa file upload tạm nếu có
+    if (file?.path && fs.existsSync(file.path)) {
+      try {
+        fs.unlinkSync(file.path);
+      } catch {
+        // bỏ qua
+      }
+    }
+  }
 });
 
 // GET /api/skills - [{ name, description, updatedAt, sizeBytes }]

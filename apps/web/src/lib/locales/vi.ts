@@ -26,6 +26,7 @@ export const vi: Record<string, string> = {
   "common.clear": "Xóa nội dung",
   "common.selected": "đã chọn",
   "common.search": "Tìm kiếm",
+  "common.or": "Hoặc",
 
   // ===== Điều hướng (Shell) =====
   "nav.dashboard": "Dashboard",
@@ -1009,6 +1010,16 @@ export const vi: Record<string, string> = {
   "skills.delete-desc-1": "Xóa skill",
 
   // ===== Tạo skill bằng AI =====
+  "skillGen.tab-prompt": "Từ mô tả văn bản",
+  "skillGen.tab-video": "Từ link hoặc video mẫu",
+  "skillGen.video-url-label": "Link video mẫu (TikTok, Reels, Shorts, YouTube)",
+  "skillGen.video-url-placeholder": "https://www.tiktok.com/@... hoặc https://youtube.com/shorts/...",
+  "skillGen.video-file-label": "Hoặc tải file video MP4 từ máy tính",
+  "skillGen.video-file-hint": "Hỗ trợ file .mp4, .mov, tối đa 500MB",
+  "skillGen.video-analyze-btn": "Phân tích video & Tạo bộ Skill",
+  "skillGen.video-analyzing": "AI Vision đang phân tích video & tạo bộ skill (có thể mất 1–2 phút)…",
+  "skillGen.video-missing-source": "Vui lòng nhập link video hoặc chọn file MP4 từ máy tính.",
+  "skillGen.video-success": "Đã tạo thành công bộ Skill \"{name}\" gồm {count} khung hình tham chiếu!",
   "skillGen.review-title": "Duyệt draft skill",
   "skillGen.edit-answers": "Sửa câu trả lời",
   "skillGen.regenerate": "Tạo lại",

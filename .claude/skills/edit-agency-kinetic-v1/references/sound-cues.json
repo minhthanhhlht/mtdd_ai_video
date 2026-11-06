@@ -1,0 +1,86 @@
+{
+  "skill": "edit-agency-kinetic-v1",
+  "reference_video": "prime_animator_merged.mp4",
+  "duration_seconds": 23.4,
+  "sound_cues": [
+    {
+      "time_seconds": 0.5,
+      "event": "hook_keyword_pop",
+      "sfx": "sub_whoosh_pop.wav",
+      "volume_db": -6
+    },
+    {
+      "time_seconds": 3.2,
+      "event": "failing_keyword_impact",
+      "sfx": "impact_thud_clean.wav",
+      "volume_db": -4
+    },
+    {
+      "time_seconds": 6.8,
+      "event": "camera_shutter_and_halo",
+      "sfx": "dslr_shutter_click.wav",
+      "volume_db": -3
+    },
+    {
+      "time_seconds": 8.0,
+      "event": "notification_pill_bubble",
+      "sfx": "iphone_message_pop.wav",
+      "volume_db": -8
+    },
+    {
+      "time_seconds": 9.5,
+      "event": "rec_viewfinder_start",
+      "sfx": "camera_beep.wav",
+      "volume_db": -10
+    },
+    {
+      "time_seconds": 10.4,
+      "event": "alert_card_1_what_to_say",
+      "sfx": "soft_ui_ding.wav",
+      "volume_db": -6
+    },
+    {
+      "time_seconds": 11.8,
+      "event": "alert_card_2_revenue",
+      "sfx": "soft_ui_ding_low.wav",
+      "volume_db": -6
+    },
+    {
+      "time_seconds": 15.2,
+      "event": "card_plan_pop",
+      "sfx": "bubble_pop_pitch1.wav",
+      "volume_db": -5
+    },
+    {
+      "time_seconds": 16.0,
+      "event": "card_shoot_pop",
+      "sfx": "bubble_pop_pitch2.wav",
+      "volume_db": -5
+    },
+    {
+      "time_seconds": 16.8,
+      "event": "card_script_pop",
+      "sfx": "bubble_pop_pitch3.wav",
+      "volume_db": -5
+    },
+    {
+      "time_seconds": 17.6,
+      "event": "card_edit_pop",
+      "sfx": "bubble_pop_pitch4.wav",
+      "volume_db": -5
+    },
+    {
+      "time_seconds": 18.4,
+      "event": "card_post_pop",
+      "sfx": "bubble_pop_pitch5.wav",
+      "volume_db": -5
+    },
+    {
+      "time_seconds": 20.8,
+      "event": "cta_dynamic_island_reveal",
+      "sfx": "smooth_success_chime.wav",
+      "volume_db": -4
+    }
+  ]
+}
+

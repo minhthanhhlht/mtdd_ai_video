@@ -6,6 +6,68 @@
 
 ---
 
+### [SESSION-2026-11-06-22:05] Tích Hợp Gói Skill Agency Kinetic V1 & Xây Dựng Tính Năng Video-to-Skill Generator Bằng AI Vision
+
+- **Thời gian**: 2026-11-06 22:05 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  1. Tích hợp bộ skill Agency Kinetic V1 (`D:\AI\edit-agency-kinetic-v1`) vào dự án để hỗ trợ tự động edit video talking head thành phong cách Agency Kinetic (Kinetic Typography 2 bậc, Halo Light, REC Viewfinder, 3D Workflow Cards, Dynamic Island CTA).
+  2. Bổ sung tính năng Video-to-Skill Generator: Dùng AI Vision tự động phân tích link video (TikTok/Shorts/Reels) hoặc video MP4 tải lên từ máy tính để dịch ngược và sinh ra gói skill hoàn chỉnh tương tự.
+  3. Lập kế hoạch chi tiết, cập nhật vào Notion Roadmap (`FEAT-07` và `FEAT-08`), sau đó thực thi trọn vẹn từ Backend đến Frontend UI.
+- **Thực thi kỹ thuật & Kiến trúc**:
+  1. **Đồng bộ kế hoạch lên Notion Database**:
+     - Tạo 2 trang tính năng chi tiết với cấu trúc block phong phú trên Notion Database `📋 Bảng Quản Lý Tính Năng & Lộ Trình (Feature Roadmap)`:
+       - `FEAT-07`: *Tích hợp Bộ Skill Agency Kinetic V1 (Kinetic Typography, Halo Light, 3D Workflow Cards, Dynamic Island CTA)*.
+       - `FEAT-08`: *Xây Dựng Tính Năng Video-to-Skill Generator Bằng AI (Tự Động Trích Xuất Phong Cách Từ Link Hoặc File Video)*.
+     - Tạo artifact kế hoạch song ngữ kỹ thuật: `ke_hoach_tich_hop_skill_va_video_to_skill.md`.
+  2. **Gói Skill & Remotion Kinetic Components (Phase 1)**:
+     - Sao chép toàn bộ gói skill vào `.claude/skills/edit-agency-kinetic-v1/` và đăng ký tương thích với hệ thống skill AIEV.
+     - Tích hợp 6 kinetic motion components vào `engines/remotion/src/components/kinetic/`:
+       - `KineticText.tsx`: Kinetic Typography 2-tier với dynamic word pop, shadow và highlight.
+       - `HaloLight.tsx`: Hiệu ứng ambient glow / halo light mượt mà phía sau chủ thể.
+       - `RecViewfinder.tsx`: Khung ngắm camera REC điện ảnh nhấp nháy timestamp.
+       - `NotificationCard.tsx` & `WorkflowCards.tsx`: 3D floating workflow cards và card thông báo spring-animated.
+       - `DynamicIslandCTA.tsx`: Floating call-to-action lấy cảm hứng từ Dynamic Island.
+       - `index.ts`: Export toàn bộ module.
+     - Chạy kiểm thử Remotion (`npm test -w engines/remotion`) đạt 22/22 tests pass 100%.
+  3. **Video-to-Skill Generator Pipeline (Phase 2)**:
+     - Cài đặt `yt-dlp` trên môi trường Python 3.13.
+     - Xây dựng `apps/server/src/videoToSkill.ts`:
+       - Tải video qua `yt-dlp` (hoặc nhận file MP4 upload qua multer tối đa 500MB).
+       - Trích xuất metadata thời lượng, độ phân giải, fps bằng `ffprobe`.
+       - Trích xuất khung hình keyframes tiêu biểu ở tốc độ 1 frame/giây (720p jpeg) bằng `ffmpeg`.
+       - Lấy mẫu tối đa 15-20 frames đại diện gửi tới Anthropic Messages API (`claude-sonnet-5-5` / `claude-haiku-5-5` hoặc Gemini Vision) với cấu trúc phân tích đa chiều (cấu trúc cảnh, kinetic typography, motion graphics, ánh sáng/halo light, palette màu, sound effects theo nhịp).
+       - Tự động sinh trọn bộ gói skill trên ổ đĩa: `SKILL.md`, `style.md`, `timeline-breakdown.md`, `motion.md`, `audio.md`, `sound-cues.json`, `manifest.json`, cùng toàn bộ ảnh chụp `frames/`.
+     - Bổ sung route API `POST /api/skills/from-video` trong `apps/server/src/routes/skills.ts`.
+  4. **Giao diện Web UI & Đa ngôn ngữ (Phase 3)**:
+     - Thêm client API `generateSkillFromVideo` và types trong `apps/web/src/lib/api.ts`.
+     - Nâng cấp modal `apps/web/src/components/SkillGenerateModal.tsx`:
+       - Thêm thanh chuyển đổi `<Segmented>` giữa 2 tab: *"Từ mô tả văn bản"* và *"Từ link hoặc video mẫu"*.
+       - Hỗ trợ nhập URL video mẫu (TikTok, Reels, Shorts, YouTube) hoặc chọn tải file MP4 từ máy tính với dung lượng tệp và nút xóa.
+       - Nhập tên skill tùy chọn (kebab-case) và ghi chú bổ sung.
+       - Hiển thị thanh tiến trình indeterminate cùng thông báo phân tích AI Vision.
+       - Khi phân tích hoàn tất, tự động chuyển người dùng vào trang chi tiết của bộ skill vừa tạo.
+     - Cập nhật 100% chuỗi song ngữ trong `apps/web/src/lib/locales/vi.ts` và `apps/web/src/lib/locales/en.ts`.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `SESSION_LOG.md`: Ghi nhật ký chi tiết phiên làm việc.
+  - `.claude/skills/edit-agency-kinetic-v1/`: Gói skill Agency Kinetic V1 hoàn chỉnh.
+  - `engines/remotion/src/components/kinetic/*`: 6 kinetic motion components.
+  - `apps/server/src/videoToSkill.ts`: Pipeline trích xuất video thành skill.
+  - `apps/server/src/routes/skills.ts`: Endpoint `POST /api/skills/from-video`.
+  - `apps/web/src/lib/api.ts`: API client `generateSkillFromVideo`.
+  - `apps/web/src/components/SkillGenerateModal.tsx`: Modal tạo skill hỗ trợ video link/upload.
+  - `apps/web/src/lib/locales/vi.ts`: Khóa i18n tiếng Việt.
+  - `apps/web/src/lib/locales/en.ts`: Khóa i18n tiếng Anh.
+- **Kết quả kiểm định & Đảm bảo chất lượng (Quality Assurance)**:
+  - `node apps/web/scripts/check-design-system.mjs`: Sạch (100% tuân thủ CSS variables `--primary`, `--border`, primitive components, thang chữ 3 bậc).
+  - `node apps/web/scripts/check-i18n.mjs`: Pass (vi: 2255 keys, en: 0 missing keys).
+  - `npm run typecheck`: Pass 100% không lỗi trên cả 3 packages (`apps/server`, `apps/web`, `engines/remotion`).
+  - `npm test -w engines/remotion`: 22/22 tests passed.
+  - `npm run build`: Pass 100% Turbopack & Next.js production build (28 routes).
+- **Trạng thái & Hướng dẫn phiên kế tiếp**:
+  - Mã nguồn đã sẵn sàng đẩy lên GitHub `origin main` và kích hoạt triển khai tự động lên Coolify.
+
+---
+
 ### [SESSION-2026-11-06-20:35] Tích Hợp & Kích Hoạt Trực Tiếp Khóa Bản Quyền Anthropic Claude 5.5 Vào Hệ Thống
 
 - **Thời gian**: 2026-11-06 20:35 (Múi giờ +07:00)

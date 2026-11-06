@@ -1,0 +1,10 @@
+name: edit-agency-kinetic-v1
+display_name: "Edit Agency Kinetic V1"
+description: "Dựng video ngắn dạng dọc (9:16) theo phong cách Agency Kinetic & Visual Storytelling với kinetic typography 2 tầng, thẻ 3D quy trình, REC viewfinder và Dynamic Island CTA."
+model: inherit
+tools:
+  - read_file
+  - write_file
+  - edit_file
+  - run_command
+
