@@ -6,6 +6,33 @@
 
 ---
 
+### [SESSION-2026-11-06-20:10] Khắc Phục Lỗi Mở Trình Duyệt Trực Quan MCP & Cập Nhật Kết Nối Cửa Sổ Chrome Trực Tiếp
+
+- **Thời gian**: 2026-11-06 20:10 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**: "MCP đang chưa mở được web kìa. hãy kiểm tra"
+- **Nguyên nhân kỹ thuật & Kiến trúc**:
+  1. **Next.js Static Chunk Mismatch (HTTP 500)**: Tiến trình chạy ngầm cục bộ (`task-2678`) đã chạy hơn 33 giờ trước đó. Khi các phiên làm việc sau chạy `npm run build`, Next.js sinh ra các mã băm (hashes) chunk mới trên đĩa. Tiến trình cũ trong bộ nhớ vẫn trả về HTML trỏ tới các chunk cũ không còn tồn tại, dẫn tới lỗi `500 Internal Server Error` khi tải `_next/static/chunks/...` và khiến trang web tại `http://localhost:6868/projects` bị treo vô tận ở dòng chữ "Đang kiểm tra quyền truy cập...".
+  2. **Chế độ Headless của MCP Browser**: Mặc định Playwright MCP và Chrome DevTools MCP khi được khởi tạo bởi dịch vụ daemon sẽ chạy ngầm hoặc không xuất hiện cửa sổ thực trên phiên tương tác màn hình của người dùng.
+- **Biện pháp xử lý & Thao tác kỹ thuật**:
+  1. Hủy tiến trình chạy ngầm cũ `task-2678`, giải phóng cổng 6868 và 6869, khởi động lại `npm run start` với bản build mới nhất. Kiểm tra HTTP 200 trả về hoàn hảo.
+  2. Khởi tạo một phiên Google Chrome có giao diện cửa sổ thực tế (Headed Window) trên Session màn hình của người dùng (`rdp-tcp#36`) với cổng debug mở `--remote-debugging-port=9222` và thư mục profile chuyên biệt `MCP_Profile`.
+  3. Cập nhật `C:\Users\ADMIN\.gemini\config\mcp_config.json` định tuyến `chrome-devtools` kết nối trực tiếp vào `http://127.0.0.1:9222`.
+  4. Thực hiện chuỗi thao tác tự động hóa thực tế ngay trên cửa sổ Chrome hiển thị trước mắt người dùng:
+     - Tự động điền tài khoản `admin` và mật khẩu vào form đăng nhập trên cả môi trường local (`http://localhost:6868`) lẫn production (`https://video.mtdd.io.vn`).
+     - Điều hướng tới Dashboard, kiểm tra các widget chỉ số và biểu đồ token hoạt động mượt mà.
+     - Điều hướng tới trình biên tập `projects/test`, kích hoạt panel AI Agent, kiểm tra hiển thị thông báo lỗi thân thiện tiếng Việt và cảnh báo model miễn phí.
+- **Danh sách tệp tin đã thay đổi (Files Changed)**:
+  - `C:\Users\ADMIN\.gemini\config\mcp_config.json`: Cấu hình `chrome-devtools` kết nối trực tiếp `--browserUrl http://127.0.0.1:9222`.
+  - `SESSION_LOG.md`: Ghi nhận nhật ký phiên làm việc chi tiết.
+- **Kết quả kiểm định & Kiểm thử (Verification & Test Results)**:
+  - Cửa sổ Chrome mở trực tiếp trên màn hình desktop của người dùng.
+  - MCP `chrome-devtools` kết nối thành công, chụp ảnh màn hình và tương tác điền form / chuyển trang theo thời gian thực.
+  - Cả môi trường local (`http://localhost:6868`) và production (`https://video.mtdd.io.vn`) tải dữ liệu 100% ổn định.
+- **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
+  - Cửa sổ Chrome hiển thị trực tiếp trên màn hình đang kết nối với `chrome-devtools` MCP trên cổng 9222 sẵn sàng cho mọi thao tác test tiếp theo.
+
+---
+
 ### [SESSION-2026-11-06-19:45] Xử Lý Triệt Để Lỗi 429 Upstream Của Model Free OpenRouter, Cảnh Báo Agent Tool Calling & Tích Hợp Test Trực Quan MCP
 
 - **Thời gian**: 2026-11-06 19:45 (Múi giờ +07:00)
