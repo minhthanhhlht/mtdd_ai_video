@@ -19,6 +19,11 @@ Khi người dùng đã chọn skill này, TOÀN BỘ các thành phần đồ h
   - **Bộ thẻ quy trình 3D (Workflow Cards):** Chèn ít nhất 2–4 thẻ 3D lơ lửng xuất hiện theo nhịp beat với spring physics (hỗ trợ layer kind `"kinetic-cards"` hoặc `"kinetic-notification"`).
   - **Kinetic Typography 2 tầng:** Chữ Lead trắng nhỏ + Hero Neon Lime Green (#CCFF00) cực lớn xuất hiện liên tục theo nhịp beat (hỗ trợ layer kind `"kinetic-text"` hoặc layers text).
   - **Thanh CTA Dynamic Island:** Xuất hiện nổi bật ở màn kết outro (hỗ trợ layer kind `"kinetic-cta"`).
+  - **⚡ MẬT ĐỘ PHỦ KÍN TIMELINE (PACING DENSITY):**
+    - Cứ mỗi 1.5 – 3 giây BẮT BUỘC phải có 1 sự kiện thị giác (chữ nhảy, thẻ nảy, hoặc REC).
+    - CẤM để video có khoảng trống rỗng quá 2 giây liên tiếp.
+    - Video 30s cần tối thiểu 8 – 12 layers nối tiếp; video 60s cần 14 – 20 layers nối tiếp trải đều từ đầu đến cuối video.
+    - Cứ mỗi khi 1 layer bật lên tại `from`, bắt buộc chèn 1 sound effect SFX (`pop.mp3`, `swoosh.mp3`, `ding.mp3`, `camera-flash-1.wav`) tại đúng frame đó trong `audio.sfx`.
 
 ## Đọc đúng tài liệu
 - Bắt đầu bằng [phong cách và bố cục](references/style.md), [phân tích timeline mẫu](references/timeline-breakdown.md).

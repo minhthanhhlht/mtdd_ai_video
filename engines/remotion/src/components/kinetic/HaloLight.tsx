@@ -15,24 +15,46 @@ export const HaloLight: React.FC<HaloLightProps> = ({
   color = "#FFA028",
 }) => {
   const frame = useCurrentFrame();
-  const breathe = Math.sin(frame / 15) * 12;
+  const breathe = Math.sin(frame / 14) * 16;
+  const currentSize = size + breathe;
 
   return (
     <div
       style={{
         position: "absolute",
-        left: centerX - (size + breathe) / 2,
-        top: centerY - (size + breathe) / 2,
-        width: size + breathe,
-        height: size + breathe,
-        borderRadius: "50%",
-        border: `3px solid ${color}`,
-        boxShadow: `0 0 50px ${color}, inset 0 0 30px ${color}88`,
-        opacity: 0.85,
+        left: centerX - currentSize / 2,
+        top: centerY - currentSize / 2,
+        width: currentSize,
+        height: currentSize,
         pointerEvents: "none",
         zIndex: 10,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
       }}
-    />
+    >
+      {/* Lớp ánh sáng tỏa volumetric ambient glow nền */}
+      <div
+        style={{
+          position: "absolute",
+          inset: -40,
+          borderRadius: "50%",
+          background: `radial-gradient(circle, ${color}44 0%, ${color}1A 40%, transparent 70%)`,
+          filter: "blur(40px)",
+        }}
+      />
+
+      {/* Vòng Neon sắc nét với nhiều tầng phát sáng */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          borderRadius: "50%",
+          border: `3.5px solid ${color}`,
+          boxShadow: `0 0 35px ${color}, 0 0 70px ${color}AA, inset 0 0 35px ${color}66`,
+          opacity: 0.92,
+        }}
+      />
+    </div>
   );
 };
-

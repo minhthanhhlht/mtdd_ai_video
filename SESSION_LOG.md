@@ -6,6 +6,51 @@
 
 ---
 
+### [SESSION-2026-11-07-20:15] Nâng Cấp Toàn Diện Đồ Họa Động Remotion Kinetic (3D Tilt, Glassmorphism, Spring Physics) & Cưỡng Chế Mật Độ Timeline Cho AI Agent
+
+- **Thời gian**: 2026-11-07 20:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  1. "Khi nào bạn muốn nâng cấp phần này, chúng ta có thể tối ưu lại mật độ sinh layer của AI Agent và nâng cấp độ "xịn" của các component Remotion để video đạt đúng độ dày dặn và bắt mắt như video gốc! chỗ này là bạn nâng cấp trong code à. t hỏi chưa xử lí gì nhé"
+  2. "Vậy nâng cấp giúp tôi đi. Lưu ý hãy kiểm tra kĩ lưỡng để tránh phát sinh lỗi và ảnh hưởng đến logic cũ nhé"
+  3. "hãy đưa những gọi ý của bạn về đăng nhập claude pro trên coolify sang notion giúp tôi nhé"
+- **Phân tích kỹ thuật & Kiến trúc**:
+  1. **Nâng cấp độ xịn của các Component Kinetic trong Remotion (`engines/remotion/src/components/kinetic/`)**:
+     - `WorkflowCards.tsx`: Bổ sung phối cảnh 3D (`perspective: 1200px`), độ nghiêng góc nhìn isometric (`rotateY: 10deg` cho card trái, `-10deg` cho card phải), hiệu ứng bay bổng đa chiều (`Math.sin`), nền kính mờ cao cấp (`linear-gradient(145deg, rgba(36, 32, 28, 0.95), rgba(18, 16, 15, 0.96))`), squircle icon badge 3D với đổ bóng phát sáng neon và text shadow sắc nét.
+     - `HaloLight.tsx`: Bổ sung trường hào quang thể tích tỏa từ tâm (`radial-gradient(circle, ${color}44 0%, ${color}1A 40%, transparent 70%)` với `blur(40px)`) kết hợp vòng neon đa lớp phát sáng rực rỡ (`boxShadow: 0 0 35px, 0 0 70px, inset 0 0 35px`).
+     - `KineticText.tsx`: Bổ sung pill nền đen kính mờ bảo vệ tương phản (`rgba(14, 14, 16, 0.78)` với `backdropFilter: blur(20px)` và viền sáng nhẹ), loại bỏ hoàn toàn hiện tượng chữ bị chìm khi video nền có chi tiết phức tạp hoặc màu sáng; tích hợp 3D perspective pop animation và ExtraBold neon text shadows.
+     - `NotificationCard.tsx`: Bổ sung hiệu ứng 3D perspective pop khi xuất hiện, độ nghiêng nhẹ, nền kính mờ phân tầng, icon badge phát sáng và vệt sáng viền cảnh báo nổi bật.
+     - `DynamicIslandCTA.tsx`: Nâng cấp viên thuốc Dynamic Island với ánh sáng hắt đáy (ambient glow), viền beveled gradient kim loại, avatar ring phát sáng và typography tương phản cao.
+  2. **Chuẩn hóa Timeline Validation (`apps/server/src/timeline.ts`)**:
+     - Cập nhật danh sách `LAYER_KINDS` bổ sung đầy đủ các loại layer kinetic: `"kinetic-halo"`, `"kinetic-rec"`, `"kinetic-cards"`, `"kinetic-notification"`, `"kinetic-cta"`, `"kinetic-text"` giúp hệ thống thẩm định schema timeline hợp lệ 100%.
+  3. **Cưỡng chế mật độ sinh layer & Nhịp độ thị giác của AI Agent (`apps/server/src/editPrompt.ts` & `.claude/skills/edit-agency-kinetic-v1/SKILL.md`)**:
+     - Thiết lập "LUẬT MẬT ĐỘ THỊ GIÁC & PHỦ KÍN TIMELINE": Mỗi 1.5 - 3 giây BẮT BUỘC phải có một sự kiện thị giác (xuất hiện card, đổi chữ hero, nhấp nháy REC, đổi góc độ, hoặc âm thanh SFX). Nghiêm cấm khoảng trống tĩnh > 2 giây không có đồ họa.
+     - Quy chuẩn định mức: Video 30 giây đạt từ 8 - 12 layers kinetic; Video 60 giây đạt từ 14 - 20 layers kinetic xen kẽ nhịp nhàng.
+     - Tích hợp "QUY TRÌNH PHÂN ĐOẠN CHO VIDEO SẢN PHẨM / B-ROLL": Phân bổ cấu trúc 4 chương rõ ràng (Hook 0-3s, Problem & Agitation 3-10s, Product Showcase & Features 10-22s, Dynamic Island Call-to-Action 22-30s).
+     - Bổ sung chỉ thị đồng bộ âm thanh hiệu ứng SFX khớp chính xác từng frame vào thời điểm các layer đồ họa xuất hiện (`woosh`, `pop`, `click`, `camera-shutter`).
+  4. **Tạo tài liệu hướng dẫn kỹ thuật trên Notion (`DOC-01`)**:
+     - Soạn thảo và đẩy trực tiếp tài liệu chi tiết: *"HƯỚNG DẪN KỸ THUẬT: Đăng Nhập & Kích Hoạt Claude Pro ($20/tháng) Trên Coolify (Tối Ưu Chi Phí Token)"* lên Notion Database `40e32f30-abfb-8188-a127-ebabc9dc5cd6`.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `engines/remotion/src/components/kinetic/WorkflowCards.tsx`: 3D isometric tilt, floating physics, glassmorphism gradient.
+  - `engines/remotion/src/components/kinetic/HaloLight.tsx`: Volumetric inner radial aura, multi-layer glowing neon ring.
+  - `engines/remotion/src/components/kinetic/KineticText.tsx`: Protective translucent contrast pill, 3D pop animation.
+  - `engines/remotion/src/components/kinetic/NotificationCard.tsx`: 3D perspective pop, gradient glassmorphism, glowing icon badge.
+  - `engines/remotion/src/components/kinetic/DynamicIslandCTA.tsx`: Ambient glow, beveled gradient border, glowing avatar ring.
+  - `apps/server/src/timeline.ts`: Cập nhật `LAYER_KINDS` đầy đủ các kinetic types.
+  - `apps/server/src/editPrompt.ts`: Cưỡng chế mật độ thị giác 1.5-3s/layer, quy trình B-roll/sản phẩm và đồng bộ SFX.
+  - `.claude/skills/edit-agency-kinetic-v1/SKILL.md`: Đồng bộ luật mật độ timeline và frame synchronization SFX.
+  - `SESSION_LOG.md`: Ghi chép nhật ký chi tiết phiên làm việc.
+- **Kết quả kiểm định & QA**:
+  - `npm test -w engines/remotion`: Đạt 22/22 tests PASSED 100%.
+  - `npm run typecheck`: Đạt 100% không lỗi ở toàn bộ 3 packages (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs`: Sạch 100%, tuân thủ tuyệt đối Design Tokens.
+  - `node apps/web/scripts/check-i18n.mjs`: Đủ 2257 keys song ngữ, không thiếu key nào.
+  - `npm run build`: Build thành công toàn bộ mã nguồn server và giao diện web Turbopack.
+- **Triển khai (Deployment)**:
+  - Git commit & push `origin main`.
+  - Triển khai tự động lên Coolify Production (`npm run deploy:coolify -- --wait`).
+
+---
+
 ### [SESSION-2026-11-07-13:05] Thêm Checkbox Tùy Chọn "Cưỡng Chế Áp Dụng Skill 100%" (Enforce Skill Toggle) Cho Brief
 
 - **Thời gian**: 2026-11-07 13:05 (Múi giờ +07:00)

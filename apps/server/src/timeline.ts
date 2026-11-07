@@ -325,7 +325,19 @@ const TRANSITION_TYPES: readonly string[] = [
 ];
 /** Song sinh của LAYER_ANIMS trong engines/remotion/src/manifest.ts */
 const LAYER_ANIMS = ["none", "fade", "slide-up", "slide-down", "slide-left", "slide-right", "pop", "zoom"] as const;
-const LAYER_KINDS = ["image", "video", "text", "shape"] as const;
+/** Song sinh của LAYER_KINDS trong engines/remotion/src/manifest.ts */
+const LAYER_KINDS = [
+  "image",
+  "video",
+  "text",
+  "shape",
+  "kinetic-halo",
+  "kinetic-rec",
+  "kinetic-cards",
+  "kinetic-notification",
+  "kinetic-cta",
+  "kinetic-text",
+] as const;
 const KEYFRAME_EASES = ["linear", "in", "out", "inOut"] as const;
 /** Song sinh của SPEED_MIN/SPEED_MAX trong engines/remotion/src/duration.ts */
 const SPEED_MIN = 0.25;
