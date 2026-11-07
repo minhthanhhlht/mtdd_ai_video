@@ -616,8 +616,20 @@ export async function runQc(input: {
     } else {
       const delta = loud.inputI - TARGET_LUFS;
       const adjust = -delta; // cần chỉnh bao nhiêu dB để về đúng mục tiêu
-      const status: QcStatus =
-        Math.abs(delta) > LUFS_FAIL_DELTA ? "fail" : Math.abs(delta) > LUFS_WARN_DELTA ? "warn" : "pass";
+      const hasVoice = Boolean(meta?.audio?.voice || (meta?.narration as { text?: string } | undefined)?.text);
+      let status: QcStatus;
+      if (Math.abs(delta) <= LUFS_WARN_DELTA) {
+        status = "pass";
+      } else if (Math.abs(delta) <= LUFS_FAIL_DELTA) {
+        status = "warn";
+      } else if (!hasVoice && delta < 0) {
+        // Video không có thoại/voiceover (chỉ có footage nền + SFX ngắt quãng)
+        // thì LUFS tổng thể thấp hơn -14 LUFS là bình thường. Cảnh báo (warn) để AI/người dùng
+        // biết nhưng KHÔNG fail để tránh AI boost gain quá mức (+30dB) gây nổ loa hoặc kẹt loop render.
+        status = "warn";
+      } else {
+        status = "fail";
+      }
       const advice =
         status === "pass"
           ? "đạt mục tiêu"
@@ -626,7 +638,10 @@ export async function runQc(input: {
         id: "loudness",
         label: "Độ to (LUFS)",
         status,
-        detail: `${fmt(loud.inputI, 2)} LUFS (mục tiêu ${TARGET_LUFS} LUFS, lệch ${fmt(delta, 2)} dB) - ${advice}`,
+        detail:
+          !hasVoice && delta < 0
+            ? `${fmt(loud.inputI, 2)} LUFS (mục tiêu ${TARGET_LUFS} LUFS, lệch ${fmt(delta, 2)} dB) - video không có thoại, âm lượng tích hợp thấp là bình thường (cảnh báo)`
+            : `${fmt(loud.inputI, 2)} LUFS (mục tiêu ${TARGET_LUFS} LUFS, lệch ${fmt(delta, 2)} dB) - ${advice}`,
         value: loud.inputI,
       });
     }

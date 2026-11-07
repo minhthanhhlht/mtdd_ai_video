@@ -26,9 +26,17 @@ router.get("/", (req, res) => {
 // Giúp Agent chỉ cần 1 request duy nhất thay vì polling vòng lặp qua Bash.
 router.get("/:id", async (req, res) => {
   const id = req.params.id;
-  const waitSec = Math.min(300, Math.max(0, Number(req.query.wait) || 0));
+  const waitQuery = req.query.wait;
   let job = db.getJob(id);
   if (!job) throw new HttpError(404, "JOB_NOT_FOUND", `Không tìm thấy job "${id}"`);
+
+  // Mặc định: nếu không truyền ?wait VÀ job đang chạy/chờ thì server tự động giữ chờ tối đa 60s.
+  // Giúp Agent và CLI chỉ cần gọi curl thường mà không bao giờ bị rơi vào vòng lặp poll liên tục.
+  // Chỉ khi truyền tường minh ?wait=0 hoặc ?wait=false mới không chờ.
+  const waitSec =
+    waitQuery === undefined
+      ? (job.status === "queued" || job.status === "running" ? 60 : 0)
+      : Math.min(300, Math.max(0, Number(waitQuery) || 0));
 
   if (waitSec > 0 && (job.status === "queued" || job.status === "running")) {
     const isDone = (j: db.JobRow) =>
