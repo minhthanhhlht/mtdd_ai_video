@@ -178,6 +178,11 @@ export interface Brief {
   relatedKeys: string[];
   /** Tên skill dùng để edit (null = AI tự chọn) */
   skill: string | null;
+  /**
+   * BẬT = Cưỡng chế 100% các thành phần thị giác của skill (typography, halo light, thẻ 3D, viewfinder, CTA)
+   * cho mọi video bất kể có talking head hay không. TẮT = AI tự suy luận linh hoạt theo footage.
+   */
+  enforceSkill: boolean;
   /** Sound effect: chỉ bộ đề xuất / tự tìm cả thư viện / không dùng */
   sfxMode: SfxMode;
   /** Nhạc nền: "auto" = AI tự chọn bài theo mood (thư viện assets/music/), "none" = không dùng */
@@ -245,6 +250,7 @@ export function defaultBrief(): Brief {
     mainKey: "",
     relatedKeys: [],
     skill: null,
+    enforceSkill: false,
     sfxMode: "recommended",
     musicMode: "auto",
     autoIllustrations: false,
@@ -304,6 +310,7 @@ export function briefOf(meta: ProjectMeta): Brief {
     base.relatedKeys = b.relatedKeys.filter((k): k is string => typeof k === "string");
   }
   if (typeof b.skill === "string" && isSkillName(b.skill.trim())) base.skill = b.skill.trim();
+  if (typeof b.enforceSkill === "boolean") base.enforceSkill = b.enforceSkill;
   if (SFX_MODES.includes(b.sfxMode as SfxMode)) base.sfxMode = b.sfxMode as SfxMode;
   if (MUSIC_MODES.includes(b.musicMode as MusicMode)) base.musicMode = b.musicMode as MusicMode;
   if (typeof b.autoIllustrations === "boolean") base.autoIllustrations = b.autoIllustrations;
@@ -426,6 +433,7 @@ export function applyBriefPatch(
   strList("relatedKeys");
   const skill = nullableStr("skill");
   if (skill && !isSkillName(skill)) bad("skill phải là tên skill kebab-case (vd: noti-tiktok-vn)");
+  bool("enforceSkill");
   bool("autoIllustrations");
   const illustrationModel = nullableStr("illustrationModel");
   if (illustrationModel && !isModelId(illustrationModel)) bad("illustrationModel không hợp lệ");

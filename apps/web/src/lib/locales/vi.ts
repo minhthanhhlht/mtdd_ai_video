@@ -587,6 +587,8 @@ export const vi: Record<string, string> = {
   "brief.style-hint": "Sản phẩm bắt buộc tuân theo style này 100% - ghi đè mọi quy định màu/font trong skill/prompt.",
   "brief.skill-label": "Skill dùng để edit",
   "brief.skill-hint": "Quy trình/phong cách edit đã lưu sẵn - để trống thì AI tự chọn skill phù hợp.",
+  "brief.enforce-skill-label": "Cưỡng chế áp dụng skill 100% cho mọi video",
+  "brief.enforce-skill-hint": "Bắt buộc dựng đủ toàn bộ đồ họa, thẻ 3D, halo light và hiệu ứng của skill ngay cả khi video không có người nói (không có talking head). Bỏ chọn để AI tự suy luận linh hoạt theo footage.",
   "brief.sfx-hint": "Âm thanh hiệu ứng (whoosh, pop…) AI chèn theo nhịp video.",
   "brief.music-label": "Nhạc nền",
   "brief.music-hint": "AI chọn một bài trong thư viện Nhạc nền hợp mood nội dung, tự giảm âm lượng (duck) khi có thoại.",

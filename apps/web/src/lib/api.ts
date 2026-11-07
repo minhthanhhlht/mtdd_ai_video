@@ -259,6 +259,8 @@ export interface Brief {
   /** Key liên quan user chỉ định (AI bắt buộc dùng đủ) - [] = AI tự chọn 3–6 key. */
   relatedKeys: string[];
   skill: string | null;
+  /** BẬT = Cưỡng chế 100% các thành phần thị giác của skill cho mọi video kể cả không có người nói. */
+  enforceSkill?: boolean;
   sfxMode: SfxMode;
   /** "auto" (mặc định) = AI tự chọn nhạc nền theo mood, "none" = không dùng. */
   musicMode: MusicMode;

@@ -73,6 +73,7 @@ export const DEFAULT_BRIEF: Brief = {
   mainKey: "",
   relatedKeys: [],
   skill: null,
+  enforceSkill: false,
   sfxMode: "recommended",
   musicMode: "auto",
   notes: "",
@@ -590,6 +591,18 @@ export function BriefFields({
           ))}
         </select>
       </Field>
+
+      {value.skill && (
+        <div className="pl-2">
+          <CheckboxField
+            id="brief-enforce-skill"
+            checked={value.enforceSkill ?? false}
+            onChange={(v) => set("enforceSkill", v)}
+            label={t("brief.enforce-skill-label")}
+            hint={t("brief.enforce-skill-hint")}
+          />
+        </div>
+      )}
 
       {/* 6. Sound effect */}
       <Field label="Sound effect" hint={t("brief.sfx-hint")}>

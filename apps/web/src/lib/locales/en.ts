@@ -587,6 +587,8 @@ export const en: Record<string, string> = {
   "brief.style-hint": "The output must follow this style 100% - overriding any color/font rules in skills/prompts.",
   "brief.skill-label": "Skill used for editing",
   "brief.skill-hint": "A saved editing workflow/style - leave empty and the AI picks a suitable skill.",
+  "brief.enforce-skill-label": "Enforce 100% skill components on all videos",
+  "brief.enforce-skill-hint": "Forcefully applies all graphics, 3D cards, halo light and effects of the skill even when footage has no speaking person. Uncheck to let AI reason flexibly based on footage.",
   "brief.sfx-hint": "Effect sounds (whoosh, pop…) the AI inserts on the video's beats.",
   "brief.music-label": "Background music",
   "brief.music-hint": "The AI picks a track from the music library matching the content's mood, auto-ducking under speech.",

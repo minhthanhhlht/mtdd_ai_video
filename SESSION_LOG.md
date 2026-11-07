@@ -6,6 +6,38 @@
 
 ---
 
+### [SESSION-2026-11-07-13:05] Thêm Checkbox Tùy Chọn "Cưỡng Chế Áp Dụng Skill 100%" (Enforce Skill Toggle) Cho Brief
+
+- **Thời gian**: 2026-11-07 13:05 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**: "Phần bạn vừa sửa này hãy sửa nó thành 1 check box được không nếu t chọn check box đó thì cưỡng chế video nào dùng cũng được. Còn nếu tôi không chọn thì Agent tự ý suy luận rằng khi footage không có mặt người nói trước ống kính...."
+- **Phân tích kỹ thuật & Thiết kế**:
+  1. Thêm trường `enforceSkill?: boolean` (mặc định `false`) vào schema `Brief` ở cả server (`apps/server/src/meta.ts`) và web client (`apps/web/src/lib/api.ts`).
+  2. Cập nhật `createDefaultBrief()`, `briefOf()`, và `applyBriefPatch()` để lưu trữ và thẩm định trường `enforceSkill` an toàn, tương thích ngược 100% với các project cũ.
+  3. Bổ sung `<CheckboxField>` trong `apps/web/src/components/BriefFields.tsx` ngay dưới bộ chọn Skill (chỉ hiển thị khi người dùng đã chọn một skill cụ thể). Tuân thủ nghiêm ngặt Design Tokens và thang chữ 3 bậc của hệ thống thiết kế.
+  4. Phân nhánh tạo chỉ thị trong `apps/server/src/editPrompt.ts`:
+     - **Khi BẬT (`brief.enforceSkill === true`)**: Cưỡng chế 100% tất cả thành phần thị giác của skill (Halo Light, Thẻ 3D Workflow Cards, Khung ngắm REC Viewfinder, Typography 2 tầng Hero/Lead, Dynamic Island CTA, SFX) vào mọi loại video, nghiêm cấm mọi suy luận thoái thác do thiếu talking head.
+     - **Khi TẮT (`brief.enforceSkill === false`)**: Cho phép AI Agent tự do phân tích footage và suy luận linh hoạt, thích ứng hoặc lược bỏ các thành phần đặc thù của người nói khi video không có talking-head để tối ưu cho nội dung thực tế.
+  5. Bổ sung song ngữ hoàn chỉnh trong `locales/vi.ts` và `locales/en.ts` (`brief.enforce-skill-label`, `brief.enforce-skill-hint`).
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/server/src/meta.ts`: Schema `Brief.enforceSkill`, giá trị mặc định, merge và patch validation.
+  - `apps/web/src/lib/api.ts`: Kiểu TypeScript frontend `Brief.enforceSkill`.
+  - `apps/web/src/components/BriefFields.tsx`: Bổ sung `<CheckboxField>` tùy chọn cưỡng chế skill dưới bộ chọn skill.
+  - `apps/server/src/editPrompt.ts`: Phân nhánh chỉ thị AI Agent theo giá trị `enforceSkill`.
+  - `apps/web/src/lib/locales/vi.ts` & `en.ts`: Cặp khóa i18n song ngữ cho nhãn và mô tả giải thích.
+  - `SESSION_LOG.md`: Ghi chép nhật ký phiên làm việc.
+- **Kết quả kiểm định & QA**:
+  - `node apps/web/scripts/check-design-system.mjs`: Sạch 100%, tuân thủ Design Tokens.
+  - `node apps/web/scripts/check-i18n.mjs`: Pass 100%, 2257 keys, 0 keys thiếu.
+  - `npm run typecheck`: Pass 100% không có lỗi ở cả 3 packages (`apps/server`, `apps/web`, `engines/remotion`).
+  - `npm run build`: Build thành công toàn bộ các trang tĩnh và dynamic route.
+  - Kiểm tra hành vi Prompt: Kiểm thử đầu ra của `buildEditPrompt` xác nhận cả hai nhánh BẬT (cưỡng chế tuyệt đối) và TẮT (suy luận linh hoạt) hoạt động chính xác theo đúng cấu hình người dùng.
+  - Khởi động lại dịch vụ local: Cả Backend (port 6869) và Web UI (port 6868) đều trả về HTTP 200 OK.
+- **Triển khai (Deployment)**:
+  - Git commit & push `origin main`.
+  - Kích hoạt triển khai tự động lên Coolify Production (`https://video.mtdd.io.vn`).
+
+---
+
 ### [SESSION-2026-11-07-12:50] Cưỡng Chế Áp Dụng 100% Thành Phần Của Skill Cho Mọi Loại Video & Tích Hợp Native Kinetic Layers Vào Remotion
 
 - **Thời gian**: 2026-11-07 12:50 (Múi giờ +07:00)
