@@ -12,7 +12,17 @@
  * nhân với tỉ lệ hiển thị.
  */
 
-export type LayerKind = "image" | "video" | "text" | "shape";
+export type LayerKind =
+  | "image"
+  | "video"
+  | "text"
+  | "shape"
+  | "kinetic-halo"
+  | "kinetic-rec"
+  | "kinetic-cards"
+  | "kinetic-notification"
+  | "kinetic-cta"
+  | "kinetic-text";
 export type LayerAnim =
   | "none"
   | "fade"

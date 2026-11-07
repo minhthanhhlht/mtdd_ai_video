@@ -342,9 +342,22 @@ export const layerKeyframeSchema = z.looseObject({
  * (vị trí/cỡ/hiệu ứng/keyframe) tính bằng `layerBox` (layerGeometry.ts) - hàm
  * dùng chung với khung kéo-thả của trình chỉnh sửa.
  */
+export const LAYER_KINDS = [
+  "image",
+  "video",
+  "text",
+  "shape",
+  "kinetic-halo",
+  "kinetic-rec",
+  "kinetic-cards",
+  "kinetic-notification",
+  "kinetic-cta",
+  "kinetic-text",
+] as const;
+
 export const layerSchema = z.looseObject({
   id: z.string().min(1),
-  kind: z.enum(["image", "video", "text", "shape"]),
+  kind: z.enum(LAYER_KINDS),
   from: z.number().int().min(0),
   durationInFrames: z.number().int().positive(),
   /** image/video: đường dẫn trong project (meta) / staging (resolved) */
@@ -357,6 +370,10 @@ export const layerSchema = z.looseObject({
   volume: z.number().min(0).max(2).optional(),
   /** text: cho phép xuống dòng */
   text: z.string().optional(),
+  /** kinetic text: từ khóa Hero tầng dưới */
+  heroText: z.string().optional(),
+  /** kinetic: tham số riêng của từng component (cards, glow, sfx,...) */
+  kineticProps: z.record(z.string(), z.any()).optional(),
   style: layerStyleSchema.optional(),
   /** Bề rộng hộp, tỉ lệ theo chiều rộng khung 0.05..2 - mặc định 0.5 */
   width: z.number().min(0.05).max(2).optional(),

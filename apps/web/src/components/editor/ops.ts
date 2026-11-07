@@ -1795,7 +1795,18 @@ export type TimelineLayer = NonNullable<Timeline["layers"]>[number];
 export type TimelineLayerKeyframe = NonNullable<TimelineLayer["keyframes"]>[number];
 export type LayerKind = TimelineLayer["kind"];
 
-const LAYER_KINDS: readonly string[] = ["image", "video", "text", "shape"];
+const LAYER_KINDS: readonly string[] = [
+  "image",
+  "video",
+  "text",
+  "shape",
+  "kinetic-halo",
+  "kinetic-rec",
+  "kinetic-cards",
+  "kinetic-notification",
+  "kinetic-cta",
+  "kinetic-text",
+];
 
 /** Danh sách layer (rỗng khi vắng mặt hoặc sai kiểu). */
 export const layersOf = (tl: Timeline): TimelineLayer[] => (Array.isArray(tl.layers) ? tl.layers : []);

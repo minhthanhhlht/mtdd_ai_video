@@ -6,6 +6,44 @@
 
 ---
 
+### [SESSION-2026-11-07-12:50] Cưỡng Chế Áp Dụng 100% Thành Phần Của Skill Cho Mọi Loại Video & Tích Hợp Native Kinetic Layers Vào Remotion
+
+- **Thời gian**: 2026-11-07 12:50 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**: "T đã tạo thử và có 1 dòng kết quả: Bỏ qua phần talking head, halo và thẻ 3D của skill vì video không có người nói. Tôi muốn áp dụng skill cho tất cả các video miễn t chọn skill nào thì skill đó sẽ được tạo vào video và không có điều kiện gì ngăn cản skill vào video đó"
+- **Nguyên nhân kỹ thuật & Kiến trúc**:
+  1. Trong phiên dựng video `test`, Agent tự ý suy luận rằng khi footage không có mặt người nói trước ống kính thì có thể lược bỏ các thành phần đồ họa chủ chốt của skill (Halo Light, Thẻ 3D Workflow Cards, Khung ngắm REC Viewfinder), chỉ để lại chữ chạy thông thường.
+  2. Prompt chỉ định skill trong `apps/server/src/editPrompt.ts` trước đây chỉ bảo `Dùng skill làm quy trình chính`, chưa có chỉ thị cưỡng chế không cho phép bỏ qua các layer đồ họa khi video không có talking-head.
+  3. Lớp Render Remotion (`engines/remotion`) trước đó mới hỗ trợ các layer tĩnh (`image`, `video`, `text`, `shape`), chưa hỗ trợ trực tiếp các layer động (`kinetic-halo`, `kinetic-rec`, `kinetic-cards`, `kinetic-cta`, `kinetic-text`) trong `LayerTrack.tsx`.
+- **Thực thi kỹ thuật & Biện pháp khắc phục**:
+  1. **Cưỡng chế ở tầng Prompt Master (`apps/server/src/editPrompt.ts`)**:
+     - Thiết lập quy tắc thép: Khi người dùng đã chọn một skill trong brief (`brief.skill`), **100% các thành phần visual đặc trưng của skill đó BẮT BUỘC PHẢI ĐƯỢC ÁP DỤNG TRỌN VẸN VÀO VIDEO**.
+     - Nghiêm cấm mọi suy luận thoái thác, bỏ qua với lý do "video không có người nói", "không có talking-head", "video b-roll", "video sản phẩm".
+     - Hướng dẫn chi tiết cách thức adapt cho video không có người nói: Halo Light tỏa sáng ambient glow từ trung tâm tạo chiều sâu studio 3D; Khung ngắm REC Viewfinder bao quanh các phân đoạn mở đầu/nhấn mạnh; Thẻ quy trình 3D (Workflow Cards / Notification Cards) lơ lửng chuyển động với spring physics; Kinetic Typography 2 tầng xuất hiện liên tục; và Dynamic Island CTA ở đoạn kết.
+  2. **Nâng cấp Remotion Assembly Engine (`engines/remotion`)**:
+     - Cập nhật `manifest.ts` và `layerGeometry.ts`: Mở rộng `LayerKind` và `layerSchema` hỗ trợ các loại layer mới: `"kinetic-halo"`, `"kinetic-rec"`, `"kinetic-cards"`, `"kinetic-notification"`, `"kinetic-cta"`, `"kinetic-text"`.
+     - Nâng cấp `LayerTrack.tsx`: Tích hợp trực tiếp các component kinetic vào luồng render layer của Remotion, giúp `meta.json` có thể khai báo và render trọn vẹn toàn bộ các thành phần visual của skill.
+     - Cập nhật `ops.ts` trong `apps/web` đảm bảo tính đồng bộ kiểu dữ liệu.
+  3. **Cập nhật tài liệu Skill (`.claude/skills/edit-agency-kinetic-v1/SKILL.md`)**:
+     - Ghi nhận nguyên tắc áp dụng 100% cho mọi loại video (cả talking-head lẫn b-roll/sản phẩm/explainer).
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/server/src/editPrompt.ts`: Chỉ thị cưỡng chế 100% thành phần skill.
+  - `.claude/skills/edit-agency-kinetic-v1/SKILL.md`: Cập nhật nguyên tắc áp dụng universal.
+  - `engines/remotion/src/manifest.ts`: Bổ sung kinetic layer kinds và props vào schema.
+  - `engines/remotion/src/layerGeometry.ts`: Đồng bộ kiểu `LayerKind`.
+  - `engines/remotion/src/components/LayerTrack.tsx`: Render các component kinetic trực tiếp.
+  - `apps/web/src/components/editor/ops.ts`: Đồng bộ `LAYER_KINDS`.
+  - `SESSION_LOG.md`: Ghi nhận phiên làm việc.
+- **Kết quả kiểm định & QA**:
+  - `npm run typecheck`: Pass 100% trên cả 3 packages (`apps/server`, `apps/web`, `engines/remotion`).
+  - `npm test -w engines/remotion`: 22/22 tests passed.
+  - `node apps/web/scripts/check-design-system.mjs`: Sạch.
+  - `node apps/web/scripts/check-i18n.mjs`: Đủ cả 2255 keys.
+  - `npm run build`: Build thành công toàn bộ 28 routes.
+- **Triển khai**:
+  - Sẵn sàng push Git và triển khai tự động lên Coolify.
+
+---
+
 ### [SESSION-2026-11-06-22:05] Tích Hợp Gói Skill Agency Kinetic V1 & Xây Dựng Tính Năng Video-to-Skill Generator Bằng AI Vision
 
 - **Thời gian**: 2026-11-06 22:05 (Múi giờ +07:00)

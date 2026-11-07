@@ -786,7 +786,19 @@ export function buildEditPrompt(input: {
   lines.push("## Skill");
   if (brief.skill) {
     lines.push(
-      `Dùng skill \`${brief.skill}\` làm quy trình chính - đọc \`.claude/skills/${brief.skill}/SKILL.md\` và làm theo.`,
+      `Dùng skill \`${brief.skill}\` làm quy trình chính - đọc \`.claude/skills/${brief.skill}/SKILL.md\` và bắt buộc tuân theo.`,
+      "",
+      "🔴 BẮT BUỘC ÁP DỤNG TRỌN VẸN TẤT CẢ THÀNH PHẦN CỦA SKILL (LUẬT THÉP BẢO TOÀN SKILL):",
+      `- Người dùng ĐÃ CHỌN skill "${brief.skill}" nghĩa là BẮT BUỘC toàn bộ thành phần đồ họa, visual layers, typography, hiệu ứng chuyển động, thẻ cards/3D, halo light, viewfinder, màu sắc và âm thanh đặc trưng của skill PHẢI ĐƯỢC TẠO VÀ ÁP DỤNG TRỌN VẸN vào video.`,
+      `- TUYỆT ĐỐI CẤM tự ý bỏ qua các thành phần của skill với bất kỳ lý do nào. CẤM các suy luận hoặc báo cáo kiểu "bỏ qua talking head, halo và thẻ 3D vì video không có người nói" hay "video không có mặt người nên không dùng skill".`,
+      "- NGUYÊN TẮC ÁP DỤNG CHO MỌI LOẠI VIDEO (KỂ CẢ VIDEO KHÔNG CÓ NGƯỜI NÓI / B-ROLL / SẢN PHẨM / CHỮ):",
+      "  · Video không có người nói/mặt người? VẪN BẮT BUỘC DỰNG ĐẦY ĐỦ toàn bộ thành phần đồ họa của skill lên video!",
+      "  · Vòng sáng Halo Light: Nếu không có người nói để đặt sau đầu, đặt Halo Light ở trung tâm hoặc làm nguồn sáng tỏa ambient glow phía sau các thẻ đồ họa / chủ thể để tạo chiều sâu studio đẳng cấp (hỗ trợ layer kind \"kinetic-halo\").",
+      "  · Thẻ quy trình / cards (Workflow Cards / Notification Cards): Bắt buộc chèn các thẻ đồ họa nổi bật theo diễn biến nội dung video (hỗ trợ layer kind \"kinetic-cards\", \"kinetic-notification\").",
+      "  · Khung ngắm REC Viewfinder: Chèn lớp phủ viewfinder máy quay REC nhấp nháy ở đoạn mở đầu hoặc phân cảnh nhấn mạnh (hỗ trợ layer kind \"kinetic-rec\").",
+      "  · Kinetic Typography 2 tầng: Bắt buộc dùng kiểu chữ 2 tầng (chữ lead phụ phía trên + chữ Hero Neon cực dày nổi bật phía dưới) xuất hiện theo nhịp (hỗ trợ layer kind \"kinetic-text\" hoặc layers text lead + hero).",
+      "  · Dynamic Island CTA: Đặt thanh pill CTA capsule chuyển động mượt mà ở đoạn kết video (hỗ trợ layer kind \"kinetic-cta\").",
+      "- Tóm lại: Khi người dùng đã chọn một skill, video XUẤT RA BẮT BUỘC PHẢI THỂ HIỆN RÕ RÀNG phong cách đặc trưng của skill đó. Không có bất kỳ điều kiện nào được phép ngăn cản hoặc hạ cấp việc áp dụng skill!",
     );
   } else {
     lines.push(

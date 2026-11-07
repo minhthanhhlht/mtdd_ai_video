@@ -14,6 +14,14 @@ import { useMediaErrorProps, useMediaSrc } from "../media";
 import { ColorBox } from "./ColorBox";
 import { resolveSubtitleFont } from "./SubtitleTrack";
 import { useVietnameseFont } from "./vietnameseFont";
+import {
+  HaloLight,
+  RecViewfinder,
+  NotificationCard,
+  WorkflowCards,
+  DynamicIslandCTA,
+  KineticText,
+} from "./kinetic";
 
 /**
  * Track layer chồng (docs/EDITOR-V2-PLAN.md mục 1.2): mỗi layer một
@@ -106,6 +114,44 @@ const LayerItem: React.FC<{ layer: Layer }> = ({ layer }) => {
     );
   } else if (isText) {
     content = <TextContent layer={layer} />;
+  } else if (layer.kind === "kinetic-halo") {
+    content = <HaloLight {...((layer.kineticProps ?? {}) as any)} />;
+  } else if (layer.kind === "kinetic-rec") {
+    content = <RecViewfinder {...((layer.kineticProps ?? {}) as any)} />;
+  } else if (layer.kind === "kinetic-cards") {
+    content = <WorkflowCards {...((layer.kineticProps ?? {}) as any)} />;
+  } else if (layer.kind === "kinetic-notification") {
+    content = (
+      <NotificationCard
+        title={layer.text ?? ""}
+        {...((layer.kineticProps ?? {}) as any)}
+      />
+    );
+  } else if (layer.kind === "kinetic-cta") {
+    content = (
+      <DynamicIslandCTA
+        ctaText={layer.text ?? undefined}
+        subText={layer.heroText ?? undefined}
+        {...((layer.kineticProps ?? {}) as any)}
+      />
+    );
+  } else if (layer.kind === "kinetic-text") {
+    content = (
+      <KineticText
+        leadText={layer.text}
+        keyword={layer.heroText ?? layer.text ?? ""}
+        {...((layer.kineticProps ?? {}) as any)}
+      />
+    );
+  }
+
+  const isKinetic = layer.kind.startsWith("kinetic-");
+  if (isKinetic) {
+    return (
+      <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }} data-layer-id={layer.id}>
+        {content}
+      </div>
+    );
   }
 
   // data-layer-id: khung chọn của trình chỉnh sửa (CanvasOverlay) đo hộp chữ THẬT
