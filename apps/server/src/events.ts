@@ -1,4 +1,9 @@
 import type { Request, Response } from "express";
+import { EventEmitter } from "node:events";
+
+/** EventEmitter nội bộ cho các tiến trình server (ví dụ: chờ job hoàn thành) */
+export const jobEvents = new EventEmitter();
+jobEvents.setMaxListeners(100);
 
 /**
  * SSE hub - một stream chung tại GET /api/events.
@@ -42,6 +47,15 @@ export function addSseClient(req: Request, res: Response): void {
 }
 
 export function broadcast(event: string, data: unknown): void {
+  // Bắn sự kiện nội bộ cho các request đang chờ job (long-polling)
+  if (event === "job" && data && typeof data === "object") {
+    const job = data as { id?: string; status?: string };
+    if (job.id) {
+      jobEvents.emit(`job:${job.id}`, job);
+      jobEvents.emit("job", job);
+    }
+  }
+
   const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
   for (const res of clients) {
     if (res.writableEnded || res.destroyed) {

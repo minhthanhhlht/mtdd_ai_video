@@ -6,6 +6,59 @@
 
 ---
 
+### [SESSION-2026-11-07-22:15] Khắc Phục Triệt Để Lỗi Agent Polling Gây Đốt Token Vô Nghĩa, Giới Hạn Thử Lại QC & Bổ Sung Long-Polling Server-Side
+
+- **Thời gian**: 2026-11-07 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  1. "Bạn xem giúp mình AI đang chạy để tạo video: test video. Sao mà lâu thế với lại đã mất hơn 2$ rồi không giống như bạn nói mất có mấy trăm đồng/video"
+  2. "Hãy sửa ngay lập tức vấn đề này nhé"
+- **Nguyên nhân kỹ thuật & Kiến trúc**:
+  1. **Nguyên nhân vòng lặp Polling đốt token khủng khiếp (275 turns / 16 triệu tokens)**:
+     - Trong chỉ thị `editPrompt.ts` trước đây yêu cầu Agent: `poll GET /api/jobs/<id> bằng curl, sleep giữa các lần`.
+     - Mỗi lượt render Remotion video 55 giây mất 3 - 5 phút. Trong thời gian này, Agent liên tục chạy lệnh `sleep 15 && curl ...` lặp lại tới 20 lần cho MỖI lượt render.
+     - Cứ mỗi 15-20 giây, Agent lại gọi một lượt LLM API mới. Trong kiến trúc Agentic, mỗi lượt gọi mới phải truyền lại TOÀN BỘ lịch sử hội thoại (lên tới 80.000 - 150.000 tokens/turn từ lượt 100 trở đi).
+     - Kết quả: Agent gửi đi hơn 16 triệu tokens chỉ để hỏi "render xong chưa?", làm bay $1.5 - $2.0 số dư của người dùng.
+  2. **Nguyên nhân lặp lại Render 3 lần liên tiếp do Cổng QC**:
+     - Video gốc có âm lượng quá nhỏ (`-25.59 LUFS`, lệch -11.6 dB so với chuẩn -14 LUFS) và đuôi video có 4 giây im lặng. Cổng QC đánh fail.
+     - Prompt trước đây chỉ thị `status: "fail" -> PHẢI sửa đúng nguyên nhân rồi render draft lại và QC lại`, không hề có ngưỡng trần số lần thử lại (retry cap).
+     - Dẫn đến Agent cố chấp sửa volume rồi render lại lần 2 (lại poll 20 lần), vẫn fail rồi lại sửa render tiếp lần 3 (lại poll 20 lần)!
+  3. **Lỗi Tokenizer chặn lệnh Curl trong Agent Policy**:
+     - Hàm `tokenize` trong `agentPolicy.ts` không xử lý các ký tự nháy bị escape (`\"`), khiến tham số `-H \"Content-Type: application/json\"` bị cắt vụn thành token `application/json\"` và bị nhầm thành URL ngoại lai, kích hoạt chặn lệnh giả khiến Agent phải xoay xở retry nhiều lần.
+  4. **Lệch hiển thị chi phí trên Dashboard**:
+     - SDK Claude Agent trả về `total_cost_usd` tính theo bảng giá Claude Sonnet ($3/M) thay vì giá siêu rẻ của OpenRouter ($0.075/M với Gemini 2.5 Flash), khiến Dashboard hiển thị số tiền cao gấp 40 lần thực tế.
+- **Thực thi kỹ thuật & Giải pháp triệt để**:
+  1. **Bổ sung Long-Polling Server-Side (`GET /api/jobs/:id?wait=N`)**:
+     - `apps/server/src/events.ts`: Xuất `jobEvents = new EventEmitter()` và kích hoạt sự kiện `job:${id}` ngay khi trạng thái job thay đổi.
+     - `apps/server/src/routes/jobs.ts`: Hỗ trợ tham số `?wait=N` (tối đa 300s). Nếu job đang chạy hoặc trong hàng đợi, Express tự động giữ kết nối HTTP ở tầng server và chỉ trả về ngay khi job hoàn tất (`done`, `failed`, `canceled`) hoặc hết timeout.
+     - Giúp Agent chỉ cần gọi DUY NHẤT 1 lệnh `curl -s "http://localhost:6869/api/jobs/<id>?wait=120"`, cắt giảm 90% số turn và triệt tiêu hoàn toàn vòng lặp polling.
+  2. **Áp dụng Giới hạn Cứng cho Cổng QC & Cấm Polling `sleep 15`**:
+     - `apps/server/src/editPrompt.ts`: Cưỡng chế quy tắc: nếu QC fail, Agent chỉ được sửa và render lại TỐI ĐA 1 LẦN (tổng tối đa 2 lần render trong phiên). Nếu lần 2 vẫn fail (do footage gốc), BẮT BUỘC DỪNG LẠI và báo cáo trong Báo cáo cuối để người dùng duyệt/chỉnh tay.
+     - Thay thế toàn bộ chỉ thị polling `sleep 15` bằng lệnh `?wait=120` tiết kiệm token.
+  3. **Khắc phục Shell Tokenizer trong `agentPolicy.ts`**:
+     - Chuẩn hóa unescape nháy kép/đơn trước khi regex tokenize, loại bỏ triệt để lỗi hiểu nhầm `-H "Content-Type: application/json"` thành URL lạ.
+  4. **Cập nhật Bảng Giá OpenRouter & Chuẩn Hóa Chi Phí Thực Tế**:
+     - `apps/server/src/pricing.ts`: Bổ sung bảng giá chi tiết cho các model OpenRouter (`google/gemini-2.5-flash`, `google/gemini-2.5-pro`, `deepseek/deepseek-chat`, `deepseek/deepseek-r1`...).
+     - `apps/server/src/agent.ts`: Tính toán chi phí thực tế theo bảng giá OpenRouter khi ghi vào `token_usage`, hiển thị minh bạch và chính xác trên Dashboard.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/server/src/events.ts`: Thêm `jobEvents` EventEmitter và phát sự kiện `job:${id}`.
+  - `apps/server/src/routes/jobs.ts`: Hỗ trợ `?wait=N` long-polling server-side.
+  - `apps/server/src/editPrompt.ts`: Chỉ thị dùng `?wait=120`, cấm `sleep 15` loop, và giới hạn tối đa 1 lần render lại khi QC fail.
+  - `apps/server/src/pricing.ts`: Bổ sung bảng giá OpenRouter models.
+  - `apps/server/src/agent.ts`: Tính `cost` chuẩn theo OpenRouter pricing và gán provider chính xác.
+  - `apps/server/src/agentPolicy.ts`: Khắc phục `tokenize` unescape nháy.
+  - `SESSION_LOG.md`: Ghi nhật ký chi tiết phiên làm việc.
+- **Kết quả kiểm định & QA**:
+  - `npm test -w engines/remotion`: Pass 22/22 tests 100%.
+  - `npm run typecheck`: Pass 100% cả 3 packages (`server`, `web`, `remotion-engine`).
+  - `node apps/web/scripts/check-design-system.mjs`: Sạch 100%.
+  - `node apps/web/scripts/check-i18n.mjs`: Pass 100% (2257 keys).
+  - `npm run build`: Build thành công Next.js và Server.
+- **Triển khai (Deployment)**:
+  - Git commit & push `origin main`.
+  - Triển khai tự động lên Coolify Production (`npm run deploy:coolify -- --wait`).
+
+---
+
 ### [SESSION-2026-11-07-20:15] Nâng Cấp Toàn Diện Đồ Họa Động Remotion Kinetic (3D Tilt, Glassmorphism, Spring Physics) & Cưỡng Chế Mật Độ Timeline Cho AI Agent
 
 - **Thời gian**: 2026-11-07 20:15 (Múi giờ +07:00)

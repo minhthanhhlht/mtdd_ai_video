@@ -52,13 +52,24 @@ export const MODEL_PRICES: Record<string, ModelPrice> = {
   "claude-sonnet-4-6": { inPerM: 3, outPerM: 15 },
   "claude-haiku-4-5": { inPerM: 1, outPerM: 5 },
 
-  // ----- Google Gemini -----
+  // ----- Google Gemini (Direct Cloud) -----
   // Trùng với hằng số đã dùng để TÍNH costUsd trong stt.ts và translate.ts
   // (GEMINI_PRICE_IN_PER_M / _OUT_PER_M) - hai nơi phải bằng nhau, lệch là
   // cột tổng và cột $vào/$ra đá nhau vì lý do sai chứ không phải vì cache.
   "gemini-3.1-flash-image": { inPerM: 0.3, outPerM: 2.5 },
   "gemini-3.1-flash-lite-image": { inPerM: 0.3, outPerM: 2.5 },
   "gemini-3-pro-image": { inPerM: 0.3, outPerM: 2.5 },
+
+  // ----- OpenRouter Models (AI Video Editor Agent) -----
+  "google/gemini-2.5-flash": { inPerM: 0.075, outPerM: 0.3 },
+  "google/gemini-2.5-pro": { inPerM: 1.25, outPerM: 5.0 },
+  "deepseek/deepseek-chat": { inPerM: 0.14, outPerM: 0.28 },
+  "deepseek/deepseek-r1": { inPerM: 0.55, outPerM: 2.19 },
+  "openai/gpt-4o-mini": { inPerM: 0.15, outPerM: 0.6 },
+  "openai/gpt-4o": { inPerM: 2.5, outPerM: 10 },
+  "anthropic/claude-sonnet-4.5": { inPerM: 3, outPerM: 15 },
+  "anthropic/claude-3.5-sonnet": { inPerM: 3, outPerM: 15 },
+  "anthropic/claude-3.7-sonnet": { inPerM: 3, outPerM: 15 },
 };
 
 /**
@@ -69,12 +80,13 @@ export const MODEL_PRICES: Record<string, ModelPrice> = {
  */
 export const PROVIDER_FALLBACK_PRICES: Record<string, ModelPrice> = {
   gemini: { inPerM: 0.3, outPerM: 2.5 },
+  openrouter: { inPerM: 0.15, outPerM: 0.6 },
 };
 
 /** Đơn giá của một dòng usage; null = không biết, UI phải để trống ô $. */
 export function priceFor(
-  model: string | null,
-  provider: string | null,
+  model: string | null | undefined,
+  provider?: string | null,
 ): ModelPrice | null {
   if (model && MODEL_PRICES[model]) return MODEL_PRICES[model];
   if (provider && PROVIDER_FALLBACK_PRICES[provider]) {

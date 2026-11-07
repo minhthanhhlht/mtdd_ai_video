@@ -7,6 +7,7 @@ import * as db from "./db.js";
 import { broadcast } from "./events.js";
 import { normOutput, readMeta } from "./meta.js";
 import { isQcReportStale, readQcReport } from "./qc.js";
+import { priceFor } from "./pricing.js";
 import { readRenderSettings } from "./renderSettings.js";
 import { agentRunStarted, agentRunFinished, timelineVersion } from "./timeline.js";
 
@@ -674,9 +675,22 @@ export async function runAgent(
             (msg.usage?.cache_creation_input_tokens ?? 0) +
             (msg.usage?.cache_read_input_tokens ?? 0);
           const outTok = msg.usage?.output_tokens ?? msg.output_tokens ?? 0;
-          const cost = typeof msg.total_cost_usd === "number" ? msg.total_cost_usd : 0;
+          let cost = typeof msg.total_cost_usd === "number" ? msg.total_cost_usd : 0;
+          let provider: "claude" | "gemini" | "openai" = "claude";
+          if (isRouter && session?.model) {
+            provider = session.model.startsWith("google/")
+              ? "gemini"
+              : session.model.startsWith("openai/")
+                ? "openai"
+                : "claude";
+            const p = priceFor(session.model);
+            if (p) {
+              // Tính theo bảng giá thực tế của OpenRouter thay vì giá Claude Sonnet bị SDK phóng đại
+              cost = (inTok / 1e6) * p.inPerM + (outTok / 1e6) * p.outPerM;
+            }
+          }
           if (inTok > 0 || outTok > 0 || cost > 0) {
-            db.addTokenUsage(sessionId, session?.projectId ?? null, inTok, outTok, cost);
+            db.addTokenUsage(sessionId, session?.projectId ?? null, inTok, outTok, cost, provider);
           }
         } catch {
           /* usage là phụ - không để hỏng luồng chính */

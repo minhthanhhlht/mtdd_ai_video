@@ -1,6 +1,6 @@
 import { Router } from "express";
 import * as db from "../db.js";
-import { broadcast } from "../events.js";
+import { broadcast, jobEvents } from "../events.js";
 import { autoCutExists } from "../autoCutMeta.js";
 import { IMAGE_GEN_STEPS, imageProjectExists, type ImageGenStep } from "../imageMeta.js";
 import { assertVideoJobAllowed, enqueueJob } from "../jobRules.js";
@@ -21,9 +21,51 @@ router.get("/", (req, res) => {
 });
 
 // GET /api/jobs/:id - Job + log đầy đủ
-router.get("/:id", (req, res) => {
-  const job = db.getJob(req.params.id);
-  if (!job) throw new HttpError(404, "JOB_NOT_FOUND", `Không tìm thấy job "${req.params.id}"`);
+// Hỗ trợ ?wait=N (giây, tối đa 300s): nếu job chưa hoàn tất, server giữ kết nối
+// chờ tới khi job xong (done/failed/canceled) hoặc hết timeout.
+// Giúp Agent chỉ cần 1 request duy nhất thay vì polling vòng lặp qua Bash.
+router.get("/:id", async (req, res) => {
+  const id = req.params.id;
+  const waitSec = Math.min(300, Math.max(0, Number(req.query.wait) || 0));
+  let job = db.getJob(id);
+  if (!job) throw new HttpError(404, "JOB_NOT_FOUND", `Không tìm thấy job "${id}"`);
+
+  if (waitSec > 0 && (job.status === "queued" || job.status === "running")) {
+    const isDone = (j: db.JobRow) =>
+      j.status === "done" || j.status === "failed" || j.status === "canceled";
+    await new Promise<void>((resolve) => {
+      let timer: NodeJS.Timeout | null = null;
+      const onJob = (data: { id?: string; status?: string }) => {
+        if (
+          data.id === id &&
+          (data.status === "done" || data.status === "failed" || data.status === "canceled")
+        ) {
+          cleanup();
+          resolve();
+        }
+      };
+      const cleanup = () => {
+        if (timer) clearTimeout(timer);
+        jobEvents.off(`job:${id}`, onJob);
+        req.off("close", cleanup);
+      };
+      timer = setTimeout(() => {
+        cleanup();
+        resolve();
+      }, waitSec * 1000);
+      jobEvents.on(`job:${id}`, onJob);
+      req.on("close", cleanup);
+
+      // Race condition check ngay sau khi gán listener
+      const fresh = db.getJob(id);
+      if (fresh && isDone(fresh)) {
+        cleanup();
+        resolve();
+      }
+    });
+    job = db.getJob(id) ?? job;
+  }
+
   res.json({ ...db.jobToApi(job), log: job.log });
 });
 

@@ -235,7 +235,7 @@ function briefSwitchLines(id: string, brief: Brief, mode: "edit" | "editor"): st
           "`{ \"cutCandidates\": [{start,end}, ...] }` = ĐÚNG các khoảng bạn đã duyệt (bỏ trống nếu " +
           "không duyệt cái nào - khoảng lặng vẫn được cắt). Server cắt một lượt, dời mốc transcript " +
           "sang `assets/transcript.cut.json`, nghiệm thu lại và ghi `assets/auto-trim-report.json`.\n" +
-          "  4. ĐỢI job chạy xong (poll `GET /api/jobs/<id>`), rồi đọc `assets/auto-trim-report.json`: " +
+          "  4. ĐỢI job chạy xong (`curl -s \"http://localhost:6869/api/jobs/<id>?wait=60\"`), rồi đọc `assets/auto-trim-report.json`: " +
           "`verdict` phải là `pass`. `fail` nghĩa là còn quá nhiều chỗ chết - duyệt thêm ứng viên rồi " +
           "chạy lại, hoặc nêu rõ lý do chấp nhận trong báo cáo.\n" +
           "  5. Từ đây trở đi mọi bước (phụ đề, key, sound effect, zoom) dùng BẢN ĐÃ CẮT + " +
@@ -871,8 +871,10 @@ export function buildEditPrompt(input: {
       "(body JSON rỗng `{}` là đủ - server tự chọn bản draft mới nhất). Server đo bằng ffmpeg: âm lượng (LUFS), " +
       "clipping, frame đen giữa video, đứng hình, im lặng thừa ở đuôi, lệch thời lượng hình/tiếng, và với video dọc " +
       "là chữ có lọt vào dải bị UI TikTok/Reels che hay không. Report trả về có `status` và danh sách `checks`.\n" +
-      "  · `status: \"fail\"` → PHẢI sửa đúng nguyên nhân (đọc `detail` của check fail) rồi render draft lại và QC lại. " +
-      "Job `assemble-final` sẽ bị server từ chối (409 QC_REQUIRED / QC_FAILED) khi chưa QC hoặc QC còn fail.\n" +
+      "  · `status: \"fail\"` → Đọc kỹ `detail` của check fail. Nếu là lỗi có thể sửa nhanh (như lệch thời lượng, text lệch lề), bạn được phép sửa và render draft lại TỐI ĐA 1 LẦN.\n" +
+      "  ⚠️ QUY TẮC BẢO VỆ TOKEN (BẮT BUỘC): TUYỆT ĐỐI KHÔNG render draft lại quá 1 lần (tổng không quá 2 lần render draft trong cả phiên). " +
+      "Nếu sau 1 lần sửa mà QC vẫn chưa pass (đặc biệt các lỗi âm lượng/clipping do footage gốc quá nhỏ/quá to không bù đắp được bằng volume), bạn BẮT BUỘC DỪNG LẠI, không render lại lần 3, " +
+      "mà báo cáo rõ nguyên nhân và kết quả QC trong Báo cáo cuối để người dùng duyệt hoặc chỉnh tay trên Trình chỉnh sửa.\n" +
       "  · `status: \"warn\"` → xem xét sửa nếu ảnh hưởng chất lượng, không bắt buộc.\n" +
       "  · Check `safe-area` LUÔN pass và trả về mảng `frames` (ảnh toàn khung có KHOANH ĐỎ dải trên/dưới " +
       "bị UI TikTok/Reels che). Máy KHÔNG tự kết luận được vì mật độ biên của chữ và của cảnh quay là như " +
@@ -898,8 +900,10 @@ export function buildEditPrompt(input: {
     lines.push(
       `- NHIỆM VỤ CHỈ HOÀN THÀNH khi file final \`outputs/${id}-v<N>.mp4\` đã render xong và ` +
         "`meta.json` có status=done + output trỏ file đó. KHÔNG kết thúc lượt sau khi mới lập " +
-        "kế hoạch/draft; nếu đã tạo job render qua API thì PHẢI đợi job chạy xong " +
-        "(poll GET /api/jobs/<id> bằng curl, sleep giữa các lần) rồi verify + cập nhật meta " +
+        "kế hoạch/draft; nếu đã tạo job render qua API thì PHẢI đợi job chạy xong bằng lệnh: " +
+        `\`curl -s "http://localhost:6869/api/jobs/<id>?wait=120"\` ` +
+        "(server tự động giữ kết nối chờ tới 120s cho đến khi job xong, TUYỆT ĐỐI CẤM dùng vòng lặp `sleep 15` poll liên tục để tránh lãng phí token). " +
+        "Nếu sau 120s job vẫn running, chỉ cần gọi lại lệnh `?wait=120` thêm một lần nữa rồi verify + cập nhật meta " +
         "trước khi kết thúc.",
     );
   } else {
@@ -913,8 +917,10 @@ export function buildEditPrompt(input: {
         "Bản draft render bằng CLI gõ tay KHÔNG được tính - xếp job qua API " +
         `(\`POST http://localhost:6869/api/projects/${id}/editor/render\` body \`{ "quality": "draft" }\` - ` +
         "tự xếp kèm scene-draft còn thiếu - hoặc `POST /api/jobs` type `assemble-draft`). KHÔNG kết thúc " +
-        "lượt sau khi mới lập kế hoạch; đã tạo job thì PHẢI đợi job chạy xong (poll GET /api/jobs/<id> " +
-        "bằng curl, sleep giữa các lần), verify frame, QC, rồi mới kết thúc.",
+        "lượt sau khi mới lập kế hoạch; đã tạo job thì PHẢI đợi job chạy xong bằng lệnh: " +
+        `\`curl -s "http://localhost:6869/api/jobs/<id>?wait=120"\` ` +
+        "(server tự động giữ kết nối chờ tới 120s cho đến khi job xong, TUYỆT ĐỐI CẤM dùng vòng lặp `sleep 15` poll liên tục để tránh lãng phí token). " +
+        "Nếu sau 120s job vẫn running, chỉ cần gọi lại `?wait=120` một lần nữa; sau đó verify frame, QC, rồi mới kết thúc.",
     );
     lines.push(
       "- Báo cáo cuối: tóm tắt đã dựng gì + kết quả QC, rồi nói rõ bản nháp đã sẵn sàng: người dùng mở " +
@@ -1064,7 +1070,7 @@ export function buildEditorChatPrompt(input: {
         "khi người dùng yêu cầu rõ. Ngoại lệ duy nhất: tạo mới hoặc sửa composition HyperFrames (scene có " +
         "`src`) thì `npx hyperframes lint` rồi xếp job `scene-draft` CHO ĐÚNG scene đó qua " +
         `\`POST http://localhost:6869/api/jobs\` body \`{ "projectId": "${id}", "type": "scene-draft", "sceneId": "<id scene>" }\` ` +
-        "để trình phát có bản xem trước, rồi đợi job xong (poll `GET http://localhost:6869/api/jobs/<jobId>`).",
+        "để trình phát có bản xem trước, rồi đợi job xong (`curl -s \"http://localhost:6869/api/jobs/<jobId>?wait=60\"`).",
     );
     lines.push(
       "- Kết thúc: báo lại NGẮN GỌN đã đổi gì (khóa nào, scene/cue nào, mốc thời gian nào) và điều gì " +

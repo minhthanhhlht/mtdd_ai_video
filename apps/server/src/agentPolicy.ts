@@ -202,9 +202,11 @@ const PS_EXEC_FLAG_RE = /^-(c|command|encodedcommand|e|ec|enc)$/i;
 /** Tách token kiểu shell (đủ dùng cho việc soi: tôn trọng nháy đơn/kép) */
 function tokenize(seg: string): string[] {
   const out: string[] = [];
+  // Hóa giải các nháy bị escape \" hoặc \' khi lệnh nằm trong chuỗi JSON/Bash lồng nhau
+  const normalized = seg.replace(/\\"/g, '"').replace(/\\'/g, "'");
   const re = /"((?:\\.|[^"\\])*)"|'([^']*)'|(\S+)/g;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(seg)) !== null) out.push(m[1] ?? m[2] ?? m[3] ?? "");
+  while ((m = re.exec(normalized)) !== null) out.push(m[1] ?? m[2] ?? m[3] ?? "");
   return out;
 }
 
