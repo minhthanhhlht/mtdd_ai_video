@@ -6,6 +6,60 @@
 
 ---
 
+### [SESSION-2026-11-08-19:45] Tích Hợp Đa Mô Hình Sinh Ảnh OpenRouter (FLUX.2, Recraft, Seedream...) Vào Module Image Providers & Tab AI Editor
+
+- **Thời gian**: 2026-11-08 19:45 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  1. "Tôi đang ở tab AI rồi nhưng mà AI chỉ cho cọn của GEMINI API. Tôi muốn chọn các AI khác thì sao hãy thêm vào nhé"
+  2. "Thế sao t không thấy của openrouter mặc dù t đã kết nối rồi"
+  3. "Tiến hành cập nhật giúp t đi."
+- **Nguyên nhân kỹ thuật & Bản chất**:
+  1. Hệ thống trước đây chỉ gán OpenRouter cho vai trò LLM (`roles: ["edit", "chat"]` trong `connections.ts`), dùng cho AI Agent biên tập video và chat.
+  2. Module sinh ảnh (`apps/server/src/imageProviders/`) chỉ mới khai báo 3 provider: `gemini-api`, `chatgpt-web` và `gemini-web`. Vì vậy, dù người dùng đã có `OPENROUTER_API_KEY` trong hệ thống thì Tab AI trong trình chỉnh sửa vẫn không hiển thị OpenRouter.
+  3. Giao diện `AiImagePanel.tsx` trước đây chỉ cho chọn Provider, chưa cho phép người dùng chọn Model cụ thể tương ứng với từng nhà cung cấp.
+- **Thực thi kỹ thuật & Giải pháp triệt để**:
+  1. **Xây dựng module OpenRouter Image Provider (`apps/server/src/imageProviders/openrouter.ts`)**:
+     - Kết nối tới OpenRouter Unified Image Generation API (`POST https://openrouter.ai/api/v1/images`).
+     - Hỗ trợ các mô hình sinh ảnh hàng đầu thế giới:
+       - `black-forest-labs/flux.2-flex` (mặc định - cân bằng sắc nét)
+       - `black-forest-labs/flux.2-pro` (chất lượng cao)
+       - `black-forest-labs/flux.2-klein-4b` (tốc độ cao)
+       - `recraft/recraft-v4.1` & `recraft/recraft-v3` (thiết kế vector & đồ họa)
+       - `bytedance-seed/seedream-5-0-flash`
+       - `openai/gpt-image-2`
+       - `qwen/qwen-image-3`
+     - Xử lý phản hồi linh hoạt: hỗ trợ cả base64 (`b64_json`) lẫn URL ảnh (`safeFetch`), bọc xử lý lỗi chuẩn HTTP (bao gồm mã `402 Insufficient Credits` với hướng dẫn nạp credit rõ ràng), ghi nhận chi phí token usage vào SQLite `token_usage`.
+  2. **Tích hợp vào kiến trúc `imageProviders` tổng thể**:
+     - `apps/server/src/imageProviders/index.ts`: Bổ sung `"openrouter"` vào `ImageProviderId`, `IMAGE_PROVIDER_IDS`, `LABELS`, `providerConfigured` (tự động nhận diện khi có `OPENROUTER_API_KEY`), và điều phối luồng gọi API trực tiếp trong `generateWith`.
+     - `apps/server/src/routes/connections.ts`: Mở rộng quyền vai trò của OpenRouter thành `roles: ["edit", "chat", "image"]`.
+     - `apps/server/src/routes/generateImage.ts`: Hỗ trợ tham số `model` truyền từ client và mở rộng whitelist provider.
+     - `apps/server/src/db.ts`: Bổ sung provider `"openrouter"` vào bảng `addTokenUsage`.
+  3. **Nâng cấp giao diện Tab AI (`apps/web/src/components/editor/AiImagePanel.tsx`)**:
+     - Tự động hiển thị `OpenRouter (FLUX, Recraft, SD...)` khi có API key OpenRouter.
+     - Bổ sung ô chọn **Mô hình sinh ảnh (Model)** động: Khi chọn OpenRouter, giao diện hiện danh sách 8 model FLUX/Recraft/GPT-Image; khi chọn Gemini API, giao diện hiện 3 model Gemini Image tương ứng.
+     - Đồng bộ song ngữ `editor.ai.model` trong `vi.ts` và `en.ts`.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/server/src/imageProviders/openrouter.ts`: Tạo mới module OpenRouter Image API.
+  - `apps/server/src/imageProviders/index.ts`: Tích hợp provider openrouter vào luồng sinh ảnh.
+  - `apps/server/src/routes/connections.ts`: Cập nhật role `image` cho OpenRouter.
+  - `apps/server/src/routes/generateImage.ts`: Hỗ trợ nhận model và whitelist provider.
+  - `apps/server/src/db.ts`: Hỗ trợ provider openrouter trong `addTokenUsage`.
+  - `apps/web/src/components/editor/AiImagePanel.tsx`: Thêm dropdown chọn model và tích hợp openrouter.
+  - `apps/web/src/lib/api.ts`: Cập nhật interface `GenerateProjectImageInput` & `ImageProviderId`.
+  - `apps/web/src/lib/locales/vi.ts` & `en.ts`: Thêm key i18n cho ô chọn model.
+  - `SESSION_LOG.md`: Ghi chép nhật ký chi tiết phiên làm việc.
+- **Kết quả kiểm định & QA**:
+  - `node apps/web/scripts/check-design-system.mjs`: Sạch 100%.
+  - `node apps/web/scripts/check-i18n.mjs`: Khớp 2279/2279 keys song ngữ.
+  - `npm run typecheck`: Pass 100% không lỗi ở cả 3 packages (`server`, `web`, `remotion-engine`).
+  - `npm run build`: Succeeded 22/22 routes Next.js.
+  - Kiểm thử trực tiếp trên Chrome DevTools MCP:
+    - Tab AI hiện đầy đủ 3 tùy chọn: `Tự động`, `Gemini API`, `OpenRouter (FLUX, Recraft, SD...)`.
+    - Chọn OpenRouter lập tức hiển thị dropdown 8 model: `FLUX.2 Flex`, `FLUX.2 Pro`, `FLUX.2 Klein`, `Recraft V4.1`...
+    - Chọn Gemini API hiển thị dropdown 3 model của Google: `Gemini 3.1 Flash Image`, `Flash Lite Image`, `Pro Image`.
+
+---
+
 ### [SESSION-2026-11-08-19:15] Khắc Phục Triệt Để Nhãn "Dữ Liệu Lỗi" Của Các Kinetic Layer Trên Timeline & Nâng Cấp Inspector Hỗ Trợ Chỉnh Sửa Trực Tiếp
 
 - **Thời gian**: 2026-11-08 19:15 (Múi giờ +07:00)

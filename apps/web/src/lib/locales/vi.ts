@@ -3382,6 +3382,7 @@ export const vi: Record<string, string> = {
   "editor.ai.prompt-too-long": "Tối đa {n} ký tự.",
   "editor.ai.provider": "Nhà cung cấp",
   "editor.ai.provider-auto": "Tự động",
+  "editor.ai.model": "Mô hình sinh ảnh:",
   "editor.ai.no-provider": "Chưa cấu hình nhà cung cấp tạo ảnh nào - thêm Gemini API key, tài khoản ChatGPT hoặc cookie Gemini ở trang Kết nối.",
   "editor.ai.providers-error": "Không tải được danh sách nhà cung cấp tạo ảnh.",
   "editor.ai.open-connections": "Mở trang Kết nối",

@@ -88,7 +88,7 @@ router.post("/:id/generate-image", (req, res) => {
     throw new HttpError(
       400,
       "INVALID_PROVIDER",
-      'provider phải là một trong: "auto", "gemini-api", "chatgpt-web", "gemini-web"',
+      'provider phải là một trong: "auto", "gemini-api", "openrouter", "chatgpt-web", "gemini-web"',
     );
   }
   if (body.allowText !== undefined && typeof body.allowText !== "boolean") {
@@ -154,6 +154,7 @@ router.post("/:id/generate-image", (req, res) => {
         design: getStyle(brief.styleId || null),
         outFile,
         provider,
+        model: typeof body.model === "string" ? body.model : null,
         usageProjectId: id,
         allowText: body.allowText === true,
         videoStyle: getVideoStyle(activeVideoStyleId(brief)),

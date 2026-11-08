@@ -3389,6 +3389,7 @@ export const en: Record<string, string> = {
   "editor.ai.prompt-too-long": "At most {n} characters.",
   "editor.ai.provider": "Provider",
   "editor.ai.provider-auto": "Automatic",
+  "editor.ai.model": "Image Model:",
   "editor.ai.no-provider": "No image provider is configured - add a Gemini API key, a ChatGPT account or a Gemini cookie on the Connections page.",
   "editor.ai.providers-error": "Couldn't load the image providers.",
   "editor.ai.open-connections": "Open Connections",

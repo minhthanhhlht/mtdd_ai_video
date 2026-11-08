@@ -4645,7 +4645,7 @@ export function timelineIssuesOf(err: unknown): TimelineIssue[] {
 // image-providers) và luồng E (handoff).
 
 /** Id nhà cung cấp tạo ảnh - "auto" = provider mặc định rồi tới các provider đã cấu hình còn lại. */
-export type ImageProviderId = "gemini-api" | "chatgpt-web" | "gemini-web";
+export type ImageProviderId = "gemini-api" | "openrouter" | "chatgpt-web" | "gemini-web";
 
 export interface ImageProviderInfo {
   id: ImageProviderId | string;
@@ -4668,6 +4668,7 @@ export interface GenerateProjectImageInput {
   prompt: string;
   /** Bỏ trống = "auto" */
   provider?: ImageProviderId | "auto";
+  model?: string;
   /** filler = cảnh trám (scene ảnh), layer = ảnh chồng */
   purpose: "filler" | "layer";
   /** Cho phép chữ trong ảnh (mặc định server: không) */

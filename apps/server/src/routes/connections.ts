@@ -135,12 +135,12 @@ function listConnections(): ConnectionInfo[] {
     {
       id: "openrouter",
       label: "OpenRouter (Gemini Pro, DeepSeek, Claude...)",
-      roles: ["edit", "chat"],
+      roles: ["edit", "chat", "image"],
       connected: !!openrouterKey,
       source: openrouterKey ? "api-key" : null,
       note: openrouterKey
-        ? "Đã kết nối bằng API key OpenRouter - có thể dùng Gemini 2.5 Pro, DeepSeek V3/R1, Claude Sonnet cho AI Editor."
-        : "Chưa kết nối - nhập OPENROUTER_API_KEY để dùng Gemini 2.5 Pro, DeepSeek, Claude cho AI Editor mà không cần tài khoản Claude Pro.",
+        ? "Đã kết nối bằng API key OpenRouter - có thể dùng Gemini 2.5 Pro, DeepSeek V3/R1 cho AI Editor và FLUX.2, Recraft cho Tạo ảnh."
+        : "Chưa kết nối - nhập OPENROUTER_API_KEY để dùng Gemini 2.5 Pro, DeepSeek, Claude cho AI Editor và FLUX / Recraft cho Tạo ảnh.",
       key: {
         envVar: "OPENROUTER_API_KEY",
         present: !!openrouterKey,

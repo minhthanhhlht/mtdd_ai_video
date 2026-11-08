@@ -21,6 +21,12 @@ import { NOT_INSTALLED_HINT } from "./errors.js";
 import { runInGatewayQueue } from "./gatewayQueue.js";
 import { generateGeminiWebImage, geminiWebConfigured } from "./geminiWeb.js";
 import { coverFit, removeGeminiWatermark } from "./postprocess.js";
+import {
+  OPENROUTER_IMAGE_MODELS,
+  DEFAULT_OPENROUTER_IMAGE_MODEL,
+  generateOpenrouterImage,
+  openrouterApiKey,
+} from "./openrouter.js";
 import { chatgptGatewayInstalled, gatewayPaths, geminiWebInstalled } from "./runtime.js";
 
 /**
@@ -42,10 +48,10 @@ import { chatgptGatewayInstalled, gatewayPaths, geminiWebInstalled } from "./run
  * LUÔN được cover-fit về đúng kích thước khung (postprocess.ts).
  */
 
-export type ImageProviderId = "gemini-api" | "chatgpt-web" | "gemini-web";
+export type ImageProviderId = "gemini-api" | "openrouter" | "chatgpt-web" | "gemini-web";
 export type ImageProviderChoice = ImageProviderId | "auto";
 
-export const IMAGE_PROVIDER_IDS: readonly ImageProviderId[] = ["gemini-api", "chatgpt-web", "gemini-web"];
+export const IMAGE_PROVIDER_IDS: readonly ImageProviderId[] = ["gemini-api", "openrouter", "chatgpt-web", "gemini-web"];
 
 export function isImageProviderChoice(v: unknown): v is ImageProviderChoice {
   return v === "auto" || IMAGE_PROVIDER_IDS.includes(v as ImageProviderId);
@@ -53,6 +59,7 @@ export function isImageProviderChoice(v: unknown): v is ImageProviderChoice {
 
 const LABELS: Record<ImageProviderId, string> = {
   "gemini-api": "Gemini API",
+  "openrouter": "OpenRouter (FLUX, Recraft, SD...)",
   "chatgpt-web": "ChatGPT (tài khoản web)",
   "gemini-web": "Gemini (cookie web)",
 };
@@ -134,6 +141,7 @@ export function writeGatewayDelaySec(value: number): void {
 /** Đã cấu hình (có key/token/cookie) - rẻ, không gọi mạng, gọi mỗi request được */
 export function providerConfigured(id: ImageProviderId): boolean {
   if (id === "gemini-api") return geminiApiKey() !== null;
+  if (id === "openrouter") return openrouterApiKey() !== null;
   if (id === "chatgpt-web") {
     if (!chatgptGatewayInstalled() || !chatgptGatewayUsed()) return false;
     // Số tài khoản dùng được lần gần nhất hỏi gateway (lưu đĩa). Chưa hỏi lần nào
@@ -165,9 +173,11 @@ export function listImageProviders(): {
       models:
         id === "gemini-api"
           ? IMAGE_MODELS.map((m) => m.id)
-          : id === "chatgpt-web"
-            ? [...CHATGPT_IMAGE_MODELS]
-            : [],
+          : id === "openrouter"
+            ? [...OPENROUTER_IMAGE_MODELS]
+            : id === "chatgpt-web"
+              ? [...CHATGPT_IMAGE_MODELS]
+              : [],
     })),
   };
 }
@@ -272,7 +282,7 @@ export async function generateImage(input: GenerateImageInput): Promise<Generate
       const run = () => generateWith(provider, { ...input, aspect }, target, geminiModel);
       // Gateway web: lần lượt từng ảnh + nghỉ giữa hai ảnh; Gemini API thì chạy thẳng
       const promptUsed =
-        provider === "gemini-api"
+        provider === "gemini-api" || provider === "openrouter"
           ? await run()
           : await runInGatewayQueue(provider, run, {
               delayMs: () => readGatewayDelaySec() * 1000,
@@ -331,6 +341,31 @@ async function generateWith(
   }
 
   const promptUsed = buildImagePrompt(input);
+  if (provider === "openrouter") {
+    if (!openrouterApiKey()) {
+      throw new HttpError(
+        503,
+        "NO_OPENROUTER_KEY",
+        "Chưa có OPENROUTER_API_KEY. Vui lòng nhập key tại trang Kết nối.",
+      );
+    }
+    const buf = await generateOpenrouterImage({
+      prompt: promptUsed,
+      width: target.width,
+      height: target.height,
+      aspect: input.aspect,
+      model: input.model ?? undefined,
+      projectId: input.usageProjectId,
+    });
+    const raw = `${input.outFile}.openrouter-raw`;
+    fs.writeFileSync(raw, buf);
+    try {
+      await coverFit(raw, input.outFile, target.width, target.height);
+    } finally {
+      fs.rmSync(raw, { force: true });
+    }
+    return promptUsed;
+  }
   if (provider === "chatgpt-web") {
     if (!chatgptGatewayInstalled()) {
       throw new HttpError(503, "GATEWAY_NOT_INSTALLED", `Chưa cài gateway ChatGPT. ${NOT_INSTALLED_HINT}`);

@@ -109,6 +109,7 @@ export function AiImagePanel({
   const errorText = useAiImageErrorText();
   const [prompt, setPrompt] = useState("");
   const [provider, setProvider] = useState<string>("auto");
+  const [model, setModel] = useState<string>("");
   const [allowText, setAllowText] = useState(false);
   const [providers, setProviders] = useState<ImageProviderInfo[] | null>(null);
   const [providersError, setProvidersError] = useState<string | null>(null);
@@ -146,6 +147,19 @@ export function AiImagePanel({
   useEffect(() => {
     if (provider !== "auto" && providers && !configured.some((p) => p.id === provider)) setProvider("auto");
   }, [provider, providers, configured]);
+
+  const currentProviderInfo = useMemo(
+    () => configured.find((p) => p.id === provider) ?? null,
+    [configured, provider],
+  );
+  const availableModels: string[] = currentProviderInfo?.models ?? [];
+  useEffect(() => {
+    if (availableModels.length > 0 && (!model || !availableModels.includes(model))) {
+      setModel(availableModels[0]);
+    } else if (availableModels.length === 0) {
+      setModel("");
+    }
+  }, [availableModels, model]);
 
   // ---- vòng hỏi tiến độ ----
   useEffect(() => {
@@ -220,6 +234,7 @@ export function AiImagePanel({
       const { taskId } = await generateProjectImage(projectId, {
         prompt: text,
         provider: provider === "auto" ? "auto" : (provider as ImageProviderId),
+        model: model || undefined,
         purpose,
         ...(allowText ? { allowText: true } : {}),
       });
@@ -303,6 +318,24 @@ export function AiImagePanel({
           ))}
         </select>
       </Field>
+
+      {availableModels.length > 0 && (
+        <Field label={t("editor.ai.model")} htmlFor="ai-image-model">
+          <select
+            id="ai-image-model"
+            className="input"
+            value={model}
+            disabled={readOnly || busy}
+            onChange={(e) => setModel(e.target.value)}
+          >
+            {availableModels.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
 
       <CheckboxField
         id="ai-image-allow-text"
