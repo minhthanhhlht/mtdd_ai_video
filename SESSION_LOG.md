@@ -1995,3 +1995,42 @@
 - **Trạng thái hiện tại & Hướng dẫn sử dụng (Next Steps / Handover)**:
   - Website đã chính thức online tại: **[https://video.mtdd.io.vn](https://video.mtdd.io.vn)**.
   - Bảo mật qua Cloudflare SSL/TLS Edge và Cloudflare Tunnel, an toàn tuyệt đối không cần mở port router.
+
+
+---
+
+### [SESSION-2026-11-08-20:20] Tích hợp Gemini Pro Web Cookie Gateway & Docker Runtime trên Coolify / Proxmox
+
+- **Thời gian**: 2026-11-08 20:20 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - Tích hợp tài khoản Gemini Pro (Google One AI Premium / Gemini Advanced web) vào AIEVv2 để tạo ảnh trám B-roll 0đ không tốn phí API key.
+  - Đảm bảo hoạt động trơn tru cả môi trường cục bộ (Local) và Docker trên máy chủ Coolify / Proxmox tại nhà.
+  - Hướng dẫn các bước tiếp theo để người dùng lấy cookie và bắt đầu sử dụng.
+- **Giải pháp kiến trúc & Thay đổi mã nguồn (Architectural Solution & Changes)**:
+  1. **Môi trường Docker Runtime trên Coolify (`Dockerfile`)**:
+     - Bổ sung `python3`, `python3-pip`, `python3-venv` vào Stage 2 (`runner`) trên nền `node:22-bookworm-slim`.
+     - Tự động khởi tạo môi trường ảo Python `/app/.runtime/venv-gateway` và cài đặt `gateways/requirements.txt` (bao gồm `gemini-webapi==2.1.1`, `curl-cffi`, `fastapi`, `pillow`, `tiktoken`, `uvicorn`, `sqlalchemy`).
+     - Tạo sẵn thư mục cache cookie `.runtime/gemini-web/`.
+     - Xác nhận cookie của người dùng được lưu trữ an toàn tại `/app/apps/server/data/gemini-web.json` thuộc volume persistent storage đã cấu hình trên Coolify.
+  2. **Đồng bộ UI & Danh mục Provider**:
+     - Cập nhật `apps/web/src/app/connections/GatewayCards.tsx`: Đưa OpenRouter và Gemini Web vào danh sách chọn nhà cung cấp tạo ảnh mặc định (`CHOICES`).
+     - Bổ sung key song ngữ i18n (`vi.ts`, `en.ts`) cho `conn.imageProvider.openrouter`.
+  3. **Quy trình hoạt động Gateway**:
+     - Worker `gateways/gemini-web/worker.py` (AGPL-3.0) chạy tiến trình nền cô lập, nhận diện session qua `__Secure-1PSID` và `__Secure-1PSIDTS`.
+     - Cơ chế `auto_refresh` tự động làm mới xoay vòng cookie trong nền.
+     - Sau khi nhận ảnh gốc chất lượng cao từ Gemini web, pipeline tự động kích hoạt worker `gateways/gemini-watermark-remover/aiev-worker.mjs` để bóc tách watermark SynthID trước khi scale `coverFit` vào khung hình video.
+     - Do server chạy trên Coolify tại Proxmox gia đình (IP mạng dân cư / Residential IP), hạn chế tối đa nguy cơ bị Google chặn IP datacenter hay checkpoint tài khoản.
+- **Danh sách tệp tin đã thay đổi (Files Changed)**:
+  - `Dockerfile`: Bổ sung python3, venv và cài đặt gateway dependencies trong runner stage.
+  - `apps/web/src/app/connections/GatewayCards.tsx`: Cập nhật `CHOICES` bao gồm `openrouter` và `gemini-web`.
+  - `apps/web/src/lib/locales/vi.ts`: Thêm key i18n tiếng Việt cho `conn.imageProvider.openrouter`.
+  - `apps/web/src/lib/locales/en.ts`: Thêm key i18n tiếng Anh cho `conn.imageProvider.openrouter`.
+- **Kết quả kiểm định & Kiểm thử (Verification & Test Results)**:
+  - `npm run typecheck` → **Pass 100% (apps/server, apps/web, engines/remotion)**.
+  - `node apps/web/scripts/check-design-system.mjs` → **Hệ thống thiết kế: sạch (100% tokens & primitives)**.
+  - `node apps/web/scripts/check-i18n.mjs` → **vi.ts: đủ 2279 key, en.ts đủ key**.
+  - `npm run build` → **Compiled successfully 22 routes Next.js Turbopack & backend TypeScript**.
+  - Worker ping test (`gateways/gemini-web/worker.py`) → **`{"ok": true, "version": "2.1.1", "ready": false}`**.
+- **Trạng thái & Bước kế tiếp (Next Steps / Handover)**:
+  - Thực hiện Git commit, push lên `origin main` và kích hoạt triển khai Coolify theo RULE 15.
+  - Hướng dẫn người dùng các bước trích xuất cookie từ Google Chrome F12 và cấu hình vào `/connections`.

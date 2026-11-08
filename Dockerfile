@@ -39,6 +39,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-dejavu-core \
     ca-certificates \
     curl \
+    python3 \
+    python3-pip \
+    python3-venv \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/* /usr/share/doc /usr/share/man /tmp/*
 
 ENV PORT=6868 \
@@ -53,7 +56,11 @@ WORKDIR /app
 
 COPY --from=builder /app ./
 
-RUN mkdir -p .runtime/tmp .runtime/models apps/server/data video-projects outputs
+RUN mkdir -p .runtime/tmp .runtime/models .runtime/gemini-web apps/server/data video-projects outputs \
+    && python3 -m venv /app/.runtime/venv-gateway \
+    && /app/.runtime/venv-gateway/bin/pip install --no-cache-dir --upgrade pip \
+    && /app/.runtime/venv-gateway/bin/pip install --no-cache-dir -r /app/gateways/requirements.txt \
+    && rm -rf /root/.cache/pip /tmp/*
 
 EXPOSE 6868
 

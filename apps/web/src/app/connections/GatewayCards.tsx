@@ -892,6 +892,12 @@ const CHOICES: { value: ProviderChoice; label: string; desc: string; reason: str
     reason: "conn.imageProvider.gemini-api-reason",
   },
   {
+    value: "openrouter",
+    label: "conn.imageProvider.openrouter",
+    desc: "conn.imageProvider.openrouter-desc",
+    reason: "conn.imageProvider.openrouter-reason",
+  },
+  {
     value: "chatgpt-web",
     label: "conn.imageProvider.chatgpt-web",
     desc: "conn.imageProvider.chatgpt-web-desc",
