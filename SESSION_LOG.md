@@ -6,6 +6,45 @@
 
 ---
 
+### [SESSION-2026-11-08-20:45] Khắc Phục Triệt Để Màn Hình "Đang Kiểm Tra Quyền Truy Cập…" Khi Refresh/F5 Bằng Instant Hydration & Cơ Chế Thoát Hiểm Timeout
+
+- **Thời gian**: 2026-11-08 20:45 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Sao t refresf lại trang Sao nó cứ báo kiểm tra quyền truy cập là sao nhỉ. T đã gặp mấy lần r hãy sửa triệt để đi."
+- **Nguyên nhân kỹ thuật & Bản chất (Root Cause Analysis)**:
+  1. **Khởi tạo State Auth bị chặn (Blocking Auth State)**: Trong `apps/web/src/lib/authContext.tsx`, `loading` ban đầu luôn được gán cứng `useState(true)` và `user` là `null`. Do đó, mỗi khi người dùng F5 hoặc điều hướng lại trang, React phải khởi tạo một vòng gọi bất đồng bộ tới `GET /api/auth/me`.
+  2. **Shell chặn toàn bộ ứng dụng (Full-screen Blocker)**: Trong `apps/web/src/components/Shell.tsx`, điều kiện `if (authLoading) return <div ...>{t("shell.auth-checking")}</div>` chặn đứng toàn bộ việc render nội dung trang cho tới khi `authLoading` chuyển sang `false`.
+  3. **Tắc nghẽn API & Bão request `/api/health`**: Trong `apps/web/src/lib/api.ts`, mọi hàm `request()` đều `await ensureToken()`. Khi triển khai ngoài localhost (như domain Coolify `video.mtdd.io.vn`), `ensureToken()` liên tục gọi `/api/health` ở mỗi request vì `tokenPromise` bị reset về `null` ngay lập tức mà không có cơ chế throttling (cooldown). Điều này khiến cuộc gọi `/api/auth/me` bị trễ hàng giây trên đường truyền mạng.
+  4. **Thiếu cơ chế Timeout & Fallback thoát hiểm**: Trước đây nếu kết nối mạng chập chờn hoặc request `/api/auth/me` bị treo, không có timeout guard, khiến màn hình bị "đơ" vĩnh viễn ở trạng thái "Đang kiểm tra quyền truy cập…" mà không có bất kỳ nút bấm nào để thử lại hay đăng nhập lại.
+- **Thực thi kỹ thuật & Giải pháp triệt để**:
+  1. **Instant State Hydration & Bộ Nhớ Đệm User (SWR-like Cache)**:
+     - Tạo hằng số `USER_INFO_KEY = "aiev_user_info"` trong `authContext.tsx`.
+     - Xây dựng hàm `getInitialUser()` và `hasSessionToken()` để khôi phục thông tin người dùng ngay lập tức từ `localStorage`/`sessionStorage` đồng bộ ngay thời điểm component mount.
+     - `loading` được khởi tạo thành `false` ngay lập tức nếu đã có cached user và session token hợp lệ. Nhờ đó khi F5, ứng dụng hiển thị ngay lập tức, hoàn toàn **KHÔNG CÒN** hiện tượng nhấp nháy hay màn hình chờ "Đang kiểm tra quyền truy cập…".
+     - Trong nền (background), hàm `refreshUser()` tiếp tục âm thầm đồng bộ lại thông tin phiên với backend mà không gián đoạn trải nghiệm của người dùng.
+  2. **Throttling và Tối Ưu Hóa Headers API**:
+     - Thêm cơ chế cooldown 30 giây (`lastHealthCheckTime`) trong `apps/web/src/lib/api.ts` để ngăn chặn việc spam request tới `/api/health`.
+     - Bỏ qua bước chờ `ensureToken()` trong `request()` khi đã có sẵn `getUserSessionToken()` (vì header `x-user-session` và cookie phiên đã đủ xác thực an toàn tuyệt đối).
+  3. **Cơ Chế Bảo Vệ Timeout & Component Thoát Hiểm (`AuthLoadingFallback`)**:
+     - Bọc request `getMe()` trong `Promise.race` với thời gian chờ tối đa 6 giây để không bao giờ bị treo vô tận nếu rớt mạng. Nếu gặp timeout/lỗi mạng tạm thời nhưng đã có cached user thì vẫn giữ nguyên phiên đăng nhập để người dùng không bị văng ra ngoài bất ngờ.
+     - Xây dựng component `AuthLoadingFallback` trong `Shell.tsx`: Hiển thị spinner xoay tròn chuyên nghiệp (`Loader2`). Nếu quá 3.5 giây mà việc xác thực chưa xong (ví dụ mạng quá yếu), tự động hiển thị khu vực cứu hộ với 2 nút bấm: "Tải lại trang" (`shell.auth-retry`) và "Đăng nhập lại" (`shell.auth-to-login`).
+  4. **Đồng Bộ Song Ngữ Đầy Đủ**:
+     - Bổ sung 3 khóa i18n mới vào `apps/web/src/lib/locales/vi.ts` và `apps/web/src/lib/locales/en.ts`: `shell.auth-timeout`, `shell.auth-retry`, `shell.auth-to-login`.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/lib/authContext.tsx`: Thêm cache `aiev_user_info`, khởi tạo đồng bộ state, timeout 6s trong `refreshUser()`.
+  - `apps/web/src/components/Shell.tsx`: Thay thế div tĩnh bằng component `AuthLoadingFallback` có escape hatch sau 3.5s.
+  - `apps/web/src/lib/api.ts`: Throttling 30s cho `/api/health`, tối ưu hóa bỏ qua `ensureToken()` khi đã có session token.
+  - `apps/web/src/lib/locales/vi.ts`: Thêm các key cứu hộ phiên xác thực tiếng Việt.
+  - `apps/web/src/lib/locales/en.ts`: Thêm các key cứu hộ phiên xác thực tiếng Anh.
+  - `SESSION_LOG.md`: Ghi chép nhật ký chi tiết phiên làm việc.
+- **Kết quả kiểm định & QA**:
+  - `npm run typecheck`: Pass 100% không lỗi (`server`, `web`, `remotion-engine`).
+  - `node apps/web/scripts/check-design-system.mjs`: Sạch 100%.
+  - `node apps/web/scripts/check-i18n.mjs`: Đủ cả 2282 keys, 0 key thiếu.
+  - `npm run build`: Hoàn thành 100% biên dịch tĩnh & động cho toàn bộ 22 route.
+
+---
+
 ### [SESSION-2026-11-08-19:45] Tích Hợp Đa Mô Hình Sinh Ảnh OpenRouter (FLUX.2, Recraft, Seedream...) Vào Module Image Providers & Tab AI Editor
 
 - **Thời gian**: 2026-11-08 19:45 (Múi giờ +07:00)

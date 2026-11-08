@@ -50,6 +50,7 @@ import {
   Settings2,
   Users,
   LogOut,
+  Loader2,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -279,6 +280,37 @@ export function useRevealShellPanel(): () => void {
 }
 const noop = () => {};
 
+function AuthLoadingFallback() {
+  const { t } = useT();
+  const router = useRouter();
+  const [showEscape, setShowEscape] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowEscape(true), 3500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <div className="flex h-screen w-screen flex-col items-center justify-center gap-3 bg-[var(--bg)] px-4 text-center text-meta text-[var(--text-muted)]">
+      <Loader2 size={24} className="animate-spin text-[var(--primary)]" />
+      <p>{t("shell.auth-checking")}</p>
+      {showEscape && (
+        <div className="mt-2 flex flex-col items-center gap-2">
+          <p className="text-xs text-[var(--text-muted)]">{t("shell.auth-timeout")}</p>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <Button variant="secondary" small onClick={() => router.push("/login")}>
+              {t("shell.auth-to-login")}
+            </Button>
+            <Button variant="secondary" small onClick={() => window.location.reload()}>
+              {t("shell.auth-retry")}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ================================== Shell ===================================
 
 export function Shell({ children }: { children: ReactNode }) {
@@ -410,11 +442,7 @@ export function Shell({ children }: { children: ReactNode }) {
   }
 
   if (authLoading) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-[var(--bg)] text-meta text-[var(--text-muted)]">
-        {t("shell.auth-checking")}
-      </div>
-    );
+    return <AuthLoadingFallback />;
   }
 
   if (!user) {

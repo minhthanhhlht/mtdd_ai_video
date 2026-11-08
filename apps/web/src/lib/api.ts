@@ -849,6 +849,7 @@ export class ApiError extends Error {
 const TOKEN_KEY = "aiev_api_token";
 
 let apiToken: string | null = null;
+let lastHealthCheckTime = 0;
 let tokenPromise: Promise<string | null> | null = null;
 
 /** Token phiên upload QR trên URL (trang /m) - "" nếu không có. */
@@ -908,17 +909,20 @@ async function ensureToken(): Promise<string | null> {
     } catch {
       /* bỏ qua */
     }
-    try {
-      const res = await fetch(`${serverOrigin()}/api/health`, { cache: "no-store" });
-      if (res.ok) {
-        const body = (await res.json()) as { apiToken?: string };
-        if (body?.apiToken) {
-          await persistToken(body.apiToken);
-          return body.apiToken;
+    if (Date.now() - lastHealthCheckTime > 30_000) {
+      lastHealthCheckTime = Date.now();
+      try {
+        const res = await fetch(`${serverOrigin()}/api/health`, { cache: "no-store" });
+        if (res.ok) {
+          const body = (await res.json()) as { apiToken?: string };
+          if (body?.apiToken) {
+            await persistToken(body.apiToken);
+            return body.apiToken;
+          }
         }
+      } catch {
+        // Không gọi thẳng backend được (mở dashboard qua tunnel) - cần ?t=
       }
-    } catch {
-      // Không gọi thẳng backend được (mở dashboard qua tunnel) - cần ?t=
     }
     tokenPromise = null; // cho phép thử lại ở request sau
     return null;
@@ -994,7 +998,8 @@ export function applyUserSessionHeaders(headers: Headers | Record<string, string
 }
 
 async function request<T>(path: string, init?: RequestInit, retried = false): Promise<T> {
-  const token = await ensureToken();
+  const hasUserSession = Boolean(getUserSessionToken());
+  const token = hasUserSession ? null : await ensureToken();
   const headers = new Headers(init?.headers);
   if (token) headers.set("x-aiev-token", token);
   applyUserSessionHeaders(headers);
