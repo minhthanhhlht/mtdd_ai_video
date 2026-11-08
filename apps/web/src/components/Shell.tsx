@@ -73,7 +73,6 @@ import { HardwareMeter } from "@/components/HardwareMeter";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { SidebarProfile } from "@/components/SidebarProfile";
-import { UpdateBadge } from "@/components/UpdateBadge";
 
 import { useT } from "@/lib/i18n";
 
@@ -568,13 +567,12 @@ export function Shell({ children }: { children: ReactNode }) {
               })}
             </nav>
 
-            {/* Đáy rail: Profile người dùng + Badge phiên bản */}
-            <div className="shell-nav-foot mt-auto flex flex-col gap-1">
-              {user && <SidebarProfile user={user} logout={logout} />}
-              <div className="shell-nav-extra flex-col">
-                <UpdateBadge />
+            {/* Đáy rail: Profile người dùng */}
+            {user && (
+              <div className="shell-nav-foot mt-auto">
+                <SidebarProfile user={user} logout={logout} />
               </div>
-            </div>
+            )}
           </aside>
 
           {/* FULL WIDTH - không max-width, dùng tối đa không gian màn hình */}

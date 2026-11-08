@@ -4,7 +4,6 @@ import { LogOut, User as UserIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Badge } from "@/components/Badge";
-import { UpdateBadge } from "@/components/UpdateBadge";
 import { useT } from "@/lib/i18n";
 import type { UserInfo } from "@/lib/api";
 
@@ -16,7 +15,7 @@ interface SidebarProfileProps {
 export function SidebarProfile({ user, logout }: SidebarProfileProps) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
-  const [popPos, setPopPos] = useState<{ bottom: number; left: number; width?: number } | null>(null);
+  const [popPos, setPopPos] = useState<{ bottom: number; left: number; width: number } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
 
@@ -28,19 +27,20 @@ export function SidebarProfile({ user, logout }: SidebarProfileProps) {
       if (cardRef.current) {
         const rect = cardRef.current.getBoundingClientRect();
         const isCollapsed = rect.width < 100;
+        const popoverWidth = 260;
         if (isCollapsed) {
           // Rail co 56px: mở popover sang bên phải của rail
           setPopPos({
             bottom: Math.max(8, window.innerHeight - rect.bottom),
             left: rect.right + 8,
-            width: 220,
+            width: popoverWidth,
           });
         } else {
-          // Rail mở 220px: mở popover ngay phía trên thẻ
+          // Rail mở 220px: mở popover ngay phía trên thẻ, bề rộng 260px đủ thoáng cho nhãn vai trò
           setPopPos({
             bottom: Math.max(8, window.innerHeight - rect.top + 8),
             left: rect.left,
-            width: rect.width,
+            width: popoverWidth,
           });
         }
       }
@@ -135,7 +135,7 @@ export function SidebarProfile({ user, logout }: SidebarProfileProps) {
             style={{
               bottom: popPos.bottom,
               left: popPos.left,
-              width: popPos.width ?? 220,
+              width: popPos.width,
             }}
             className="fixed z-50 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-2 shadow-lg flex flex-col gap-2"
           >
@@ -144,25 +144,19 @@ export function SidebarProfile({ user, logout }: SidebarProfileProps) {
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--primary-soft)] text-xs font-bold text-[var(--primary)] uppercase shrink-0">
                 {user.name.charAt(0) || <UserIcon size={14} />}
               </span>
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 overflow-hidden">
                 <div className="text-sm font-semibold text-[var(--text)] truncate" title={user.name}>
                   {user.name}
                 </div>
-                <div className="mt-0.5">
+                <div className="mt-1 flex items-center">
                   <Badge
                     tone={user.role === "admin" ? "success" : "muted"}
                     dot={false}
-                    label={t(`users.role-${user.role}`)}
+                    className="max-w-full"
+                    label={<span className="truncate">{t(`users.role-${user.role}`)}</span>}
                   />
                 </div>
               </div>
-            </div>
-
-            <div className="h-px bg-[var(--border)]" role="separator" />
-
-            {/* Badge cập nhật phiên bản */}
-            <div className="flex flex-col">
-              <UpdateBadge />
             </div>
 
             <div className="h-px bg-[var(--border)]" role="separator" />

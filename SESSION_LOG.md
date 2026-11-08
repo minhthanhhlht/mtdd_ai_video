@@ -6,6 +6,35 @@
 
 ---
 
+### [SESSION-2026-11-08-22:30] Bỏ Kiểm Tra Bản Update & Sửa Lỗi Tràn Giao Diện Nhãn Vai Trò (Admin Quản Trị Viên) Trong Popover Profile
+
+- **Thời gian**: 2026-11-08 22:30 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Bỏ luôn kiểm tra bản update luôn đi. Và lúc bấm vào profile thì đang lỗi giao diện bị tràn chỗ Admin quản trị viên kìa"
+- **Phân tích kỹ thuật & Khắc phục triệt để**:
+  1. **Bỏ hoàn toàn tính năng kiểm tra bản update**:
+     - Gỡ bỏ component `UpdateBadge` khỏi cả `Shell.tsx` và `SidebarProfile.tsx`.
+     - Chân sidebar (`.shell-nav-foot`) giờ đây chỉ giữ duy nhất thẻ Profile người dùng, mang lại giao diện tinh giản, chuyên nghiệp.
+  2. **Khắc phục lỗi tràn viền tại nhãn vai trò Admin (Quản trị viên)**:
+     - **Nguyên nhân**: Popover trước đó đặt bề rộng theo `rect.width` (~196px của thẻ trong sidebar). Sau khi trừ padding ngoài, padding trong và avatar 32px, chiều rộng thực tế của ô chứa text chỉ còn ~124px. Vì component `<Badge>` có thuộc tính `white-space: nowrap`, chuỗi `"Admin (Quản trị viên)"` dài ~150px đã bị tràn ra ngoài viền phải của khung popover.
+     - **Giải pháp**:
+       - Cố định kích thước popover chuẩn 260px (`popoverWidth = 260`) cho cả 2 trạng thái rail mở rộng (220px) lẫn thu gọn (56px).
+       - Thêm `overflow-hidden` vào khung chứa nhãn, gán `className="max-w-full"` cho `<Badge>` và bọc nội dung trong `<span className="truncate">{t(`users.role-${user.role}`)}</span>`, bảo đảm nhãn hiển thị trọn vẹn, không bao giờ bị tràn khung trong mọi kích thước màn hình và độ dài chuỗi dịch.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ `UpdateBadge` ở chân rail và làm sạch import.
+  - `apps/web/src/components/SidebarProfile.tsx`: Gỡ bỏ `UpdateBadge`, mở rộng popover lên 260px và xử lý chống tràn nhãn vai trò.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & QA**:
+  - `npm run typecheck` → **Pass 100%** không lỗi trên cả 3 workspace (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế).
+  - `node apps/web/scripts/check-i18n.mjs` → **2281/2281 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 routes**.
+  - **Kiểm thử trực quan Chrome DevTools MCP**:
+    - Không còn badge kiểm tra cập nhật bản dựng ở chân sidebar.
+    - Bấm vào profile, popover bung ra 260px chuẩn xác, nhãn "Admin (Quản trị viên)" nằm trọn vẹn bên trong badge xanh mà không hề bị tràn hay cắt chữ.
+
+---
+
 ### [SESSION-2026-11-08-22:25] Bỏ Hẳn Liên Kết GitHub & Đặt Thẻ Profile Người Dùng Ở Góc Dưới Chân Sidebar
 
 - **Thời gian**: 2026-11-08 22:25 (Múi giờ +07:00)
