@@ -1975,8 +1975,24 @@ function useLayerKindLabel(): (kind: string) => string {
         return t("editor.inspector2.kind-video");
       case "text":
         return t("editor.inspector2.kind-text");
-      default:
+      case "shape":
         return t("editor.inspector2.kind-shape");
+      case "kinetic-halo":
+        return t("editor.inspector2.kind-kinetic-halo");
+      case "kinetic-rec":
+        return t("editor.inspector2.kind-kinetic-rec");
+      case "kinetic-cards":
+        return t("editor.inspector2.kind-kinetic-cards");
+      case "kinetic-notification":
+        return t("editor.inspector2.kind-kinetic-notification");
+      case "kinetic-cta":
+        return t("editor.inspector2.kind-kinetic-cta");
+      case "kinetic-text":
+        return t("editor.inspector2.kind-kinetic-text");
+      default:
+        return kind.startsWith("kinetic-")
+          ? t("editor.inspector2.kind-kinetic-generic")
+          : t("editor.inspector2.kind-shape");
     }
   };
 }
@@ -2009,7 +2025,7 @@ function LayerForm({ layer, actions }: { layer: TimelineLayer; actions: Inspecto
         </ReadOnlyRow>
       )}
 
-      {kind === "text" && (
+      {(kind === "text" || kind === "kinetic-text") && (
         <TextField
           id={`${lid}-text`}
           label={t("editor.inspector2.text")}
@@ -2018,6 +2034,42 @@ function LayerForm({ layer, actions }: { layer: TimelineLayer; actions: Inspecto
           value={typeof layer.text === "string" ? layer.text : ""}
           onCommit={(text) => patch({ text }, "text")}
         />
+      )}
+      {kind === "kinetic-text" && (
+        <TextField
+          id={`${lid}-hero-text`}
+          label={t("editor.inspector2.hero-text")}
+          hint={t("editor.inspector2.hero-text-hint")}
+          value={typeof (layer as Record<string, unknown>).heroText === "string" ? String((layer as Record<string, unknown>).heroText) : ""}
+          onCommit={(heroText) => patch({ heroText }, "heroText")}
+        />
+      )}
+      {kind === "kinetic-notification" && (
+        <TextField
+          id={`${lid}-notif-text`}
+          label={t("editor.inspector2.notification-text")}
+          hint={t("editor.inspector2.notification-text-hint")}
+          value={typeof layer.text === "string" ? layer.text : ""}
+          onCommit={(text) => patch({ text }, "text")}
+        />
+      )}
+      {kind === "kinetic-cta" && (
+        <>
+          <TextField
+            id={`${lid}-cta-text`}
+            label={t("editor.inspector2.cta-text")}
+            hint={t("editor.inspector2.cta-text-hint")}
+            value={typeof layer.text === "string" ? layer.text : ""}
+            onCommit={(text) => patch({ text }, "text")}
+          />
+          <TextField
+            id={`${lid}-cta-subtext`}
+            label={t("editor.inspector2.cta-subtext")}
+            hint={t("editor.inspector2.cta-subtext-hint")}
+            value={typeof (layer as Record<string, unknown>).heroText === "string" ? String((layer as Record<string, unknown>).heroText) : ""}
+            onCommit={(heroText) => patch({ heroText }, "heroText")}
+          />
+        </>
       )}
 
       <div className="grid grid-cols-2 gap-3">

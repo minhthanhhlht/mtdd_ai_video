@@ -6,6 +6,56 @@
 
 ---
 
+### [SESSION-2026-11-08-19:15] Khắc Phục Triệt Để Nhãn "Dữ Liệu Lỗi" Của Các Kinetic Layer Trên Timeline & Nâng Cấp Inspector Hỗ Trợ Chỉnh Sửa Trực Tiếp
+
+- **Thời gian**: 2026-11-08 19:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Tôi đang mở chỉnh sửa ở MCP đó có một số chỗ ở timeline báo Dữ liệu lỗi đó là gì hãy kiểm tra cho t"
+- **Nguyên nhân kỹ thuật & Bản chất**:
+  1. Khi nâng cấp bộ Remotion kinetic components (`kinetic-halo`, `kinetic-rec`, `kinetic-cards`, `kinetic-notification`, `kinetic-cta`, `kinetic-text`), các layer này được lưu trữ chuẩn xác trong `meta.layers` và render video hoàn toàn chuẩn xác.
+  2. Tuy nhiên, trên giao diện Web Editor (`TimelinePanel.tsx`), logic xác định nhãn layer trước đây chỉ kiểm tra `kind === "text"` hoặc `kind === "shape"`. Mọi kind khác (bao gồm cả các loại kinetic) đều bị mặc định xem như media có đường dẫn tệp (`baseName(src)`).
+  3. Do các component kinetic là layer đồ họa động được sinh bởi Remotion code và không cần tệp media (`src === undefined`), hàm `baseName(src)` trả về chuỗi rỗng `""`. Khi đó, code fallback về `t("editor.malformed.short")` và hiển thị ra giao diện dòng chữ **"Dữ liệu lỗi"** (mặc dù bản thân layer hoàn toàn hợp lệ, `isWellFormed` trả về `true` và video render rất đẹp).
+  4. Đồng thời trong Inspector (`Inspector.tsx`), `useLayerKindLabel` chỉ hỗ trợ 4 kind cơ bản (`image`, `video`, `text`, `shape`), khiến toàn bộ layer kinetic bị gắn nhãn "Khối màu" và không cho phép người dùng xem/sửa nội dung chữ (`text`, `heroText`) của `kinetic-text`, `kinetic-cta`, `kinetic-notification`.
+- **Thực thi kỹ thuật & Giải pháp triệt để**:
+  1. **Cập nhật nhận diện và nhãn hiển thị trong `TimelinePanel.tsx`**:
+     - Phân định rõ từng loại kinetic kind:
+       - `kinetic-text`: Lấy `layer.text` hoặc `layer.heroText`, hiển thị rõ nội dung chữ (VD: *"SIÊU PHẨM MỚI"* thay vì "Dữ liệu lỗi").
+       - `kinetic-cards`: Hiển thị "Thẻ tính năng" (`editor.layers.kind-kinetic-cards`).
+       - `kinetic-halo`: Hiển thị "Hào quang" (`editor.layers.kind-kinetic-halo`).
+       - `kinetic-rec`: Hiển thị "Khung ngắm REC" (`editor.layers.kind-kinetic-rec`).
+       - `kinetic-notification`: Hiển thị "Thông báo: [nội dung]" (`editor.layers.kind-kinetic-notification`).
+       - `kinetic-cta`: Hiển thị "CTA: [nội dung]" (`editor.layers.kind-kinetic-cta`).
+     - Safegaurd fallback: Nếu layer hợp lệ (`ok === true`) nhưng không có `src`, fallback về `id || kind` thay vì nhãn lỗi "Dữ liệu lỗi". Chỉ khi dữ liệu thực sự hỏng (`!ok`) mới gán `editor.malformed.short`.
+     - Icon biểu thị: Chuyển đổi icon layer sang `Sparkles` cho các layer kinetic và `Type` cho `kinetic-text`.
+  2. **Nâng cấp Inspector Panel (`Inspector.tsx`)**:
+     - Bổ sung nhãn badge chuẩn hóa cho toàn bộ kinetic kinds (`useLayerKindLabel`).
+     - Tích hợp các trường chỉnh sửa trực tiếp trong Inspector:
+       - `kinetic-text`: Cho phép sửa `text` và `heroText` (từ khóa nổi bật).
+       - `kinetic-notification`: Cho phép sửa `text` (nội dung thông báo).
+       - `kinetic-cta`: Cho phép sửa `text` (nút kêu gọi) và `heroText` (phụ đề ưu đãi).
+  3. **Mở rộng Type Definition (`apps/web/src/lib/api.ts`)**:
+     - Bổ sung các loại `kinetic-*` vào union type của `Layer.kind`, thêm `heroText?: string` và `kineticProps?: Record<string, unknown>`.
+  4. **Bổ sung Từ Điển Song Ngữ (`locales/vi.ts` & `locales/en.ts`)**:
+     - Bổ sung đầy đủ 21 keys song ngữ mới cho các nhãn layer và gợi ý trường dữ liệu.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/editor/TimelinePanel.tsx`: Cập nhật logic nhãn, icon và fallback an toàn cho timeline blocks.
+  - `apps/web/src/components/editor/Inspector.tsx`: Bổ sung badge và các trường chỉnh sửa text cho kinetic layers.
+  - `apps/web/src/lib/api.ts`: Cập nhật interface `Layer` đầy đủ các kinetic kinds.
+  - `apps/web/src/lib/locales/vi.ts`: Thêm các key tiếng Việt cho layer và inspector.
+  - `apps/web/src/lib/locales/en.ts`: Thêm các key tiếng Anh đồng bộ.
+  - `SESSION_LOG.md`: Ghi chép nhật ký chi tiết phiên làm việc.
+- **Kết quả kiểm định & QA**:
+  - `node apps/web/scripts/check-design-system.mjs`: Sạch 100%.
+  - `node apps/web/scripts/check-i18n.mjs`: Khớp 2278/2278 keys song ngữ, 0 key thiếu.
+  - `npm run typecheck`: Pass 100% không lỗi ở cả 3 packages (`server`, `web`, `remotion-engine`).
+  - `npm run build`: Succeeded 22/22 routes Next.js.
+  - Kiểm thử trực tiếp trên Chrome DevTools MCP (Page 5: `http://localhost:6868/projects/video-test-fixed/editor`):
+    - `errorBlocks`: Trả về `[]` (0 lỗi).
+    - Toàn bộ 12 khối timeline hiển thị tên trực quan: "SIÊU PHẨM MỚI", "Khung ngắm REC", "Hào quang", "Thẻ tính năng", "Thông báo", "Dynamic Island CTA"...
+    - Bấm chọn layer trên timeline hiển thị đúng form Inspector với badge "Chữ động Kinetic" và cho phép gõ sửa nội dung trực tiếp.
+
+---
+
 ### [SESSION-2026-11-07-23:05] Hoàn Thiện Long-Polling Mặc Định Cho Jobs, Nới Lỏng QC Loudness Cho Video Không Lời Thoại & Kiểm Thử Thực Tế Dự Án `video test fixed`
 
 - **Thời gian**: 2026-11-07 23:05 (Múi giờ +07:00)

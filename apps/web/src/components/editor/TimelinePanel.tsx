@@ -1130,15 +1130,44 @@ export function TimelinePanel({
     const sel: Selection = { kind: "layer", id };
     const ok = !!id && isWellFormed(timeline, sel);
     const src = str(layer?.src);
-    const label =
-      kind === "text"
-        ? str(layer?.text).replace(/\n+/g, " / ") || t("editor.layers.kind-text")
-        : kind === "shape"
-          ? t("editor.layers.kind-shape")
-          : baseName(src) || t("editor.malformed.short");
+    let label = "";
+    if (kind === "text") {
+      label = str(layer?.text).replace(/\n+/g, " / ") || t("editor.layers.kind-text");
+    } else if (kind === "shape") {
+      label = t("editor.layers.kind-shape");
+    } else if (kind === "kinetic-text") {
+      const text = str(layer?.text) || str((layer as Record<string, unknown>)?.heroText);
+      label = text.replace(/\n+/g, " / ") || t("editor.layers.kind-kinetic-text");
+    } else if (kind === "kinetic-cards") {
+      label = t("editor.layers.kind-kinetic-cards");
+    } else if (kind === "kinetic-halo") {
+      label = t("editor.layers.kind-kinetic-halo");
+    } else if (kind === "kinetic-rec") {
+      label = t("editor.layers.kind-kinetic-rec");
+    } else if (kind === "kinetic-notification") {
+      const text = str(layer?.text);
+      label = text ? `${t("editor.layers.kind-kinetic-notification")}: ${text}` : t("editor.layers.kind-kinetic-notification");
+    } else if (kind === "kinetic-cta") {
+      const text = str(layer?.text);
+      label = text ? `CTA: ${text}` : t("editor.layers.kind-kinetic-cta");
+    } else if (kind.startsWith("kinetic-")) {
+      label = id || kind;
+    } else {
+      label = baseName(src) || (ok ? id || kind : t("editor.malformed.short"));
+    }
     const start = num(layer?.from, 0);
     const end = start + Math.max(1, num(layer?.durationInFrames, 1));
     const missing = (kind === "image" || kind === "video") && isMediaMissing(preview, src);
+    const layerIcon =
+      kind === "text" || kind === "kinetic-text"
+        ? Type
+        : kind === "shape"
+          ? Square
+          : kind === "video"
+            ? Video
+            : kind === "image"
+              ? ImageIcon
+              : Sparkles;
     layerLanes[layerPack.lanes[index] ?? 0].push(
       block({
         sel,
@@ -1148,7 +1177,7 @@ export function TimelinePanel({
         title: missing
           ? tf("editor.timeline.block-missing", { name: label, file: src })
           : `${label} (${secLabel(start)} - ${secLabel(end)})`,
-        icon: kind === "text" ? Type : kind === "shape" ? Square : kind === "video" ? Video : ImageIcon,
+        icon: layerIcon,
         resizable: { start: ok, end: ok },
         invalid: !ok || missing,
         // Layer thiếu id thì không chọn/kéo được (selection theo id) - vẫn vẽ để thấy

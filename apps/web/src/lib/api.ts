@@ -4228,7 +4228,18 @@ export interface LayerStyle {
  */
 export interface Layer {
   id: string;
-  kind: "image" | "video" | "text" | "shape";
+  kind:
+    | "image"
+    | "video"
+    | "text"
+    | "shape"
+    | "kinetic-halo"
+    | "kinetic-rec"
+    | "kinetic-cards"
+    | "kinetic-notification"
+    | "kinetic-cta"
+    | "kinetic-text"
+    | (string & {});
   from: number;
   durationInFrames: number;
   /** image/video (bắt buộc): đường dẫn trong project */
@@ -4241,6 +4252,10 @@ export interface Layer {
   volume?: number;
   /** text: cho phép xuống dòng */
   text?: string;
+  /** kinetic-text / kinetic-cta: từ khóa nổi bật hoặc phụ đề */
+  heroText?: string;
+  /** kinetic layer props mở rộng */
+  kineticProps?: Record<string, unknown>;
   style?: LayerStyle;
   /** Bề rộng hộp, tỉ lệ theo chiều rộng khung 0.05..2 - mặc định 0.5 */
   width?: number;
