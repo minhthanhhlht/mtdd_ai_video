@@ -6,6 +6,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-08-21:50] Khắc Phục Hiện Tượng Kéo Layer Bị Nhảy Lung Tung (Erratic Drag Jump & Dynamic Lane Re-pack) Trên Timeline
 
 - **Thời gian**: 2026-11-08 21:50 (Múi giờ +07:00)
