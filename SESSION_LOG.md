@@ -6,6 +6,53 @@
 
 ---
 
+### [SESSION-2026-11-08-21:50] Khắc Phục Hiện Tượng Kéo Layer Bị Nhảy Lung Tung (Erratic Drag Jump & Dynamic Lane Re-pack) Trên Timeline
+
+- **Thời gian**: 2026-11-08 21:50 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "T vừa thêm ảnh li-xi vào layer. T muốn kéo nó sát vào chỗ giới thiệu tính năng nhưng cứ kéo là nó nhảy lung tung. hãy kiểm tra và sửa nó"
+- **Nguyên nhân kỹ thuật & Phân tích bản chất (Root Cause Analysis)**:
+  1. **Hiện tượng giật dọc (Vertical Lane Re-packing Fluctuation)**:
+     - Track Layer hỗ trợ nhiều làn tự động thông qua thuật toán interval packing `packLanes()`.
+     - Trong lúc kéo một layer (`mode === "move"`), vị trí `from` của layer được đẩy liên tục vào store qua rAF, kích hoạt React re-render `TimelinePanel`.
+     - Mỗi khung hình di chuyển chuột, `packLanes()` sắp xếp lại toàn bộ các layer theo thứ tự thời gian (`order.sort(a.start - b.start)`). Khi `from` của layer đang kéo lướt qua các mốc thời gian của các layer khác, thứ tự ưu tiên gán làn thay đổi đột ngột: layer đang kéo bị nhảy qua lại giữa làn 1, làn 2, và làn 3 (chênh lệch 32px đến 64px theo trục Y), khiến chiều cao track liên tục co giãn, làm xê dịch toàn bộ các track bên dưới và làm khối trượt khỏi tầm con trỏ chuột.
+  2. **Hiện tượng giật ngang do hít mốc mép đuôi ở xa (Distant Tail Edge Snapping)**:
+     - Trong `snapDelta()`, mảng `edges` khi di chuyển khối trước đây chứa cả 2 mép: `[layer.from, end]` với trọng số ngang nhau.
+     - Với một layer dài (như `li-xi-1` dài 23 giây = 690 frame), khi người dùng cầm đầu chuột kéo mép đầu (start) để căn sát vào cảnh "Giới thiệu tính năng" (frame 360), mép đuôi (end) ở frame 1050-1080 liên tục chạm vào vùng hít của các mốc sự kiện ở tận cuối video (như SFX cue, scene cut, layer khác).
+     - Khi mép đuôi hít vào mốc 1080, hàm `snapDelta()` tự động cộng thêm độ dời `delta` vào toàn bộ khối, khiến mép đầu (đang được người dùng quan sát) đột ngột bị giật lùi/tiến 10-15 frame mà không hiểu lý do.
+  3. **Nhiễu loạn mốc hít (Candidate Noise Overload)**:
+     - `snapCandidates()` trước đây gom chung toàn bộ mốc của mọi track: hàng chục điểm SFX (0.3s swoosh, pop), karaoke syllables, phụ đề... tạo ra mật độ mốc hít dày đặc chiếm hơn 50% tổng số frame của video, biến timeline thành ma trận nam châm hỗn loạn.
+- **Thực thi kỹ thuật & Giải pháp triệt để**:
+  1. **Đóng băng cấu trúc làn trong suốt lượt kéo (Stable Lane Assignment during Drag)**:
+     - Trong `TimelinePanel.tsx`, khi phát hiện đang có lượt kéo layer (`isDraggingLayer = dragView?.target?.kind === "layer" && dragRef.current !== null`), cấu trúc phân làn `layerPack` được neo cố định theo `dragRef.current.origin`.
+     - Nhờ đó, trong suốt quá trình rê chuột kéo khối, layer đang kéo giữ nguyên làn xuất phát của nó (trượt ngang mượt mà, hiển thị nổi bật với `z-index: 2`, `opacity: 0.85` và bóng đổ shadow), không bao giờ nhảy làn hay làm thay đổi chiều cao track. Chỉ khi nhả chuột (`finishDrag`), cấu trúc phân làn mới được tính toán lại gọn gàng.
+  2. **Hít thông minh theo vị trí cầm chuột (Pointer-Proximity Edge Snapping)**:
+     - Xác định vị trí bấm chuột ban đầu `clickFrame = frameAtClient(e.clientX)`.
+     - Nếu khối có độ dài lớn hơn 2.5 lần ngưỡng hít (`durationInFrames > thresholdFrames * 2.5`), chỉ kích hoạt hít cho mép nằm gần con trỏ chuột nhất (`layer.from` nếu cầm nửa trước, `end` nếu cầm nửa sau).
+     - Với các khối ngắn, ưu tiên tuyệt đối mép gần con trỏ trước (`best.edgeIdx === 0`), không để mép phụ ghi đè giật khối.
+  3. **Lọc mốc hít theo ngữ cảnh track (Contextual Candidate Filtering)**:
+     - Track Layer chỉ hít vào: Playhead (`playback.getFrame()`), Ranh giới chuyển cảnh video (`spans.start/end`), và Ranh giới các layer khác (`l.from`, `l.from + durationInFrames`).
+     - Loại bỏ hoàn toàn nhiễu từ các mốc SFX và karaoke cue khi thao tác trên track Layer.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/editor/TimelinePanel.tsx`:
+    - Cập nhật `snapCandidates` lọc mốc hít theo ngữ cảnh track.
+    - Cập nhật `snapDelta` ưu tiên mép chính theo thứ tự con trỏ.
+    - Cập nhật `onPointerDown` xác định mép hít theo vị trí nắm chuột và độ dài khối.
+    - Đóng băng `layerPackSource` theo `dragRef.current.origin` trong lúc kéo layer.
+  - `video-projects/video-test-fixed/meta.json`:
+    - Layer `li-xi-1` đã được kéo sát vào ngay sau phần "Giới thiệu tính năng" (`from: 360`).
+- **Kết quả kiểm định & Kiểm thử (Verification & Test Results)**:
+  - `npm run typecheck` → **Pass 100% (apps/server, apps/web, engines/remotion)**.
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ (100% tokens & primitives)**.
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys song ngữ đầy đủ**.
+  - `npm run build -w apps/web` → **Next.js Turbopack biên dịch thành công 22 routes**.
+  - Kiểm thử mô phỏng kéo bằng Chrome DevTools MCP:
+    - Kéo sang phải: hít chính xác mốc `360` (vạch hít đỏ `.tl-snap` hiện rõ ràng tại 431px).
+    - Kéo sang trái: hít chính xác mốc `150` (vạch hít đỏ `.tl-snap` hiện rõ ràng tại 275px).
+    - Khối không còn bị giật làn hay co giãn chiều cao track.
+
+---
+
 ### [SESSION-2026-11-08-21:20] Khắc Phục Lỗi Menu Nút Cộng (+) Ở Track Layer Bị Đẩy Ra Phía Sau Bằng React Portal & Stacking Context Isolation
 
 - **Thời gian**: 2026-11-08 21:20 (Múi giờ +07:00)

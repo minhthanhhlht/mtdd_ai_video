@@ -491,6 +491,27 @@ export function TimelinePanel({
       out.add(s.start);
       out.add(s.end);
     });
+
+    // Track Layer: hít mốc scene, playhead và các layer khác (tránh hít vào hàng chục cue sfx/phụ đề chi tiết gây giật)
+    if (sel?.kind === "layer") {
+      layersOf(timeline).forEach((l) => {
+        if (!isLayerWellFormed(l) || sel.id === l.id) return;
+        out.add(l.from);
+        out.add(l.from + l.durationInFrames);
+      });
+      return [...out];
+    }
+
+    // Track SFX: hít scene, playhead và sfx khác
+    if (sel?.kind === "sfx") {
+      timeline.audio.sfx.forEach((s, i) => {
+        if (sel.index === i) return;
+        if (s && Number.isFinite(s.atFrame)) out.add(s.atFrame);
+      });
+      return [...out];
+    }
+
+    // Track Cues (overlay, caption, subtitle):
     const addCues = (kind: "caption" | "subtitle" | "overlay") => {
       timeline[CUE_KIND[kind]].forEach((c, i) => {
         if (sel?.kind === kind && "index" in sel && sel.index === i) return;
@@ -502,15 +523,6 @@ export function TimelinePanel({
     addCues("caption");
     addCues("subtitle");
     addCues("overlay");
-    timeline.audio.sfx.forEach((s, i) => {
-      if (sel?.kind === "sfx" && sel.index === i) return;
-      if (s && Number.isFinite(s.atFrame)) out.add(s.atFrame);
-    });
-    layersOf(timeline).forEach((l) => {
-      if (!isLayerWellFormed(l) || (sel?.kind === "layer" && sel.id === l.id)) return;
-      out.add(l.from);
-      out.add(l.from + l.durationInFrames);
-    });
     return [...out];
   };
 
@@ -522,11 +534,17 @@ export function TimelinePanel({
   ): { delta: number; at: number | null } => {
     if (disabled || edges.length === 0) return { delta, at: null };
     const threshold = pxToFrame(SNAP_PX, pps, fps);
-    let best: { d: number; at: number } | null = null;
-    for (const edge of edges) {
+    let best: { d: number; at: number; edgeIdx: number } | null = null;
+    for (let ei = 0; ei < edges.length; ei++) {
+      const edge = edges[ei];
       for (const c of candidates) {
         const d = c - (edge + delta);
-        if (Math.abs(d) <= threshold && (!best || Math.abs(d) < Math.abs(best.d))) best = { d, at: c };
+        if (Math.abs(d) <= threshold) {
+          // Ưu tiên mép chính (ei === 0, gần điểm nắm chuột) trước mép phụ
+          if (!best || (ei === 0 && best.edgeIdx > 0) || (ei === best.edgeIdx && Math.abs(d) < Math.abs(best.d))) {
+            best = { d, at: c, edgeIdx: ei };
+          }
+        }
       }
     }
     return best ? { delta: delta + best.d, at: best.at } : { delta, at: null };
@@ -744,7 +762,19 @@ export function TimelinePanel({
       const cue = timeline[CUE_KIND[sel.kind]][sel.index];
       if (cue && Number.isFinite(cue.from) && Number.isFinite(cue.durationInFrames)) {
         const end = cue.from + cue.durationInFrames;
-        edges = mode === "move" ? [cue.from, end] : mode === "trim-start" ? [cue.from] : [end];
+        if (mode === "move") {
+          const clickFrame = frameAtClient(e.clientX);
+          const distToStart = Math.abs(clickFrame - cue.from);
+          const distToEnd = Math.abs(clickFrame - end);
+          const thresholdFrames = pxToFrame(SNAP_PX, pps, fps);
+          if (cue.durationInFrames > thresholdFrames * 2.5) {
+            edges = distToStart <= distToEnd ? [cue.from] : [end];
+          } else {
+            edges = distToStart <= distToEnd ? [cue.from, end] : [end, cue.from];
+          }
+        } else {
+          edges = mode === "trim-start" ? [cue.from] : [end];
+        }
       }
     } else if (sel?.kind === "sfx") {
       const sfx = timeline.audio.sfx[sel.index];
@@ -753,7 +783,20 @@ export function TimelinePanel({
       const layer = layersOf(timeline).find((l) => l?.id === sel.id);
       if (isLayerWellFormed(layer)) {
         const end = layer.from + layer.durationInFrames;
-        edges = mode === "move" ? [layer.from, end] : mode === "trim-start" ? [layer.from] : [end];
+        if (mode === "move") {
+          const clickFrame = frameAtClient(e.clientX);
+          const distToStart = Math.abs(clickFrame - layer.from);
+          const distToEnd = Math.abs(clickFrame - end);
+          const thresholdFrames = pxToFrame(SNAP_PX, pps, fps);
+          // Khối dài hơn 2.5x ngưỡng hít: chỉ hít mép gần con trỏ nhất để tránh mép đuôi ở xa 10-20s tự hít giật khối
+          if (layer.durationInFrames > thresholdFrames * 2.5) {
+            edges = distToStart <= distToEnd ? [layer.from] : [end];
+          } else {
+            edges = distToStart <= distToEnd ? [layer.from, end] : [end, layer.from];
+          }
+        } else {
+          edges = mode === "trim-start" ? [layer.from] : [end];
+        }
       }
     }
 
@@ -1116,10 +1159,16 @@ export function TimelinePanel({
   });
 
   // Track Layer: layer chồng thời gian tự xếp thành nhiều làn (packLanes) - làn
-  // tính từ dữ liệu, không lưu: kéo một layer thì làn tự sắp lại
+  // tính từ dữ liệu, không lưu: kéo một layer thì làn tự sắp lại.
+  // Trong lúc kéo layer: giữ nguyên cấu trúc làn từ lúc bấm chuột (origin) để
+  // khối đang kéo không bị nhảy lên nhảy xuống các làn khác nhau và chiều cao
+  // track không co giãn giật cục giữa chừng.
+  const isDraggingLayer = dragView?.target?.kind === "layer" && dragRef.current !== null;
+  const layerTimeline = isDraggingLayer && dragRef.current ? dragRef.current.origin : timeline;
   const layerList = layersOf(timeline);
+  const layerPackSource = layersOf(layerTimeline);
   const layerPack = packLanes(
-    layerList.map((l) => {
+    layerPackSource.map((l) => {
       const start = num(l?.from, 0);
       return { start, end: start + Math.max(1, num(l?.durationInFrames, 1)) };
     }),
