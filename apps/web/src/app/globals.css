@@ -1786,6 +1786,7 @@ textarea.input {
   right: auto;
   width: 220px;
   margin-top: 0;
+  z-index: 100;
 }
 /* Đang kéo FILE từ máy vào trình chỉnh sửa: viền đứt quanh cả editor (thả đâu
    cũng nhận - track Video/Layer/SFX chèn luôn, chỗ khác vào thư viện) */

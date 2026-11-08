@@ -6,6 +6,44 @@
 
 ---
 
+### [SESSION-2026-11-08-21:20] Khắc Phục Lỗi Menu Nút Cộng (+) Ở Track Layer Bị Đẩy Ra Phía Sau Bằng React Portal & Stacking Context Isolation
+
+- **Thời gian**: 2026-11-08 21:20 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Khi t bấm vào nút cộng ở layer thì menu hiện ra bị đẩy ra phía sau kìa. T đang mở ở trên MCP đó bạn hãy kiểm tra nhé"
+- **Nguyên nhân kỹ thuật & Bản chất (Root Cause Analysis)**:
+  1. **Bẫy ngữ cảnh xếp lớp (Stacking Context Trap)**:
+     - Component `AddLayerMenu` nằm bên trong phần tử tiêu đề hàng của track Layer (`<div className="tl-label ...">`).
+     - Theo thiết kế Timeline, mọi tiêu đề hàng (`.tl-label`) đều có CSS `position: sticky; z-index: 3;`. Khi một phần tử có `position: sticky` kết hợp `z-index`, trình duyệt tự động tạo ra một **Stacking Context** độc lập cho phần tử đó.
+     - Các track kế tiếp nằm bên dưới track Layer (như track `overlay`, `caption`, `subtitle`, `sfx`...) đều xuất hiện sau trong cấu trúc cây DOM và cũng mang `position: sticky; z-index: 3`.
+     - Theo quy chuẩn CSS W3C, khi các Stacking Context có cùng `z-index`, phần tử xuất hiện sau trong DOM sẽ được vẽ đè lên trên (paint on top).
+  2. **Menu bị cắt và chìm xuống dưới**:
+     - Mặc dù menu `.tl-add-menu` có `position: fixed` và `z-index: 50`, nhưng do nó được render lồng bên trong Stacking Context của `tl-label` track Layer, nên nó không thể thoát ra khỏi ngữ cảnh xếp lớp của cha.
+     - Hệ quả: Khi mở menu ra, phần dưới của menu bị các tiêu đề và nút bấm (nút Ổ khóa `tl-lock`, text track) của track `overlay` và các track bên dưới đè lên trên, tạo cảm giác menu bị "đẩy ra phía sau".
+- **Thực thi kỹ thuật & Giải pháp triệt để**:
+  1. **Cơ chế React Portal (`createPortal`)**:
+     - Trong `apps/web/src/components/editor/TimelinePanel.tsx`, import `createPortal` từ `react-dom`.
+     - Chuyển toàn bộ việc render menu thả xuống `.tl-add-menu` vào `createPortal(..., document.body)`.
+     - Khi gắn trực tiếp vào `document.body`, menu thoát khỏi 100% các Stacking Context của `.tl-label`, `.tl-row` và `overflow` của timeline.
+  2. **Nâng cấp độ ưu tiên hiển thị & Xử lý lật hướng thông minh**:
+     - Trong `apps/web/src/app/globals.css`, thiết lập `z-index: 100;` cho `.editor-menu.tl-add-menu`.
+     - Thêm logic tính toán tự động lật hướng (flip): Nếu khoảng cách từ nút đến đáy màn hình nhỏ hơn chiều cao menu (`menuH = 100px`), menu sẽ tự động mở lật ngược lên trên nút thay vì tràn xuống đáy màn hình.
+     - Bổ sung sự kiện lắng nghe cuộn trang `window.addEventListener("scroll", onScroll, true)` để tự động đóng menu khi timeline cuộn.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/editor/TimelinePanel.tsx`: Cập nhật `AddLayerMenu` dùng `createPortal(..., document.body)` và auto-flip.
+  - `apps/web/src/app/globals.css`: Bổ sung `z-index: 100` cho `.editor-menu.tl-add-menu`.
+  - `SESSION_LOG.md`: Ghi chép nhật ký chi tiết phiên làm việc.
+- **Kết quả kiểm định & QA**:
+  - `npm run typecheck`: Pass 100% không lỗi.
+  - `node apps/web/scripts/check-design-system.mjs`: Sạch 100%.
+  - `node apps/web/scripts/check-i18n.mjs`: Đủ 2282 keys.
+  - `npm run build`: Hoàn thành 100% biên dịch.
+  - Kiểm thử trực tiếp qua Chrome DevTools MCP:
+    - Bấm nút `+` ở track Layer: menu `.tl-add-menu` mở ra trực tiếp tại `document.body` với `z-index: 100`.
+    - Kiểm tra tại tọa độ `(228, 830.5)`: phần tử nhận diện là nút `Khối màu` trong menu, hoàn toàn không bị nút `tl-lock` của track dưới che khuất.
+
+---
+
 ### [SESSION-2026-11-08-20:45] Khắc Phục Triệt Để Màn Hình "Đang Kiểm Tra Quyền Truy Cập…" Khi Refresh/F5 Bằng Instant Hydration & Cơ Chế Thoát Hiểm Timeout
 
 - **Thời gian**: 2026-11-08 20:45 (Múi giờ +07:00)

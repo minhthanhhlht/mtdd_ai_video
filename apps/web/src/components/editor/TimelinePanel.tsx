@@ -49,6 +49,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { Badge } from "@/components/Badge";
 import { IconButton } from "@/components/IconButton";
 import type { Timeline, TimelinePreview } from "@/lib/api";
@@ -1520,10 +1521,12 @@ function AddLayerMenu({ disabled, onAdd }: { disabled: boolean; onAdd: (kind: Ad
     document.addEventListener("pointerdown", onDown, true);
     document.addEventListener("keydown", onKey, true);
     window.addEventListener("resize", onScroll);
+    window.addEventListener("scroll", onScroll, true);
     return () => {
       document.removeEventListener("pointerdown", onDown, true);
       document.removeEventListener("keydown", onKey, true);
       window.removeEventListener("resize", onScroll);
+      window.removeEventListener("scroll", onScroll, true);
     };
   }, [open, close]);
 
@@ -1533,7 +1536,14 @@ function AddLayerMenu({ disabled, onAdd }: { disabled: boolean; onAdd: (kind: Ad
       return;
     }
     const rect = rootRef.current?.getBoundingClientRect();
-    if (rect) setPos({ left: rect.left, top: rect.bottom + 4 });
+    if (rect) {
+      const menuH = 100;
+      const top =
+        rect.bottom + 4 + menuH > window.innerHeight
+          ? Math.max(8, rect.top - menuH - 4)
+          : rect.bottom + 4;
+      setPos({ left: rect.left, top });
+    }
   };
 
   const pick = (kind: AddLayerKind) => {
@@ -1553,7 +1563,7 @@ function AddLayerMenu({ disabled, onAdd }: { disabled: boolean; onAdd: (kind: Ad
       >
         <Plus size={13} strokeWidth={2} />
       </IconButton>
-      {pos && (
+      {pos && typeof document !== "undefined" && createPortal(
         <div
           ref={menuRef}
           role="menu"
@@ -1580,7 +1590,8 @@ function AddLayerMenu({ disabled, onAdd }: { disabled: boolean; onAdd: (kind: Ad
             <Square size={16} strokeWidth={1.75} aria-hidden="true" />
             {t("editor.layers.add-shape")}
           </button>
-        </div>
+        </div>,
+        document.body
       )}
     </span>
   );
