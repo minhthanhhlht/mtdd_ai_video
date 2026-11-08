@@ -72,7 +72,8 @@ import { GUIDE_PANEL_ID, GuidePanel } from "@/components/GuidePanel";
 import { HardwareMeter } from "@/components/HardwareMeter";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { UserProfileMenu } from "@/components/UserProfileMenu";
+import { SidebarProfile } from "@/components/SidebarProfile";
+import { UpdateBadge } from "@/components/UpdateBadge";
 
 import { useT } from "@/lib/i18n";
 
@@ -498,7 +499,6 @@ export function Shell({ children }: { children: ReactNode }) {
             <BackendStatus />
             <LanguageToggle />
             <ThemeToggle />
-            {user && <UserProfileMenu user={user} logout={logout} />}
           </div>
         </header>
 
@@ -568,7 +568,13 @@ export function Shell({ children }: { children: ReactNode }) {
               })}
             </nav>
 
-
+            {/* Đáy rail: Profile người dùng + Badge phiên bản */}
+            <div className="shell-nav-foot mt-auto flex flex-col gap-1">
+              {user && <SidebarProfile user={user} logout={logout} />}
+              <div className="shell-nav-extra flex-col">
+                <UpdateBadge />
+              </div>
+            </div>
           </aside>
 
           {/* FULL WIDTH - không max-width, dùng tối đa không gian màn hình */}

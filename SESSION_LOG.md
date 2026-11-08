@@ -6,6 +6,81 @@
 
 ---
 
+### [SESSION-2026-11-08-22:25] Bỏ Hẳn Liên Kết GitHub & Đặt Thẻ Profile Người Dùng Ở Góc Dưới Chân Sidebar
+
+- **Thời gian**: 2026-11-08 22:25 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Không phải chuyển mục github lên đó mà hãy bỏ hẳn mục github giúp tôi. Thay vào đó là tên profile để ở góc dưới của sidebar"
+- **Phân tích kỹ thuật & Chuẩn hóa UI/UX**:
+  1. **Loại bỏ liên kết GitHub**: Gỡ bỏ hoàn toàn liên kết "Mã nguồn GitHub" khỏi toàn bộ giao diện dự án theo chỉ định của người dùng.
+  2. **Định vị Profile ở chân Sidebar**:
+     - Chuyển toàn bộ nhận diện người dùng (Avatar, Tên người dùng, Vai trò, Nút đăng xuất) từ topbar xuống góc dưới chân sidebar (`.shell-nav-foot`).
+     - Topbar phía trên trở nên tinh gọn, chỉ giữ lại các tiện ích hệ thống (`HardwareMeter`, `BackendStatus`, `LanguageToggle`, `ThemeToggle`).
+     - Dưới chân sidebar, thẻ profile người dùng nằm ngay phía trên badge phiên bản `<UpdateBadge />` ("Bản mới nhất v2.0.2").
+  3. **Thích ứng hoàn hảo khi thu gọn/mở rộng Rail**:
+     - Khi mở rộng (220px): Thẻ hiển thị trực quan Avatar, Tên MTDD, Vai trò Admin, nút Đăng xuất 1 chạm và badge phiên bản.
+     - Khi thu gọn (56px): Nhãn chữ tự ẩn via CSS `--shell-nav-label: none`, Avatar tròn hiển thị căn giữa gọn gàng.
+     - Popover Portal: Bấm vào avatar hoặc tên sẽ mở popover menu nổi (bằng `createPortal` gắn vào `document.body`), loại bỏ hoàn toàn nguy cơ bị cắt khung do `overflow-x: hidden` của sidebar.
+- **Thực thi kỹ thuật chi tiết**:
+  - Tạo mới component `SidebarProfile.tsx` tuân thủ Design Tokens, nhịp khoảng cách chuẩn và WAI-ARIA.
+  - Xóa bỏ component `UserProfileMenu.tsx`.
+  - Cập nhật `Shell.tsx`: Gỡ bỏ profile khỏi header topbar, gắn `SidebarProfile` vào `.shell-nav-foot` ở chân rail bên trái.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/SidebarProfile.tsx`: Component hồ sơ người dùng ở chân sidebar.
+  - `apps/web/src/components/UserProfileMenu.tsx`: Đã xóa bỏ hoàn toàn.
+  - `apps/web/src/components/Shell.tsx`: Cập nhật cấu trúc chân sidebar và topbar header.
+  - `SESSION_LOG.md`: Ghi nhận nhật ký phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi trên cả 3 workspace (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 vi phạm, 100% token biến CSS).
+  - `node apps/web/scripts/check-i18n.mjs` → **2281/2281 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 routes**.
+  - **Kiểm thử trực quan Chrome DevTools MCP**:
+    - Topbar header sạch sẽ, không còn profile trùng lặp.
+    - Chân sidebar hiển thị thẻ MTDD (Admin), nút Đăng xuất và Badge v2.0.2.
+    - Không còn bất kỳ đường dẫn nào đến GitHub.
+    - Đóng/mở popover và các thao tác đều mượt mà.
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
 
 - **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
@@ -91,6 +166,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-08-21:20] Khắc Phục Lỗi Menu Nút Cộng (+) Ở Track Layer Bị Đẩy Ra Phía Sau Bằng React Portal & Stacking Context Isolation
 
 - **Thời gian**: 2026-11-08 21:20 (Múi giờ +07:00)
@@ -126,6 +239,44 @@
   - Kiểm thử trực tiếp qua Chrome DevTools MCP:
     - Bấm nút `+` ở track Layer: menu `.tl-add-menu` mở ra trực tiếp tại `document.body` với `z-index: 100`.
     - Kiểm tra tại tọa độ `(228, 830.5)`: phần tử nhận diện là nút `Khối màu` trong menu, hoàn toàn không bị nút `tl-lock` của track dưới che khuất.
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -165,6 +316,44 @@
   - `node apps/web/scripts/check-design-system.mjs`: Sạch 100%.
   - `node apps/web/scripts/check-i18n.mjs`: Đủ cả 2282 keys, 0 key thiếu.
   - `npm run build`: Hoàn thành 100% biên dịch tĩnh & động cho toàn bộ 22 route.
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -222,6 +411,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-08-19:15] Khắc Phục Triệt Để Nhãn "Dữ Liệu Lỗi" Của Các Kinetic Layer Trên Timeline & Nâng Cấp Inspector Hỗ Trợ Chỉnh Sửa Trực Tiếp
 
 - **Thời gian**: 2026-11-08 19:15 (Múi giờ +07:00)
@@ -272,6 +499,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-07-23:05] Hoàn Thiện Long-Polling Mặc Định Cho Jobs, Nới Lỏng QC Loudness Cho Video Không Lời Thoại & Kiểm Thử Thực Tế Dự Án `video test fixed`
 
 - **Thời gian**: 2026-11-07 23:05 (Múi giờ +07:00)
@@ -312,6 +577,44 @@
 - **Triển khai (Deployment)**:
   - Git commit & push `origin main`.
   - Triển khai tự động lên Coolify Production (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -368,6 +671,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-07-20:15] Nâng Cấp Toàn Diện Đồ Họa Động Remotion Kinetic (3D Tilt, Glassmorphism, Spring Physics) & Cưỡng Chế Mật Độ Timeline Cho AI Agent
 
 - **Thời gian**: 2026-11-07 20:15 (Múi giờ +07:00)
@@ -413,6 +754,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-07-13:05] Thêm Checkbox Tùy Chọn "Cưỡng Chế Áp Dụng Skill 100%" (Enforce Skill Toggle) Cho Brief
 
 - **Thời gian**: 2026-11-07 13:05 (Múi giờ +07:00)
@@ -442,6 +821,44 @@
 - **Triển khai (Deployment)**:
   - Git commit & push `origin main`.
   - Kích hoạt triển khai tự động lên Coolify Production (`https://video.mtdd.io.vn`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -480,6 +897,44 @@
   - `npm run build`: Build thành công toàn bộ 28 routes.
 - **Triển khai**:
   - Sẵn sàng push Git và triển khai tự động lên Coolify.
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -545,6 +1000,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-06-20:35] Tích Hợp & Kích Hoạt Trực Tiếp Khóa Bản Quyền Anthropic Claude 5.5 Vào Hệ Thống
 
 - **Thời gian**: 2026-11-06 20:35 (Múi giờ +07:00)
@@ -558,6 +1051,44 @@
   3. Khởi động lại dịch vụ local và kích hoạt build triển khai tự động lên Coolify theo RULE 15.
   4. Kiểm tra trang `/connections` qua cửa sổ Chrome trực quan: Trạng thái kết nối Claude hiển thị `Hoạt động` (Xanh lá cây).
 - **Kết quả**: Hệ thống đã sẵn sàng 100% sử dụng model `Claude Sonnet 5.5` và dòng 5.5 chính hãng từ Anthropic.
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -585,6 +1116,44 @@
   - Cả môi trường local (`http://localhost:6868`) và production (`https://video.mtdd.io.vn`) tải dữ liệu 100% ổn định.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Cửa sổ Chrome hiển thị trực tiếp trên màn hình đang kết nối với `chrome-devtools` MCP trên cổng 9222 sẵn sàng cho mọi thao tác test tiếp theo.
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -629,6 +1198,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -664,6 +1271,44 @@
   - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -694,6 +1339,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -729,6 +1412,44 @@
   - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -767,6 +1488,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -802,6 +1561,44 @@
   - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -832,6 +1629,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -867,6 +1702,44 @@
   - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -891,6 +1764,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -926,6 +1837,44 @@
   - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -953,6 +1902,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -988,6 +1975,44 @@
   - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -1029,6 +2054,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -1064,6 +2127,44 @@
   - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -1097,6 +2198,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -1132,6 +2271,44 @@
   - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -1167,6 +2344,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -1202,6 +2417,44 @@
   - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -1227,6 +2480,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -1262,6 +2553,44 @@
   - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -1293,6 +2622,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -1328,6 +2695,44 @@
   - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -1355,6 +2760,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -1390,6 +2833,44 @@
   - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -1479,6 +2960,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -1514,6 +3033,44 @@
   - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -1547,6 +3104,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -1582,6 +3177,44 @@
   - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -1610,6 +3243,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -1645,6 +3316,44 @@
   - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -1682,6 +3391,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -1717,6 +3464,44 @@
   - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -1742,6 +3527,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -1777,6 +3600,44 @@
   - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -1806,6 +3667,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -1841,6 +3740,44 @@
   - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -1858,6 +3795,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -1893,6 +3868,44 @@
   - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -1963,6 +3976,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -1998,6 +4049,44 @@
   - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -2030,6 +4119,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -2065,6 +4192,44 @@
   - `npm run build` → **Next.js Turbopack compiled successfully 22 routes**.
 - **Trạng thái hiện tại & Hướng dẫn cho phiên kế tiếp (Next Steps / Handover)**:
   - Tự động đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15 (`npm run deploy:coolify -- --wait`).
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
@@ -2100,6 +4265,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-20:35] Tích Hợp Toàn Bộ Danh Mục Model Trực Tuyến Của OpenRouter (450+ Models) Phân Nhóm Khoa Học
 
 - **Thời gian**: 2026-11-05 20:35 (Múi giờ +07:00)
@@ -2138,6 +4341,44 @@
 
 ---
 
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
+
+---
+
 ### [SESSION-2026-11-05-01:45] Khắc phục kết nối Cloudflare Zero Trust Tunnel & Kích hoạt Public Domain `https://video.mtdd.io.vn`
 
 - **Thời gian**: 2026-11-05 01:45 (Múi giờ +07:00)
@@ -2158,6 +4399,44 @@
   - Website đã chính thức online tại: **[https://video.mtdd.io.vn](https://video.mtdd.io.vn)**.
   - Bảo mật qua Cloudflare SSL/TLS Edge và Cloudflare Tunnel, an toàn tuyệt đối không cần mở port router.
 
+
+---
+
+### [SESSION-2026-11-08-22:15] Chuyển Mục "Mã Nguồn GitHub" & Badge "Bản Mới Nhất" Từ Cuối Sidebar Sang Menu Hồ Sơ (User Profile Menu) Góc Trên Bên Phải Header
+
+- **Thời gian**: 2026-11-08 22:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ này chuyển giúp tôi phần này sang tên profile của góc trên bên phải ấy" (kèm ảnh chụp mục `Mã nguồn GitHub` và `Bản mới nhất v2.0.2` ở chân sidebar).
+- **Phân tích kỹ thuật & Tối ưu hóa UI/UX**:
+  1. **Thực trạng**: Chân sidebar (`.shell-nav-foot`) trước đây chứa liên kết mã nguồn GitHub và component kiểm tra phiên bản cập nhật hệ thống (`<UpdateBadge />`). Vị trí này chiếm diện tích chân thanh điều hướng, dễ bị che khuất trên màn hình nhỏ hoặc khi người dùng thu gọn sidebar (collapsed rail 56px).
+  2. **Giải pháp chuẩn hóa**: Di chuyển toàn bộ cụm chức năng hệ thống và mã nguồn vào menu hồ sơ người dùng (User Profile Dropdown Menu) gắn tại góc trên bên phải của Header chính (`Shell.tsx`).
+- **Thực thi kỹ thuật chi tiết**:
+  1. **Xây dựng component `UserProfileMenu.tsx`**:
+     - Thiết kế theo chuẩn Design System (Design Tokens, nhịp khoảng cách 4/8/12/16/24px, thang chữ 3 bậc):
+       - **Trigger Button**: Hiển thị Avatar ký tự đầu có nền màu thương hiệu mềm (`var(--primary-soft)`), tên người dùng, nhãn vai trò (role), và mũi tên mở rộng (`ChevronDown`) có hiệu ứng xoay 180 độ khi mở.
+       - **User Card Header**: Thẻ tóm tắt thông tin người dùng với Avatar lớn, tên đầy đủ và Badge vai trò (`<Badge tone="success" dot={false} />` cho Admin).
+       - **Version & Update Status**: Tích hợp `<UpdateBadge />` ngay trong menu, hiển thị trạng thái phiên bản hiện tại (v2.0.2) và mở trực tiếp modal "Cập nhật hệ thống" (`UpdateModal`) khi bấm vào.
+       - **GitHub Repository Link**: Nút liên kết ngoài "Mã nguồn GitHub" mở tab mới an toàn (`rel="noreferrer noopener"`), tích hợp SVG GitHub path chuẩn và icon `ExternalLink`.
+       - **Đăng xuất (Logout)**: Nút hành động đăng xuất với icon `LogOut`, màu `var(--danger)` và hiệu ứng hover nhẹ nhàng.
+     - **Trải nghiệm tương tác & Accessibility**: Hỗ trợ đầy đủ sự kiện bàn phím (phím Escape để đóng), nhấp chuột ngoài vùng (click outside via `mousedown`/`touchstart`), và các thuộc tính WAI-ARIA (`role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup`).
+  2. **Tối ưu hóa `Shell.tsx`**:
+     - Gỡ bỏ hoàn toàn khối `.shell-nav-foot` ở chân sidebar, giúp thanh điều hướng trở nên thông thoáng, tập trung 100% vào các danh mục tính năng chính.
+     - Dọn sạch các import và khai báo không còn dùng (`REPO_URL`, `GithubMark`, `ExternalLink`, `LogOut`).
+     - Tích hợp `<UserProfileMenu user={user} logout={logout} />` vào góc trên bên phải của topbar.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/UserProfileMenu.tsx`: Tạo mới component menu hồ sơ người dùng hoàn chỉnh.
+  - `apps/web/src/components/Shell.tsx`: Gỡ bỏ cụm footer ở sidebar, nhúng `UserProfileMenu` vào header topbar và dọn sạch mã thừa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `npm run typecheck` → **Pass 100%** không lỗi TypeScript across all 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%** (0 lỗi thiết kế, 100% token biến CSS, chuẩn nhịp khoảng cách).
+  - `node apps/web/scripts/check-i18n.mjs` → **2282/2282 keys hợp lệ** đầy đủ song ngữ vi/en.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 static/dynamic routes**.
+  - **Kiểm thử trực quan qua Chrome DevTools MCP**:
+    - Sidebar không còn mục GitHub và UpdateBadge ở đáy.
+    - Topbar góc trên bên phải hiển thị nút hồ sơ MTDD gọn gàng, đẹp mắt.
+    - Click vào nút hồ sơ: Popover menu mở ra ngay bên dưới với đầy đủ thông tin, Badge v2.0.2, Link GitHub và nút Đăng xuất.
+    - Click vào badge v2.0.2: Modal "Cập nhật hệ thống" hiển thị đầy đủ thông tin chi tiết và nút "Kiểm tra lại ngay".
 
 ---
 
