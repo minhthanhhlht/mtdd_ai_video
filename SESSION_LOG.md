@@ -6,6 +6,33 @@
 
 ---
 
+### [SESSION-2026-11-09-14:35] Đồng Bộ Toàn Bộ Kho Skills Lên Coolify: Khắc Phục Dockerfile Bỏ Quên Thư Mục `.claude/skills` Qua `.dockerignore`
+
+- **Thời gian**: 2026-11-09 14:35 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "bạn có thể đẩy toàn bộ skill lên coolify giúp t được không. trên coolify t chưa thấy có skill nào cả"
+- **Phân tích kỹ thuật & Khắc phục triệt để**:
+  1. **Nguyên nhân cốt lõi**:
+     - Kho mã nguồn Git đã lưu và theo dõi đầy đủ 22 kỹ năng trong `.claude/skills/`.
+     - Tuy nhiên, trong tệp `.dockerignore`, dòng 15 khai báo chặn toàn bộ thư mục `.claude`.
+     - Do đó, khi máy chủ Coolify thực hiện lệnh `COPY . .` trong `Dockerfile`, toàn bộ thư mục `.claude/skills/` bị bỏ qua (ignored), dẫn đến môi trường container production không có tệp kỹ năng nào và API `GET /api/skills` trả về mảng rỗng `[]`.
+  2. **Giải pháp xử lý chuẩn xác & bảo mật**:
+     - Cập nhật `.dockerignore`: Thay thế lệnh chặn diện rộng `.claude` bằng việc chỉ chặn các tệp cấu hình cục bộ nhạy cảm:
+       - `.claude/settings.local.json`
+       - `.claude/.credentials.json`
+       - `.claude/credentials.json`
+     - Bảo đảm toàn bộ thư mục `.claude/skills/` cùng cấu hình an toàn `.claude/settings.json` được sao chép đầy đủ vào Docker image production trên Coolify.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `.dockerignore`: Cho phép sao chép `.claude/skills/` vào Docker build image, chỉ chặn credential cá nhân.
+  - `SESSION_LOG.md`: Ghi chép nhật ký chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & QA**:
+  - `node apps/web/scripts/check-design-system.mjs`: Sạch sẽ 100%.
+  - `node apps/web/scripts/check-i18n.mjs`: Khớp 2281/2281 keys song ngữ.
+  - `npm run typecheck`: Pass 100% không lỗi ở cả 3 packages (`server`, `web`, `remotion-engine`).
+  - Đẩy Git lên `main` và kích hoạt triển khai Coolify tự động (`npm run deploy:coolify`).
+
+---
+
 ### [SESSION-2026-11-09-11:05] Khắc Phục Lỗi Tạo Skill Từ Video: Chặn Link Slideshow Ảnh TikTok & Tăng Độ Bền Phân Tích JSON AI Vision
 
 - **Thời gian**: 2026-11-09 11:05 (Múi giờ +07:00)

@@ -12,7 +12,9 @@ text-to-video
 translate-video
 outputs
 imports
-.claude
+.claude/settings.local.json
+.claude/.credentials.json
+.claude/credentials.json
 .aiev
 .github
 docs
