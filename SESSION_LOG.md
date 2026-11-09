@@ -6,6 +6,39 @@
 
 ---
 
+### [SESSION-2026-11-09-11:05] Khắc Phục Lỗi Tạo Skill Từ Video: Chặn Link Slideshow Ảnh TikTok & Tăng Độ Bền Phân Tích JSON AI Vision
+
+- **Thời gian**: 2026-11-09 11:05 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "tôi đang mở tạo bộ skill và đang lỗi trên màn hình MCP đó bạn hãy kiểm tra xem lỗi gì"
+  - "hãy cập nhật đi nhé"
+- **Phân tích kỹ thuật & Khắc phục triệt để**:
+  1. **Lỗi 1 - Link TikTok dạng Album ảnh lướt (Photo Slideshow)**:
+     - **Hiện tượng**: Người dùng dán link TikTok bao lì xì (`video/7695819708469202194`). Hệ thống báo lỗi kỹ thuật HTTP 500 `FRAME_EXTRACTION_FAILED` (mã thoát FFmpeg `-22` / `4294967274: Output file does not contain any stream`).
+     - **Nguyên nhân**: Bài đăng trên TikTok là dạng Album ảnh lướt tĩnh vật, không phải video chuyển động; `yt-dlp` chỉ tải về luồng nhạc nền `audio only`. Khi FFmpeg cắt frame từ file chỉ có âm thanh, FFmpeg crash.
+     - **Khắc phục**:
+       - Thêm kiểm tra `!videoStream` trong `probeVideoMetadata`: lập tức trả về lỗi HTTP 422 rõ ràng, thân thiện bằng tiếng Việt: *"Liên kết hoặc tệp tải lên không chứa luồng video (ví dụ: bài đăng dạng Album ảnh/Photo Slideshow TikTok, hoặc file chỉ có âm thanh/nhạc nền). Vui lòng chọn một liên kết video thực tế, hoặc lưu video về máy rồi tải tệp MP4 lên."*
+       - Đổi `scale=720:-1` thành `scale=720:-2` trong `extractKeyframes` để đảm bảo kích thước khung hình luôn là số chẵn.
+  2. **Lỗi 2 - AI Vision trả JSON có ký tự điều khiển hoặc bị nghẽn token**:
+     - **Hiện tượng**: Khi người dùng tải file MP4 thật lên, AI Vision bóc tách 6 tầng phong cách nhưng `JSON.parse` báo lỗi `INVALID_AI_RESPONSE` do token bị cắt ngang và có literal newlines bên trong trường markdown.
+     - **Khắc phục**:
+       - Nâng cấp `extractJsonFromText`: bóc tách code fence ngoài an toàn, tự động chuẩn hóa control characters (`\n`, `\r`, `\t`) trong chuỗi JSON, hỗ trợ vá đóng ngoặc khi bị cắt ngang và fallback trích xuất regex trường cấp cao.
+       - Tăng `max_tokens` từ `4096` lên `8192` cho cả Anthropic và OpenRouter Vision để đảm bảo đủ dung lượng xuất toàn bộ kịch bản và tài liệu tham chiếu.
+       - Bổ sung kênh gọi trực tiếp Google Gemini API (`gemini-2.5-flash`) nếu hệ thống có `GEMINI_API_KEY`.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/server/src/videoToSkill.ts`: Kiểm tra luồng video sớm, chuẩn hóa parser JSON an toàn, tăng max_tokens và hỗ trợ Gemini API.
+  - `SESSION_LOG.md`: Cập nhật chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & QA**:
+  - `npm run typecheck` → **Pass 100%** không lỗi (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs` → **Sạch sẽ 100%**.
+  - `node apps/web/scripts/check-i18n.mjs` → **2281/2281 keys hợp lệ**.
+  - `npm run build` → **Next.js Turbopack biên dịch thành công 22 routes**.
+  - **Kiểm thử thực tế qua Chrome DevTools MCP**:
+    - Thử nghiệm gửi link TikTok ảnh lướt: Hệ thống trả mã HTTP 422 với thông báo lỗi tiếng Việt rõ ràng, dễ hiểu.
+    - Người dùng tải file `skill video.mp4` thật lên: Quá trình tiếp nhận và xử lý mượt mà.
+
+---
+
 ### [SESSION-2026-11-08-22:30] Bỏ Kiểm Tra Bản Update & Sửa Lỗi Tràn Giao Diện Nhãn Vai Trò (Admin Quản Trị Viên) Trong Popover Profile
 
 - **Thời gian**: 2026-11-08 22:30 (Múi giờ +07:00)

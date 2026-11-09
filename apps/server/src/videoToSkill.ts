@@ -44,27 +44,66 @@ interface ParsedStyleData {
   soundCues: unknown[];
 }
 
-/** Trích xuất JSON từ chuỗi phản hồi AI (lọc bỏ ```json ... ``` nếu có) */
+/** Trích xuất JSON an toàn và bền bỉ từ chuỗi phản hồi AI */
 function extractJsonFromText(rawText: string): any {
   let clean = rawText.trim();
-  const jsonMatch = clean.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  if (jsonMatch) {
-    clean = jsonMatch[1].trim();
+
+  // 1. Gỡ code fences ```markdown hoặc ```json bao ngoài nếu có
+  if (clean.startsWith("```")) {
+    const firstNewline = clean.indexOf("\n");
+    if (firstNewline !== -1) {
+      clean = clean.slice(firstNewline + 1);
+    }
   }
+  if (clean.endsWith("```")) {
+    clean = clean.slice(0, clean.lastIndexOf("```")).trim();
+  }
+
+  // 2. Cắt từ dấu { đầu tiên đến dấu } cuối cùng
+  const firstBrace = clean.indexOf("{");
+  const lastBrace = clean.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    clean = clean.slice(firstBrace, lastBrace + 1);
+  } else if (firstBrace !== -1 && lastBrace <= firstBrace) {
+    // Bị cắt ngang token, thử vá đóng
+    clean = clean.slice(firstBrace) + '"}';
+  }
+
+  // 3. Parse trực tiếp
   try {
     return JSON.parse(clean);
   } catch (err) {
-    // Thử tìm khối JSON {} đầu tiên đến cuối cùng
-    const start = clean.indexOf("{");
-    const end = clean.lastIndexOf("}");
-    if (start !== -1 && end !== -1 && end > start) {
-      return JSON.parse(clean.slice(start, end + 1));
+    // 4. Khắc phục lỗi control characters / unescaped newlines trong chuỗi markdown JSON
+    try {
+      const sanitized = clean.replace(/[\u0000-\u001F]+/g, (match) => {
+        if (match === "\n") return "\\n";
+        if (match === "\r") return "\\r";
+        if (match === "\t") return "\\t";
+        return "";
+      });
+      return JSON.parse(sanitized);
+    } catch {
+      // 5. Fallback trích xuất regex các trường chính
+      const nameMatch = clean.match(/"name"\s*:\s*"([^"]+)"/);
+      const descMatch = clean.match(/"description"\s*:\s*"([^"]+)"/);
+      if (nameMatch) {
+        return {
+          name: nameMatch[1],
+          description: descMatch ? descMatch[1] : "Phong cách dựng video được trích xuất bằng AI.",
+          skillMarkdown: clean,
+          styleMarkdown: "",
+          timelineMarkdown: "",
+          motionMarkdown: "",
+          audioMarkdown: "",
+          soundCues: [],
+        };
+      }
+      throw new HttpError(
+        502,
+        "INVALID_AI_RESPONSE",
+        `AI phản hồi không đúng định dạng JSON: ${(err as Error).message}\nNội dung thô: ${rawText.slice(0, 300)}`,
+      );
     }
-    throw new HttpError(
-      502,
-      "INVALID_AI_RESPONSE",
-      `AI phản hồi không đúng định dạng JSON: ${(err as Error).message}\nNội dung thô: ${rawText.slice(0, 300)}`,
-    );
   }
 }
 
@@ -124,7 +163,24 @@ async function probeVideoMetadata(videoPath: string): Promise<{
     const rawJson = await execFileCapture("ffprobe", args, { timeoutMs: 15_000 });
     const data = JSON.parse(rawJson);
     const videoStream = data.streams?.find((s: any) => s.codec_type === "video");
+
+    if (!videoStream) {
+      throw new HttpError(
+        422,
+        "NO_VIDEO_STREAM",
+        "Liên kết hoặc tệp tải lên không chứa luồng video (ví dụ: bài đăng dạng Album ảnh/Photo Slideshow TikTok, hoặc file chỉ có âm thanh/nhạc nền). Vui lòng chọn một liên kết video thực tế, hoặc lưu video về máy rồi tải tệp MP4 lên.",
+      );
+    }
+
     const duration = Number(data.format?.duration || videoStream?.duration || 0);
+    if (!Number.isFinite(duration) || duration <= 0) {
+      throw new HttpError(
+        422,
+        "INVALID_VIDEO_DURATION",
+        "Thời lượng video không hợp lệ hoặc tệp video bị lỗi. Vui lòng kiểm tra lại nguồn video.",
+      );
+    }
+
     const width = Number(videoStream?.width || 1080);
     const height = Number(videoStream?.height || 1920);
 
@@ -138,6 +194,7 @@ async function probeVideoMetadata(videoPath: string): Promise<{
 
     return { duration, width, height, fps: fps || 30 };
   } catch (err: any) {
+    if (err instanceof HttpError) throw err;
     throw new HttpError(
       400,
       "PROBE_FAILED",
@@ -167,7 +224,7 @@ async function extractKeyframes(
     "-i",
     videoPath,
     "-vf",
-    `fps=1/${interval},scale=720:-1`,
+    `fps=1/${interval},scale=720:-2`,
     "-q:v",
     "3",
     "-frames:v",
@@ -243,7 +300,7 @@ Hãy phân tích cực kỳ chi tiết 6 tầng:
 6. BẢN ĐỒ ÂM THANH (Sound Map): Các điểm rơi SFX (tiếng camera click, pop nảy thẻ, ding chuông thông báo, whoosh) và nhịp nhạc nền BPM.
 
 YÊU CẦU ĐỊNH DẠNG ĐẦU RA:
-Trả về DUY NHẤT một đối tượng JSON hợp lệ (không kèm văn bản dạo đầu hay kết luận ngoài JSON) với cấu trúc sau:
+Trả về DUY NHẤT một đối tượng JSON hợp lệ (không kèm văn bản dạo đầu hay kết luận ngoài JSON). Các trường markdown viết súc tích, đi thẳng vào các thông số kỹ thuật (HEX, font, spring, thời lượng giây):
 {
   "name": "tên-skill-kebab-case",
   "description": "Mô tả ngắn 1-2 câu về phong cách này và khi nào nên dùng",
@@ -275,7 +332,7 @@ Trả về DUY NHẤT một đối tượng JSON hợp lệ (không kèm văn b�
       },
       body: JSON.stringify({
         model: selectedModel,
-        max_tokens: 4096,
+        max_tokens: 8192,
         messages: [
           {
             role: "user",
@@ -312,22 +369,59 @@ Trả về DUY NHẤT một đối tượng JSON hợp lệ (không kèm văn b�
       },
     ];
 
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${openrouterKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: openrouterModel,
-        messages,
-        max_tokens: 4096,
-      }),
-    });
+    try {
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${openrouterKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: openrouterModel,
+          messages,
+          max_tokens: 8192,
+        }),
+      });
 
-    if (res.ok) {
-      const data = (await res.json()) as any;
-      rawResponseText = data.choices?.[0]?.message?.content || "";
+      if (res.ok) {
+        const data = (await res.json()) as any;
+        rawResponseText = data.choices?.[0]?.message?.content || "";
+      }
+    } catch (err) {
+      console.warn(`[VideoToSkill] OpenRouter call error:`, err);
+    }
+  }
+
+  // 3. Fallback sang Google AI Studio chính thức nếu có GEMINI_API_KEY
+  if (!rawResponseText && geminiKey) {
+    const geminiModel = "gemini-2.5-flash";
+    try {
+      const parts = [
+        { text: promptText },
+        ...sampleFrames.map((framePath) => ({
+          inline_data: {
+            mime_type: "image/jpeg",
+            data: fs.readFileSync(framePath).toString("base64"),
+          },
+        })),
+      ];
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: [{ parts }] }),
+        }
+      );
+      if (res.ok) {
+        const data = (await res.json()) as any;
+        rawResponseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      } else {
+        const errText = await res.text();
+        console.warn(`[VideoToSkill] Gemini direct call failed (${res.status}): ${errText}`);
+      }
+    } catch (err) {
+      console.warn(`[VideoToSkill] Gemini direct call error:`, err);
     }
   }
 
@@ -335,7 +429,7 @@ Trả về DUY NHẤT một đối tượng JSON hợp lệ (không kèm văn b�
     throw new HttpError(
       503,
       "AI_VISION_UNAVAILABLE",
-      "Không thể kích hoạt mô hình AI Vision để phân tích chuỗi khung hình. Vui lòng kiểm tra lại ANTHROPIC_API_KEY hoặc OPENROUTER_API_KEY trong hệ thống.",
+      "Không thể kích hoạt mô hình AI Vision để phân tích chuỗi khung hình. Vui lòng kiểm tra lại GEMINI_API_KEY, ANTHROPIC_API_KEY hoặc OPENROUTER_API_KEY trong hệ thống.",
     );
   }
 
