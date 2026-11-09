@@ -1,0 +1,37 @@
+[
+  {
+    "timeSec": 0.5,
+    "type": "whoosh",
+    "description": "Pop chữ tiêu đề"
+  },
+  {
+    "timeSec": 1.6,
+    "type": "camera_click",
+    "description": "Chuyển cảnh tổng quan"
+  },
+  {
+    "timeSec": 2,
+    "type": "whoosh",
+    "description": "Pop chữ Gấm hoa"
+  },
+  {
+    "timeSec": 3.6,
+    "type": "swish_rustle",
+    "description": "Tay di chuyển bao lì xì"
+  },
+  {
+    "timeSec": 6.1,
+    "type": "pop_spring",
+    "description": "Khi nhấc bao lì xì lên"
+  },
+  {
+    "timeSec": 8.5,
+    "type": "sparkle",
+    "description": "Hiệu ứng bướm/hạt sáng"
+  },
+  {
+    "timeSec": 10,
+    "type": "ding_soft",
+    "description": "Điểm kết thúc nhẹ nhàng"
+  }
+]
