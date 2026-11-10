@@ -22,6 +22,7 @@
        - Thiết lập virtualenv riêng biệt `/app/.runtime/venv`.
        - Cài đặt PyTorch & Torchaudio bản tối ưu cho CPU qua `--index-url https://download.pytorch.org/whl/cpu` (chỉ ~190MB thay vì kéo 4.5GB CUDA thừa).
        - Cài đặt `vieneu` và `soundfile` phục vụ đọc 14 giọng Bắc/Trung/Nam và nhân bản giọng đọc từ file ghi âm mẫu 3-8 giây.
+        - Tối ưu hóa kích thước image và chống tràn ổ cứng VPS (`no space left on device`): Dọn sạch `torch/include`, các thư mục test suites (`tests/`, `test/`), cache `__pycache__` và file `.pyc`, giúp giảm hơn 1.5GB dung lượng layer. Nâng thời gian chờ dọn dẹp Docker trong `deploy-coolify.mjs` lên 25s.
 - **Danh sách tệp tin tác động (Files Changed)**:
   - `Dockerfile`: Bổ sung `libgomp1`, `libsndfile1`, khởi tạo `.runtime/venv`, cài `torch`, `torchaudio`, `vieneu`, `soundfile`.
   - `SESSION_LOG.md`: Ghi chép nhật ký chi tiết phiên làm việc theo RULE 13.

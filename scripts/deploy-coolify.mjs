@@ -55,7 +55,8 @@ async function main() {
           method: "POST",
           headers: { Authorization: `Bearer ${API_TOKEN}`, Accept: "application/json" },
         });
-        await new Promise((r) => setTimeout(r, 6000));
+        console.log(`[Coolify] Đợi dọn dẹp Docker hoàn tất (25s)...`);
+        await new Promise((r) => setTimeout(r, 25000));
       }
     }
   } catch (err) {

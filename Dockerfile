@@ -44,7 +44,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-venv \
     libgomp1 \
     libsndfile1 \
-    && rm -rf /var/lib/apt/lists/* /var/cache/apt/* /usr/share/doc /usr/share/man /tmp/*
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/* /usr/share/doc /usr/share/man /usr/share/locale/* /tmp/*
 
 ENV PORT=6868 \
     SERVER_PORT=6869 \
@@ -66,7 +66,11 @@ RUN mkdir -p .runtime/tmp .runtime/models .runtime/gemini-web apps/server/data v
     && /app/.runtime/venv/bin/pip install --no-cache-dir --upgrade pip \
     && /app/.runtime/venv/bin/pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cpu \
     && /app/.runtime/venv/bin/pip install --no-cache-dir vieneu soundfile \
-    && rm -rf /root/.cache/pip /tmp/*
+    && rm -rf /app/.runtime/venv/lib/python*/site-packages/torch/include 2>/dev/null || true \
+    && rm -rf /app/.runtime/venv/lib/python*/site-packages/torch/test 2>/dev/null || true \
+    && find /app/.runtime -type d \( -name "tests" -o -name "test" -o -name "__pycache__" \) -prune -exec rm -rf "{}" + 2>/dev/null || true \
+    && find /app/.runtime -type f -name "*.pyc" -delete 2>/dev/null || true \
+    && rm -rf /root/.cache /tmp/*
 
 EXPOSE 6868
 
