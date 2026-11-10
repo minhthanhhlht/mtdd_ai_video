@@ -6,6 +6,33 @@
 
 ---
 
+### [SESSION-2026-11-11-00:25] Kích Hoạt Giọng Đọc Offline & Nhân Bản Giọng (VieNeu-TTS + PyTorch CPU) Lên Coolify Production
+
+- **Thời gian**: 2026-11-11 00:25 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Hãy triển khai giọng đọc bạn vừa nói lên coolify giúp mình nhé" (kích hoạt engine VieNeu-TTS và khả năng nhân bản giọng đọc Voice Cloning trên máy chủ Coolify).
+- **Phân tích kỹ thuật & Khắc phục triệt để**:
+  1. **Nguyên nhân trước đó**:
+     - Trong Dockerfile production, môi trường Python chỉ tạo `venv-gateway` cho tính năng tạo ảnh AI, chưa khởi tạo `.runtime/venv` (nơi hệ thống tìm kiếm trình thông dịch Python cục bộ qua `venvPython()`).
+     - Thiếu các thư viện `vieneu`, `soundfile`, `torch` và `torchaudio`, khiến endpoint `/api/tts/engines` trên Coolify trả về `NO_VIENEU` và khóa tính năng nhân bản giọng đọc.
+  2. **Giải pháp chuẩn hóa kiến trúc**:
+     - Cập nhật Stage 2 (`runner`) trong `Dockerfile`:
+       - Bổ sung các thư viện hệ thống cần thiết cho C-runtime của PyTorch và ONNX: `libgomp1`, `libsndfile1`.
+       - Tạo thư mục runtime và thư mục lưu trữ giọng nhân bản: `.runtime/venv`, `assets/voices`.
+       - Thiết lập virtualenv riêng biệt `/app/.runtime/venv`.
+       - Cài đặt PyTorch & Torchaudio bản tối ưu cho CPU qua `--index-url https://download.pytorch.org/whl/cpu` (chỉ ~190MB thay vì kéo 4.5GB CUDA thừa).
+       - Cài đặt `vieneu` và `soundfile` phục vụ đọc 14 giọng Bắc/Trung/Nam và nhân bản giọng đọc từ file ghi âm mẫu 3-8 giây.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `Dockerfile`: Bổ sung `libgomp1`, `libsndfile1`, khởi tạo `.runtime/venv`, cài `torch`, `torchaudio`, `vieneu`, `soundfile`.
+  - `SESSION_LOG.md`: Ghi chép nhật ký chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & QA**:
+  - `node apps/web/scripts/check-design-system.mjs`: Sạch sẽ 100%.
+  - `node apps/web/scripts/check-i18n.mjs`: Khớp 2281/2281 keys song ngữ.
+  - `npm run typecheck`: Pass 100% không lỗi ở cả 3 packages (`server`, `web`, `remotion-engine`).
+  - Đẩy Git lên nhánh `main` và kích hoạt triển khai tự động lên Coolify (`npm run deploy:coolify`).
+
+---
+
 ### [SESSION-2026-11-09-14:35] Đồng Bộ Toàn Bộ Kho Skills Lên Coolify: Khắc Phục Dockerfile Bỏ Quên Thư Mục `.claude/skills` Qua `.dockerignore`
 
 - **Thời gian**: 2026-11-09 14:35 (Múi giờ +07:00)

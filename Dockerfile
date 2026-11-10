@@ -42,6 +42,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
     python3-venv \
+    libgomp1 \
+    libsndfile1 \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/* /usr/share/doc /usr/share/man /tmp/*
 
 ENV PORT=6868 \
@@ -56,10 +58,14 @@ WORKDIR /app
 
 COPY --from=builder /app ./
 
-RUN mkdir -p .runtime/tmp .runtime/models .runtime/gemini-web apps/server/data video-projects outputs \
+RUN mkdir -p .runtime/tmp .runtime/models .runtime/gemini-web apps/server/data video-projects outputs assets/voices \
     && python3 -m venv /app/.runtime/venv-gateway \
     && /app/.runtime/venv-gateway/bin/pip install --no-cache-dir --upgrade pip \
     && /app/.runtime/venv-gateway/bin/pip install --no-cache-dir -r /app/gateways/requirements.txt \
+    && python3 -m venv /app/.runtime/venv \
+    && /app/.runtime/venv/bin/pip install --no-cache-dir --upgrade pip \
+    && /app/.runtime/venv/bin/pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cpu \
+    && /app/.runtime/venv/bin/pip install --no-cache-dir vieneu soundfile \
     && rm -rf /root/.cache/pip /tmp/*
 
 EXPOSE 6868
