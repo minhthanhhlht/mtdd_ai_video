@@ -18,8 +18,8 @@
   },
   "devDependencies": {},
   "dependencies": {
-    "concurrently": "^10.0.6",
-    "hyperframes": "^0.8.197"
+    "concurrently": "^10.0.7",
+    "hyperframes": "^0.9.25"
   },
   "engines": {
     "node": "^22.23.4 || ^24.22.1 || >=26.12.1"
