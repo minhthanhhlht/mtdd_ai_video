@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { query, type Query } from "@anthropic-ai/claude-agent-sdk";
-import { hasClaudeAuth, paths, repoRoot } from "./config.js";
+import { hasClaudeAuth, hasNativeClaudeAuth, paths, repoRoot } from "./config.js";
 import { agentEnv, checkAgentToolUse, isOpenRouterModel } from "./agentPolicy.js";
 import * as db from "./db.js";
 import { broadcast } from "./events.js";
@@ -482,12 +482,12 @@ export async function runAgent(
     return;
   }
 
-  if (!isRouter && !hasClaudeAuth()) {
+  if (!isRouter && !hasNativeClaudeAuth()) {
     emit({
       sessionId,
       kind: "error",
       error:
-        "Chưa có xác thực Claude. Cách 1 (khuyên dùng): đăng nhập Claude Code trên máy này (VSCode extension hoặc chạy `claude` trong terminal rồi /login) - hệ thống tự dùng gói subscription. Cách 2: điền ANTHROPIC_API_KEY vào file .env rồi khởi động lại server.",
+        "Chưa có xác thực Claude. Cách 1 (khuyên dùng): đăng nhập Claude Code trên máy này (VSCode extension hoặc chạy `claude` trong terminal rồi /login) - hệ thống tự dùng gói subscription. Cách 2: điền CLAUDE_CODE_OAUTH_TOKEN hoặc ANTHROPIC_API_KEY vào file .env rồi khởi động lại server.",
     });
     // "done" phải kèm status rõ ràng: thiếu status thì web mặc định coi là
     // thành công, trong khi lượt này thất bại ngay từ guard

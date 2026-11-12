@@ -1,6 +1,6 @@
 import os from "node:os";
 import path from "node:path";
-import { childEnv, repoRoot } from "./config.js";
+import { childEnv, hasNativeClaudeAuth, repoRoot } from "./config.js";
 
 /**
  * Chính sách công cụ cho agent dựng video (PreToolUse hook trong agent.ts).
@@ -113,12 +113,11 @@ export function agentEnv(model?: string | null): Record<string, string | undefin
   // định tuyến Claude Agent SDK qua OpenRouter Anthropic Messages API
   const isRouterModel = isOpenRouterModel(model);
   const openrouterKey = (process.env.OPENROUTER_API_KEY ?? "").trim();
-  const hasAnthropic = Boolean(
-    process.env.ANTHROPIC_API_KEY?.trim() || process.env.CLAUDE_CODE_OAUTH_TOKEN?.trim()
-  );
+  const hasNative = hasNativeClaudeAuth();
 
-  // OpenRouter: khi model chỉ định là OpenRouter HOẶC máy chỉ có OPENROUTER_API_KEY (không có Anthropic)
-  if (isRouterModel || (!hasAnthropic && openrouterKey)) {
+  // OpenRouter: CHỈ KHI model chỉ định là OpenRouter (model có chứa "/")
+  // HOẶC máy chỉ có OPENROUTER_API_KEY (không có bất kỳ xác thực Claude trực tiếp nào)
+  if (isRouterModel || (!hasNative && openrouterKey)) {
     if (openrouterKey) {
       env.ANTHROPIC_BASE_URL = process.env.ANTHROPIC_BASE_URL || "https://openrouter.ai/api";
       env.ANTHROPIC_AUTH_TOKEN = openrouterKey;
@@ -127,6 +126,17 @@ export function agentEnv(model?: string | null): Record<string, string | undefin
       // Tắt các header beta thử nghiệm mà OpenRouter / bên thứ ba không hỗ trợ đầy đủ
       env.CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS = "1";
       env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1";
+    }
+  } else {
+    // Chạy trực tiếp qua Claude (Anthropic API hoặc OAuth subscription / claude login):
+    // Đảm bảo TUYỆT ĐỐI không có ANTHROPIC_BASE_URL hoặc ANTHROPIC_AUTH_TOKEN trỏ sang OpenRouter
+    delete env.ANTHROPIC_BASE_URL;
+    delete env.ANTHROPIC_AUTH_TOKEN;
+    if (process.env.CLAUDE_CODE_OAUTH_TOKEN) {
+      env.CLAUDE_CODE_OAUTH_TOKEN = process.env.CLAUDE_CODE_OAUTH_TOKEN.trim();
+    }
+    if (process.env.ANTHROPIC_API_KEY) {
+      env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY.trim();
     }
   }
   // Tắt bubblewrap scrubbing của Claude Code trên Linux/Docker

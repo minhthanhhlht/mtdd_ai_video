@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { Router } from "express";
-import { hasClaudeAuth, repoRoot } from "../config.js";
+import { hasClaudeAuth, hasNativeClaudeAuth, repoRoot } from "../config.js";
 import { geminiApiKey } from "../gemini.js";
 import { HttpError } from "../util.js";
 
@@ -474,11 +474,12 @@ function homeDir(): string {
   return process.env.USERPROFILE || process.env.HOME || "";
 }
 
-/** "oauth" nếu có ~/.claude/.credentials.json (subscription Claude Code), "api-key" nếu chỉ có key env */
+/** "oauth" nếu có ~/.claude/.credentials.json hoặc CLAUDE_CODE_OAUTH_TOKEN, "api-key" nếu có ANTHROPIC_API_KEY */
 function claudeSource(): "oauth" | "api-key" | null {
+  if (process.env.CLAUDE_CODE_OAUTH_TOKEN?.trim()) return "oauth";
   const configDir = process.env.CLAUDE_CONFIG_DIR || path.join(homeDir(), ".claude");
   if (fs.existsSync(path.join(configDir, ".credentials.json"))) return "oauth";
-  if (hasClaudeAuth()) return "api-key";
+  if (process.env.ANTHROPIC_API_KEY?.trim()) return "api-key";
   return null;
 }
 
@@ -501,7 +502,7 @@ router.get("/", async (_req, res) => {
   const claude: Provider = {
     id: "claude",
     label: "Claude (Anthropic)",
-    connected: hasClaudeAuth(),
+    connected: hasNativeClaudeAuth(),
     source: claudeSource(),
     roles: ["edit", "chat"],
     // Danh sách SDK đã hỏi được thì dùng luôn (mới hơn danh sách tĩnh)

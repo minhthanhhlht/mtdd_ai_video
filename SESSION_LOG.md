@@ -6,6 +6,47 @@
 
 ---
 
+### [SESSION-2026-11-12-20:20] Tích Hợp Claude OAuth Subscription & Ngăn Chặn OpenRouter Chiếm Quyền Điều Khiển Khi Chọn Model Claude
+
+- **Thời gian**: 2026-11-12 20:20 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "T đã login claude rồi đấy. H lấy mã đó ở đâu nhỉ"
+  - "sk-ant-oat01-... Token đây hãy thêm vào dự án giúp tôi"
+  - "hãy kiểm tra giúp tôi chạy với claude đi. T đang mở MCP đó t đã chọn model sonnet rồi mà nó cứ chạy của open router là sao. Hãy sửa nó"
+- **Phân tích kỹ thuật & Khắc phục triệt để**:
+  1. **Nguyên nhân chuyển hướng nhầm sang OpenRouter (OpenRouter Hijacking)**:
+     - Trước đây trong `apps/server/src/agentPolicy.ts`, biến `hasAnthropic` chỉ kiểm tra cứng `process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_CODE_OAUTH_TOKEN`.
+     - Trong khi đó, `config.hasClaudeAuth()` lại gộp cả `process.env.OPENROUTER_API_KEY`.
+     - Khi chạy tiến trình nền cũ hoặc khi máy có `OPENROUTER_API_KEY` nhưng chưa có `ANTHROPIC_API_KEY`, điều kiện `(!hasAnthropic && openrouterKey)` luôn thỏa mãn.
+     - Dẫn đến việc hệ thống tự ý gán `ANTHROPIC_BASE_URL = "https://openrouter.ai/api"` và `ANTHROPIC_AUTH_TOKEN = openrouterKey` cho TẤT CẢ các truy vấn Agent SDK, ngay cả khi người dùng chọn model Claude gốc (như `claude-sonnet-5-5`), làm tiêu tốn credits của OpenRouter thay vì dùng tài khoản Claude subscription.
+     - Ngoài ra, trên giao diện `ModelPicker.tsx`, nhóm OpenRouter được xếp trước nhóm Claude, và model đầu tiên hiển thị lại là `anthropic/claude-sonnet-4.5` (model proxy của OpenRouter) gây nhầm lẫn khi người dùng bấm chọn nhanh "Sonnet".
+  2. **Giải pháp chuẩn hóa kiến trúc**:
+     - **Tách bạch xác thực**: Bổ sung hàm `hasNativeClaudeAuth()` trong `apps/server/src/config.ts` để kiểm tra chính xác xác thực Claude trực tiếp (`CLAUDE_CODE_OAUTH_TOKEN`, `ANTHROPIC_API_KEY`, `~/.claude/.credentials.json` hoặc macOS Keychain). `hasClaudeAuth()` chỉ dùng khi cần kiểm tra khả năng chạy đa nền tảng.
+     - **Định tuyến Agent SDK chuẩn xác**: Trong `apps/server/src/agentPolicy.ts`, chỉ định tuyến sang OpenRouter khi model có tiền tố hãng chứa `/` (ví dụ `google/...`, `anthropic/...`, `deepseek/...`) HOẶC khi hoàn toàn không có xác thực Claude trực tiếp. Khi người dùng chọn model Claude gốc, hệ thống xóa bỏ dứt điểm `ANTHROPIC_BASE_URL` và `ANTHROPIC_AUTH_TOKEN`, truyền trực tiếp `CLAUDE_CODE_OAUTH_TOKEN` hoặc `ANTHROPIC_API_KEY`.
+     - **Bảo vệ tại cổng Agent**: Cập nhật `apps/server/src/agent.ts` và `aiText.ts` kiểm tra `hasNativeClaudeAuth()` khi chạy model native.
+     - **Giao diện & Trạng thái kết nối**:
+       - Cập nhật `apps/server/src/routes/connections.ts` và `providers.ts` nhận diện chính xác `CLAUDE_CODE_OAUTH_TOKEN` thuộc nguồn `oauth`, hiển thị trạng thái "Đang dùng subscription OAuth của Claude Code".
+       - Cập nhật `apps/web/src/components/ModelPicker.tsx` đưa nhóm `Claude (Anthropic)` lên vị trí ĐẦU TIÊN của thẻ `<select>`, ưu tiên chọn trực tiếp các model Claude gốc.
+     - **Khởi động lại Server & Triển khai**: Tắt tiến trình server cũ chạy từ Nov 9, nạp token mới vào `.env` local và biến môi trường Coolify production, build và khởi động daemon mới.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/server/src/config.ts`: Tách `hasNativeClaudeAuth()` và `hasClaudeAuth()`.
+  - `apps/server/src/agentPolicy.ts`: Sử dụng `hasNativeClaudeAuth()`, cô lập hoàn toàn môi trường OpenRouter khi chạy Claude direct.
+  - `apps/server/src/agent.ts`: Chặn chạy Claude direct khi thiếu native auth.
+  - `apps/server/src/aiText.ts`: Áp dụng guard `hasNativeClaudeAuth()`.
+  - `apps/server/src/routes/connections.ts`: Nhận diện `CLAUDE_CODE_OAUTH_TOKEN` và hiển thị kết nối OAuth chuẩn xác.
+  - `apps/server/src/routes/health.ts`: Cập nhật check `claudeAuth` qua `hasNativeClaudeAuth()`.
+  - `apps/server/src/routes/providers.ts`: Ghi nhận `CLAUDE_CODE_OAUTH_TOKEN` và trạng thái `connected` của Claude.
+  - `apps/web/src/components/ModelPicker.tsx`: Đưa nhóm model `Claude (Anthropic)` lên đầu danh sách chọn.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & QA**:
+  - `npm run typecheck`: Pass 100% không lỗi ở cả 3 packages (`server`, `web`, `remotion-engine`).
+  - `node apps/web/scripts/check-design-system.mjs`: Sạch sẽ 100%.
+  - `node apps/web/scripts/check-i18n.mjs`: 2281/2281 keys song ngữ khớp đầy đủ.
+  - `npm run build`: Next.js Turbopack và TypeScript server biên dịch thành công.
+  - Kiểm thử trực tiếp bằng mã test `generateText`: Gửi prompt tới `claude-sonnet-5-5` với `CLAUDE_CODE_OAUTH_TOKEN` thành công xuất sắc, nhận phản hồi trực tiếp từ Anthropic Claude không qua OpenRouter.
+
+---
+
 ### [SESSION-2026-11-11-00:25] Kích Hoạt Giọng Đọc Offline & Nhân Bản Giọng (VieNeu-TTS + PyTorch CPU) Lên Coolify Production
 
 - **Thời gian**: 2026-11-11 00:25 (Múi giờ +07:00)

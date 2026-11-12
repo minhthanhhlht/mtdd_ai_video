@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { Router } from "express";
-import { hasClaudeAuth, upsertEnvVar } from "../config.js";
+import { hasClaudeAuth, hasNativeClaudeAuth, upsertEnvVar } from "../config.js";
 import { HttpError } from "../util.js";
 import { chatgptAccountsKnown, testChatgptGateway } from "../imageProviders/chatgptGateway.js";
 import { geminiWebInfo, testGeminiWeb } from "../imageProviders/geminiWeb.js";
@@ -33,6 +33,7 @@ function maskKey(key: string): string {
 }
 
 function claudeOauthPresent(): boolean {
+  if (process.env.CLAUDE_CODE_OAUTH_TOKEN?.trim()) return true;
   const configDir =
     process.env.CLAUDE_CONFIG_DIR ||
     path.join(process.env.USERPROFILE || process.env.HOME || "", ".claude");
@@ -66,17 +67,23 @@ function listConnections(): ConnectionInfo[] {
       id: "claude",
       label: "Claude (Anthropic)",
       roles: ["edit", "chat"],
-      connected: hasClaudeAuth(),
+      connected: hasNativeClaudeAuth(),
       source: oauth ? "oauth" : anthropicKey ? "api-key" : null,
       note: oauth
-        ? "Đang dùng subscription OAuth của Claude Code (đăng nhập qua VSCode/terminal) - không tốn phí API."
+        ? process.env.CLAUDE_CODE_OAUTH_TOKEN
+          ? "Đang dùng subscription OAuth của Claude Code (CLAUDE_CODE_OAUTH_TOKEN) - không tốn phí API."
+          : "Đang dùng subscription OAuth của Claude Code (đăng nhập qua VSCode/terminal) - không tốn phí API."
         : anthropicKey
           ? "Đang dùng API key (tính phí theo usage)."
           : "Chưa kết nối - đăng nhập Claude Code trên máy này hoặc nhập API key.",
       key: {
-        envVar: "ANTHROPIC_API_KEY",
-        present: !!anthropicKey,
-        masked: anthropicKey ? maskKey(anthropicKey) : null,
+        envVar: process.env.CLAUDE_CODE_OAUTH_TOKEN ? "CLAUDE_CODE_OAUTH_TOKEN" : "ANTHROPIC_API_KEY",
+        present: Boolean(anthropicKey || process.env.CLAUDE_CODE_OAUTH_TOKEN),
+        masked: process.env.CLAUDE_CODE_OAUTH_TOKEN
+          ? maskKey(process.env.CLAUDE_CODE_OAUTH_TOKEN)
+          : anthropicKey
+            ? maskKey(anthropicKey)
+            : null,
       },
       keyHelpUrl: "https://console.anthropic.com/settings/keys",
     },
@@ -344,7 +351,9 @@ router.post("/:provider/test", async (req, res) => {
     if (claudeOauthPresent()) {
       res.json({
         ok: true,
-        message: "Đang dùng subscription OAuth của Claude Code (đã đăng nhập trên máy).",
+        message: process.env.CLAUDE_CODE_OAUTH_TOKEN
+          ? "Đang dùng subscription OAuth của Claude Code (CLAUDE_CODE_OAUTH_TOKEN đã cấu hình)."
+          : "Đang dùng subscription OAuth của Claude Code (đã đăng nhập trên máy).",
       });
       return;
     }

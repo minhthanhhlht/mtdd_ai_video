@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { Router } from "express";
-import { apiToken, hasClaudeAuth, repoRoot } from "../config.js";
+import { apiToken, hasNativeClaudeAuth, repoRoot } from "../config.js";
 import { execFileCapture, hyperframesCli, isLocalRequest } from "../util.js";
 
 export interface HealthChecks {
@@ -49,7 +49,7 @@ export async function getHealth(): Promise<HealthResult> {
     checks: {
       ffmpeg,
       node: process.version,
-      claudeAuth: hasClaudeAuth(),
+      claudeAuth: hasNativeClaudeAuth(),
       hyperframes,
     },
   };

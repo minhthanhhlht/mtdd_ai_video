@@ -93,16 +93,14 @@ export function apiToken(): string {
 }
 
 /**
- * Có xác thực Claude cho Agent SDK không - theo thứ tự SDK tự nhận:
- * env key (API key / OAuth token / gateway token) hoặc đăng nhập subscription
- * của Claude Code trên máy (~/.claude/.credentials.json, hoặc CLAUDE_CONFIG_DIR).
+ * Có xác thực trực tiếp với Claude (Anthropic API key, Claude Code OAuth, credentials.json hoặc Keychain).
+ * KHÔNG bao gồm OpenRouter.
  */
-export function hasClaudeAuth(): boolean {
+export function hasNativeClaudeAuth(): boolean {
   if (
-    process.env.ANTHROPIC_API_KEY ||
-    process.env.CLAUDE_CODE_OAUTH_TOKEN ||
-    process.env.ANTHROPIC_AUTH_TOKEN ||
-    process.env.OPENROUTER_API_KEY
+    process.env.ANTHROPIC_API_KEY?.trim() ||
+    process.env.CLAUDE_CODE_OAUTH_TOKEN?.trim() ||
+    (process.env.ANTHROPIC_AUTH_TOKEN?.trim() && !process.env.ANTHROPIC_BASE_URL?.includes("openrouter"))
   ) {
     return true;
   }
@@ -112,6 +110,14 @@ export function hasClaudeAuth(): boolean {
   if (fs.existsSync(path.join(configDir, ".credentials.json"))) return true;
   // macOS: Claude Code lưu OAuth trong Keychain, KHÔNG có .credentials.json
   return darwinKeychainHasClaudeCreds();
+}
+
+/**
+ * Có xác thực Claude cho Agent SDK không - theo thứ tự SDK tự nhận:
+ * hoặc trực tiếp Anthropic (API key / OAuth token / subscription), hoặc qua OpenRouter.
+ */
+export function hasClaudeAuth(): boolean {
+  return hasNativeClaudeAuth() || hasOpenRouterAuth();
 }
 
 /** Có xác thực OpenRouter (OPENROUTER_API_KEY) để chạy Claude Agent SDK đa provider không */

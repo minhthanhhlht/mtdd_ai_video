@@ -280,6 +280,13 @@ export function AiModelBlock({
             onChange={(e) => onModelChange(e.target.value)}
           >
             {modelMissing && <option value={model}>{model}</option>}
+            <optgroup label="Claude (Anthropic)">
+              {cModels.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label}
+                </option>
+              ))}
+            </optgroup>
             {Object.entries(groupedOrModels).map(([groupName, groupList]) => (
               <optgroup key={groupName} label={groupName}>
                 {groupList.map((m) => (
@@ -289,13 +296,6 @@ export function AiModelBlock({
                 ))}
               </optgroup>
             ))}
-            <optgroup label="Claude (Anthropic)">
-              {cModels.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
-              ))}
-            </optgroup>
           </select>
         </Field>
         <Field label={t("model.effort")} htmlFor="ai-effort">
@@ -388,6 +388,13 @@ export function AiModelInlineRow({
         onChange={(e) => onModelChange(e.target.value)}
       >
         {modelMissing && <option value={model}>{model}</option>}
+        <optgroup label="Claude (Anthropic)">
+          {cModels.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.label}
+            </option>
+          ))}
+        </optgroup>
         {Object.entries(groupedOrModels).map(([groupName, groupList]) => (
           <optgroup key={groupName} label={groupName}>
             {groupList.map((m) => (
@@ -397,13 +404,6 @@ export function AiModelInlineRow({
             ))}
           </optgroup>
         ))}
-        <optgroup label="Claude (Anthropic)">
-          {cModels.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.label}
-            </option>
-          ))}
-        </optgroup>
       </select>
       <select
         className="input w-auto"

@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { agentEnv, isOpenRouterModel } from "./agentPolicy.js";
-import { hasClaudeAuth, repoRoot } from "./config.js";
+import { hasNativeClaudeAuth, repoRoot } from "./config.js";
 import { addTokenUsage } from "./db.js";
 import { HttpError } from "./util.js";
 
@@ -41,7 +41,7 @@ export async function generateText(input: {
       `Chưa có OPENROUTER_API_KEY để chạy model "${input.model}". Vui lòng cấu hình OPENROUTER_API_KEY.`,
     );
   }
-  if (!isRouter && !hasClaudeAuth()) {
+  if (!isRouter && !hasNativeClaudeAuth()) {
     throw new HttpError(
       503,
       "NO_CLAUDE_AUTH",
