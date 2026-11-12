@@ -179,7 +179,7 @@ export interface Brief {
   /** Tên skill dùng để edit (null = AI tự chọn) */
   skill: string | null;
   /**
-   * BẬT = Cưỡng chế 100% các thành phần thị giác của skill (typography, halo light, thẻ 3D, viewfinder, CTA)
+   * BẬT = Cưỡng chế 100% các thành phần thị giác, đồ họa và hiệu ứng đặc trưng của skill đã chọn
    * cho mọi video bất kể có talking head hay không. TẮT = AI tự suy luận linh hoạt theo footage.
    */
   enforceSkill: boolean;

@@ -2,6 +2,7 @@ import { buildFilterChain, normAdjust } from "./color.js";
 import { countBrandLogos } from "./brandLogos.js";
 import fs from "node:fs";
 import path from "node:path";
+import { paths } from "./config.js";
 import { activeVideoStyleId, projectDirOf, SOURCE_ARTICLE_REL } from "./meta.js";
 import type { Brief, FileInfoWithDescription, FinishMode, ProjectMeta } from "./meta.js";
 import type { MusicEntry } from "./routes/music.js";
@@ -785,43 +786,86 @@ export function buildEditPrompt(input: {
   // --- Skill
   lines.push("## Skill");
   if (brief.skill) {
+    const skillRelPath = `.claude/skills/${brief.skill}/SKILL.md`;
     lines.push(
-      `Dùng skill \`${brief.skill}\` làm quy trình chính - đọc \`.claude/skills/${brief.skill}/SKILL.md\` và bắt buộc tuân theo.`,
+      `Dùng skill \`${brief.skill}\` làm quy trình chính - đọc \`${skillRelPath}\` và bắt buộc tuân theo.`,
       "",
     );
+
+    // Kiểm tra xem thư mục skill có tài liệu tham chiếu (references/) không
+    const skillDir = path.join(paths.skillsDir, brief.skill);
+    const refDir = path.join(skillDir, "references");
+    let refFiles: string[] = [];
+    if (fs.existsSync(refDir)) {
+      try {
+        refFiles = fs.readdirSync(refDir).filter((f) => f.endsWith(".md") || f.endsWith(".json"));
+      } catch {
+        /* bỏ qua nếu không đọc được */
+      }
+    }
+    if (refFiles.length > 0) {
+      lines.push(
+        `- Thư mục skill có các tệp tài liệu đặc tả tham chiếu trong \`.claude/skills/${brief.skill}/references/\`: ${refFiles.join(", ")}.`,
+        `  BẮT BUỘC ĐỌC các tệp này (đặc biệt là \`timeline-breakdown.md\`, \`style.md\`, \`motion.md\`) để nắm rõ cấu trúc chặng thời gian, bảng màu và hiệu ứng trước khi dựng timeline.`,
+        "",
+      );
+    }
+
     if (brief.enforceSkill) {
-      lines.push(
-        "🔴 BẮT BUỘC ÁP DỤNG TRỌN VẸN VÀ DÀY ĐẶC TẤT CẢ THÀNH PHẦN CỦA SKILL (CƯỠNG CHẾ SKILL 100% ĐANG BẬT):",
-        `- Người dùng ĐÃ BẬT CÔNG TẮC CƯỠNG CHẾ skill "${brief.skill}". Toàn bộ thành phần đồ họa, visual layers, typography, hiệu ứng chuyển động, thẻ cards/3D, halo light, viewfinder, màu sắc và âm thanh đặc trưng của skill PHẢI ĐƯỢC TẠO VÀ ÁP DỤNG TRỌN VẸN vào video.`,
-        `- TUYỆT ĐỐI CẤM tự ý bỏ qua các thành phần của skill với bất kỳ lý do nào. CẤM các suy luận thoái thác kiểu "bỏ qua talking head, halo và thẻ 3D vì video không có người nói".`,
-        "",
-        "⚡ LUẬT MẬT ĐỘ THỊ GIÁC & PHỦ KÍN TIMELINE (BẮT BUỘC - CHỐNG TIMELINE RỖNG):",
-        "  · Video ngắn dạng dọc giữ chân người xem bằng nhịp điệu dồn dập (high retention pacing). CỨ MỖI 1.5 – 3 GIÂY BẮT BUỘC PHẢI CÓ MỘT LAYER ĐỒ HỌA HOẶC KINETIC TEXT XUẤT HIỆN.",
-        "  · TUYỆT ĐỐI CẤM để timeline có bất kỳ khoảng trống nào quá 2 giây liên tiếp mà không có chữ hoặc đồ họa chuyển động.",
-        "  · Quy định số lượng: Video 30s cần tối thiểu 8 – 12 layers nối tiếp nhau; video 60s cần 14 – 20 layers nối tiếp nhau trải đều khắp timeline từ đầu đến cuối!",
-        "  · Mỗi cụm Kinetic Text hoặc Thẻ hiển thị từ 2.5 đến 4 giây rồi chuyển tiếp ngay sang cụm kế tiếp.",
-        "",
-        "🎬 QUY TRÌNH PHÂN ĐOẠN CHO VIDEO SẢN PHẨM / B-ROLL (KHI KHÔNG CÓ THOẠI HOẶC TẮT SUBTITLES):",
-        "  · Bạn PHẢI tự động chia nội dung video thành chuỗi thông điệp nhịp nhàng xuyên suốt video:",
-        "    1. Mở màn (0s - 4s): Khung ngắm REC Viewfinder nhấp nháy + Kinetic Text giật gân (Ví dụ: 'SIÊU PHẨM MỚI / ĐẸP XUẤT SẮC') + SFX Shutter tại atFrame=2.",
-        "    2. Giới thiệu (4s - 12s): Thẻ 3D Card 1 bay vào bên trái + Kinetic Text mô tả + Halo Light tỏa sáng ambient phía sau + SFX Pop tại atFrame tương ứng.",
-        "    3. Chi tiết (12s - 24s): Thẻ 3D Card 2 bay vào bên phải + Kinetic Text tầng 2 + SFX Whoosh.",
-        "    4. Nổi bật (24s - 36s): Notification Card thông báo + Kinetic Text nhấn mạnh + SFX Ding.",
-        "    5. Ưu đãi / Chốt hạ (36s - 48s): Thẻ 3D Card 3 + Kinetic Text kêu gọi + SFX Pop.",
-        "    6. Màn kết (48s - hết): Dynamic Island CTA xuất hiện chốt màn + SFX Pop.",
-        "",
-        "🎵 ĐỒNG BỘ HIỆU ỨNG ÂM THANH SFX KHỚP TỪNG FRAME:",
-        "  · Cứ mỗi khi một Layer (Thẻ, Chữ, REC, CTA) xuất hiện (tại `from`), BẮT BUỘC chèn 1 âm thanh SFX (`pop.mp3`, `swoosh.mp3`, `camera-flash-1.wav`, `ding.mp3`) tại đúng `atFrame` tương ứng trong mảng `audio.sfx`.",
-        "  · Âm thanh SFX khớp mắt nhìn là yếu tố sống còn tạo nên cảm giác 'đã tai đã mắt' cho phong cách Agency Kinetic.",
-        "- Tóm lại: Video XUẤT RA BẮT BUỘC PHẢI DÀY DẶN, BẮT MẮT, LIÊN TỤC VÀ THỂ HIỆN RÕ RÀNG phong cách đặc trưng của skill đó!",
-      );
+      if (brief.skill === "edit-agency-kinetic-v1") {
+        lines.push(
+          "🔴 BẮT BUỘC ÁP DỤNG TRỌN VẸN VÀ DÀY ĐẶC TẤT CẢ THÀNH PHẦN CỦA SKILL (CƯỠNG CHẾ SKILL 100% ĐANG BẬT):",
+          `- Người dùng ĐÃ BẬT CÔNG TẮC CƯỠNG CHẾ skill "${brief.skill}". Toàn bộ thành phần đồ họa, visual layers, typography, hiệu ứng chuyển động, thẻ cards/3D, halo light, viewfinder, màu sắc và âm thanh đặc trưng của skill PHẢI ĐƯỢC TẠO VÀ ÁP DỤNG TRỌN VẸN vào video.`,
+          `- TUYỆT ĐỐI CẤM tự ý bỏ qua các thành phần của skill với bất kỳ lý do nào. CẤM các suy luận thoái thác kiểu "bỏ qua talking head, halo và thẻ 3D vì video không có người nói".`,
+          "",
+          "⚡ LUẬT MẬT ĐỘ THỊ GIÁC & PHỦ KÍN TIMELINE (BẮT BUỘC - CHỐNG TIMELINE RỖNG):",
+          "  · Video ngắn dạng dọc giữ chân người xem bằng nhịp điệu dồn dập (high retention pacing). CỨ MỖI 1.5 – 3 GIÂY BẮT BUỘC PHẢI CÓ MỘT LAYER ĐỒ HỌA HOẶC KINETIC TEXT XUẤT HIỆN.",
+          "  · TUYỆT ĐỐI CẤM để timeline có bất kỳ khoảng trống nào quá 2 giây liên tiếp mà không có chữ hoặc đồ họa chuyển động.",
+          "  · Quy định số lượng: Video 30s cần tối thiểu 8 – 12 layers nối tiếp nhau; video 60s cần 14 – 20 layers nối tiếp nhau trải đều khắp timeline từ đầu đến cuối!",
+          "  · Mỗi cụm Kinetic Text hoặc Thẻ hiển thị từ 2.5 đến 4 giây rồi chuyển tiếp ngay sang cụm kế tiếp.",
+          "",
+          "🎬 QUY TRÌNH PHÂN ĐOẠN CHO VIDEO SẢN PHẨM / B-ROLL (KHI KHÔNG CÓ THOẠI HOẶC TẮT SUBTITLES):",
+          "  · Bạn PHẢI tự động chia nội dung video thành chuỗi thông điệp nhịp nhàng xuyên suốt video:",
+          "    1. Mở màn (0s - 4s): Khung ngắm REC Viewfinder nhấp nháy + Kinetic Text giật gân (Ví dụ: 'SIÊU PHẨM MỚI / ĐẸP XUẤT SẮC') + SFX Shutter tại atFrame=2.",
+          "    2. Giới thiệu (4s - 12s): Thẻ 3D Card 1 bay vào bên trái + Kinetic Text mô tả + Halo Light tỏa sáng ambient phía sau + SFX Pop tại atFrame tương ứng.",
+          "    3. Chi tiết (12s - 24s): Thẻ 3D Card 2 bay vào bên phải + Kinetic Text tầng 2 + SFX Whoosh.",
+          "    4. Nổi bật (24s - 36s): Notification Card thông báo + Kinetic Text nhấn mạnh + SFX Ding.",
+          "    5. Ưu đãi / Chốt hạ (36s - 48s): Thẻ 3D Card 3 + Kinetic Text kêu gọi + SFX Pop.",
+          "    6. Màn kết (48s - hết): Dynamic Island CTA xuất hiện chốt màn + SFX Pop.",
+          "",
+          "🎵 ĐỒNG BỘ HIỆU ỨNG ÂM THANH SFX KHỚP TỪNG FRAME:",
+          "  · Cứ mỗi khi một Layer (Thẻ, Chữ, REC, CTA) xuất hiện (tại `from`), BẮT BUỘC chèn 1 âm thanh SFX (`pop.mp3`, `swoosh.mp3`, `camera-flash-1.wav`, `ding.mp3`) tại đúng `atFrame` tương ứng trong mảng `audio.sfx`.",
+          "  · Âm thanh SFX khớp mắt nhìn là yếu tố sống còn tạo nên cảm giác 'đã tai đã mắt' cho phong cách Agency Kinetic.",
+          "- Tóm lại: Video XUẤT RA BẮT BUỘC PHẢI DÀY DẶN, BẮT MẮT, LIÊN TỤC VÀ THỂ HIỆN RÕ RÀNG phong cách đặc trưng của skill đó!",
+        );
+      } else {
+        lines.push(
+          `🔴 BẮT BUỘC ÁP DỤNG TRỌN VẸN VÀ ĐẦY ĐỦ CÁC THÀNH PHẦN CỦA SKILL "${brief.skill}" (CƯỠNG CHẾ SKILL 100% ĐANG BẬT):`,
+          `- Người dùng ĐÃ BẬT CÔNG TẮC CƯỠNG CHẾ skill "${brief.skill}". Bạn PHẢI đọc kỹ nội dung \`.claude/skills/${brief.skill}/SKILL.md\` và các tài liệu tham chiếu trong thư mục skill (nếu có: style.md, motion.md, timeline-breakdown.md,...).`,
+          `- BẮT BUỘC tuân thủ đúng ngôn ngữ thị giác, bảng màu HEX, typography, chuyển động, hiệu ứng VFX và quy trình chặng thời gian (timeline breakdown) đặc thù của chính skill "${brief.skill}".`,
+          `- TUYỆT ĐỐI CẤM tự ý áp đặt rập khuôn các thành phần của skill khác (ví dụ: KHÔNG chèn khung ngắm REC máy quay, halo light sau đầu, thẻ 3D card hay dynamic island CTA của Agency Kinetic) khi skill "${brief.skill}" không yêu cầu các thành phần đó.`,
+          "",
+          "⚡ LUẬT MẬT ĐỘ THỊ GIÁC & PHỦ KÍN TIMELINE (BẮT BUỘC - CHỐNG TIMELINE RỖNG):",
+          `  · Video ngắn giữ chân người xem bằng sự chuyển động và nhịp điệu liên tục. Cứ mỗi 1.5 – 3 giây BẮT BUỘC phải có một yếu tố thị giác, chữ hoặc hiệu ứng mang đúng phong cách của skill "${brief.skill}" xuất hiện.`,
+          "  · TUYỆT ĐỐI CẤM để timeline có bất kỳ khoảng trống nào quá 2 giây liên tiếp mà không có chuyển động thị giác hoặc nội dung nhấn mạnh.",
+          `  · Video xuất ra BẮT BUỘC PHẢI THỂ HIỆN RÕ RÀNG VÀ CHUẨN MỰC phong cách đặc trưng của skill "${brief.skill}"!`,
+        );
+      }
     } else {
-      lines.push(
-        "🟡 CHẾ ĐỘ THÍCH ỨNG LINH HOẠT THEO FOOTAGE (CÔNG TẮC CƯỠNG CHẾ TẮT):",
-        "- Người dùng KHÔNG bật công tắc cưỡng chế skill. Bạn hãy phân tích kỹ footage và nội dung video để linh hoạt áp dụng skill:",
-        "  · Nếu video có người nói trước ống kính (talking head): Hãy áp dụng đầy đủ các kỹ thuật rotoscoping, halo light sau đầu, kinetic text, thẻ cards và hiệu ứng của skill.",
-        "  · Nếu video KHÔNG có người nói / chỉ có b-roll / sản phẩm / bài viết: Bạn ĐƯỢC PHÉP TỰ Ý SUY LUẬN linh hoạt điều chỉnh hoặc lược bỏ các thành phần đặc thù của người nói (như halo sau đầu, rotoscoping khuôn mặt) để tập trung vào cách dựng phù hợp nhất với bản chất của footage thực tế.",
-      );
+      if (brief.skill === "edit-agency-kinetic-v1") {
+        lines.push(
+          "🟡 CHẾ ĐỘ THÍCH ỨNG LINH HOẠT THEO FOOTAGE (CÔNG TẮC CƯỠNG CHẾ TẮT):",
+          "- Người dùng KHÔNG bật công tắc cưỡng chế skill. Bạn hãy phân tích kỹ footage và nội dung video để linh hoạt áp dụng skill:",
+          "  · Nếu video có người nói trước ống kính (talking head): Hãy áp dụng đầy đủ các kỹ thuật rotoscoping, halo light sau đầu, kinetic text, thẻ cards và hiệu ứng của skill.",
+          "  · Nếu video KHÔNG có người nói / chỉ có b-roll / sản phẩm / bài viết: Bạn ĐƯỢC PHÉP TỰ Ý SUY LUẬN linh hoạt điều chỉnh hoặc lược bỏ các thành phần đặc thù của người nói (như halo sau đầu, rotoscoping khuôn mặt) để tập trung vào cách dựng phù hợp nhất với bản chất của footage thực tế.",
+        );
+      } else {
+        lines.push(
+          "🟡 CHẾ ĐỘ THÍCH ỨNG LINH HOẠT THEO FOOTAGE (CÔNG TẮC CƯỠNG CHẾ TẮT):",
+          `- Phân tích kỹ footage và nội dung video để linh hoạt áp dụng các nguyên tắc thiết kế và quy trình trong \`.claude/skills/${brief.skill}/SKILL.md\` sao cho hài hòa và phù hợp nhất với bản chất của footage thực tế.`,
+          `- TUYỆT ĐỐI KHÔNG áp dụng rập khuôn các hiệu ứng của skill khác (như REC, halo, 3D card của Agency Kinetic) khi skill "${brief.skill}" không yêu cầu.`,
+        );
+      }
     }
   } else {
     lines.push(

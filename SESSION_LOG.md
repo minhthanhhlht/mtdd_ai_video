@@ -6,6 +6,47 @@
 
 ---
 
+### [SESSION-2026-11-12-21:15] Khắc Phục Lỗi Áp Đặt Rập Khuôn Skill Agency Kinetic Khi Chọn Các Skill Khác (tet-red-envelope-reveal)
+
+- **Thời gian**: 2026-11-12 21:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Khi t chọn skill mới tet-red..... sau đó tạo video ai Nhưng có vẻ như đang bị dùng skill agency-kinet..... vậy nhỉ. Hãy kiểm tra lại"
+- **Phân tích kỹ thuật & Khắc phục triệt để**:
+  1. **Nguyên nhân cốt lõi**:
+     - Trước đây, khi bổ sung skill `edit-agency-kinetic-v1` vào dự án (ngày 07/11), trong tệp `apps/server/src/editPrompt.ts` (dòng 792–825), toàn bộ chỉ dẫn chi tiết về Agency Kinetic đã bị gán cứng vào khối lệnh chung `if (brief.enforceSkill)` cho TẤT CẢ các skill.
+     - Cụ thể: Bất kể người dùng chọn skill nào (`tet-red-envelope-reveal`, `noti-tiktok-vn`,...), nếu bật công tắc "Cưỡng chế skill 100%", prompt gửi cho AI Agent đều ép buộc:
+       - Mở màn (0-4s): Khung ngắm REC Viewfinder nhấp nháy + Kinetic Text giật gân + SFX Shutter.
+       - Giới thiệu (4-12s): Thẻ 3D Card 1 + Halo Light tỏa sáng ambient + SFX Pop.
+       - Chi tiết (12-24s): Thẻ 3D Card 2 + Kinetic Text tầng 2 + SFX Whoosh.
+       - Nổi bật (24-36s): Notification Card thông báo + Kinetic Text + SFX Ding.
+       - Ưu đãi (36-48s): Thẻ 3D Card 3 + SFX Pop.
+       - Màn kết: Dynamic Island CTA xuất hiện chốt màn + SFX Pop.
+       - "Âm thanh SFX khớp mắt nhìn là yếu tố sống còn tạo nên cảm giác 'đã tai đã mắt' cho phong cách Agency Kinetic".
+     - Do đó, khi người dùng chọn skill Tết & Bao Lì Xì (`tet-red-envelope-reveal`), AI Agent đọc prompt và rập khuôn tạo ra toàn bộ các layer của Agency Kinetic (`kinetic-rec`, `kinetic-halo`, `kinetic-cards`, `kinetic-notification`, `kinetic-cta`) thay vì áp dụng đúng phong cách truyền thống ấm cúng, màu đỏ vàng kim, bướm phát sáng / hạt lung linh theo đặc tả của skill Tết.
+  2. **Giải pháp chuẩn hóa**:
+     - **Tách biệt chỉ dẫn theo skill (`apps/server/src/editPrompt.ts`)**:
+       - Chỉ áp dụng quy trình phân đoạn 6 bước và các layer đặc thù (`kinetic-rec`, `kinetic-halo`, `kinetic-cards`, `kinetic-cta`) KHI `brief.skill === "edit-agency-kinetic-v1"`.
+       - Với TẤT CẢ các skill khác (như `tet-red-envelope-reveal`): Prompt yêu cầu AI Agent đọc kỹ `SKILL.md` của chính skill đó và tự động quét thư mục `references/` (như `timeline-breakdown.md`, `style.md`, `motion.md`, `sound-cues.json`). BẮT BUỘC tuân theo đúng bảng màu, typography, chuyển động và hiệu ứng của chính skill đó.
+       - Nghiêm cấm AI Agent tự ý rập khuôn chèn các thành phần lạ của Agency Kinetic (viewfinder, halo light, 3D card, dynamic island CTA) vào video.
+     - **Chuẩn hóa nhãn và gợi ý UI (`locales/vi.ts`, `locales/en.ts`, `meta.ts`)**:
+       - Cập nhật tooltip/hint của công tắc Cưỡng chế skill thành khái quát cho mọi skill: "Bắt buộc dựng đủ toàn bộ đồ họa, typography, chuyển động và hiệu ứng đặc trưng của skill đã chọn cho mọi video..." thay vì chỉ nhắc tới halo light và thẻ 3D.
+     - **Dọn dẹp project test (`video-projects/test-new-skill/meta.json`)**:
+       - Đã sao lưu trạng thái cũ vào `.history/backup-before-tet-fix.json`, dọn sạch các layer Agency Kinetic cũ để người dùng có thể bấm chạy lại video với phong cách Tết thuần túy.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/server/src/editPrompt.ts`: Tách biệt chỉ dẫn cưỡng chế của `edit-agency-kinetic-v1` và các skill khác; tự động nhận diện tài liệu tham chiếu `references/`.
+  - `apps/server/src/meta.ts`: Cập nhật chú thích trường `enforceSkill`.
+  - `apps/web/src/lib/locales/vi.ts` & `en.ts`: Chuẩn hóa văn bản gợi ý của công tắc Cưỡng chế skill.
+  - `video-projects/test-new-skill/meta.json`: Dọn sạch layer rác của lần chạy cũ.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & QA**:
+  - `npm run typecheck`: Pass 100% không lỗi (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs`: Sạch sẽ 100%.
+  - `node apps/web/scripts/check-i18n.mjs`: Khớp 2281/2281 keys.
+  - `npm run build`: Server & Web biên dịch thành công.
+  - Khởi động lại daemon server local thành công.
+
+---
+
 ### [SESSION-2026-11-12-20:20] Tích Hợp Claude OAuth Subscription & Ngăn Chặn OpenRouter Chiếm Quyền Điều Khiển Khi Chọn Model Claude
 
 - **Thời gian**: 2026-11-12 20:20 (Múi giờ +07:00)
