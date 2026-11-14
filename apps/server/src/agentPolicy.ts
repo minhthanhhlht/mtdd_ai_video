@@ -132,10 +132,12 @@ export function agentEnv(model?: string | null): Record<string, string | undefin
     // Đảm bảo TUYỆT ĐỐI không có ANTHROPIC_BASE_URL hoặc ANTHROPIC_AUTH_TOKEN trỏ sang OpenRouter
     delete env.ANTHROPIC_BASE_URL;
     delete env.ANTHROPIC_AUTH_TOKEN;
-    if (process.env.CLAUDE_CODE_OAUTH_TOKEN) {
+    if (process.env.CLAUDE_CODE_OAUTH_TOKEN?.trim()) {
       env.CLAUDE_CODE_OAUTH_TOKEN = process.env.CLAUDE_CODE_OAUTH_TOKEN.trim();
-    }
-    if (process.env.ANTHROPIC_API_KEY) {
+      // BẮT BUỘC: Khi có Claude Code OAuth token (subscription Claude Pro), SDK phải dùng token này.
+      // Nếu còn để ANTHROPIC_API_KEY, SDK sẽ ưu tiên dùng key Console API (vốn có số dư 0$ và gây lỗi "Credit balance is too low").
+      delete env.ANTHROPIC_API_KEY;
+    } else if (process.env.ANTHROPIC_API_KEY?.trim()) {
       env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY.trim();
     }
   }

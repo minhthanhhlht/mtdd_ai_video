@@ -436,6 +436,9 @@ function resolveModelAlias(model?: string | null): string | undefined {
 }
 
 function formatAgentError(raw: string): string {
+  if (raw.includes("Credit balance is too low")) {
+    return `Tài khoản Claude báo số dư quá thấp ("Credit balance is too low"). Gói Claude Pro / Max dùng qua Claude Code OAuth subscription (CLAUDE_CODE_OAUTH_TOKEN) chứ KHÔNG dùng qua ANTHROPIC_API_KEY (tài khoản Console API trả trước). Hệ thống đã tự động ưu tiên OAuth subscription để không tốn phí API.\nChi tiết: ${raw}`;
+  }
   if (raw.includes("402") || raw.includes("exceed your available credits") || raw.includes("credits")) {
     return `Tài khoản OpenRouter không đủ số dư credits (Lỗi 402: Payment Required). Vui lòng nạp thêm credit tại https://openrouter.ai/credits hoặc chọn model tiết kiệm hơn (như Gemini 2.5 Flash / DeepSeek V3).\nChi tiết: ${raw}`;
   }

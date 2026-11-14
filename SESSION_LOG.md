@@ -6,6 +6,46 @@
 
 ---
 
+### [SESSION-2026-11-14-20:38] Khắc Phục Lỗi "Credit balance is too low" Khi Dùng Tài Khoản Claude Pro (CLAUDE_CODE_OAUTH_TOKEN)
+
+- **Thời gian**: 2026-11-14 20:38 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Sao nó báo Credit balance is too low nhỉ. T đang dùng claude pro mà"
+- **Phân tích kỹ thuật & Khắc phục triệt để**:
+  1. **Nguyên nhân cốt lõi**:
+     - Người dùng sở hữu gói thuê bao **Claude Pro / Claude Max** ($20/tháng trên web `claude.ai`). Gói này đi kèm quyền dùng công cụ **Claude Code** thông qua mã OAuth Token (`sk-ant-oat01-...` được sinh ra từ lệnh `claude setup-token`), **hoàn toàn không tốn phí nạp token API**.
+     - Trong khi đó, `ANTHROPIC_API_KEY` (`sk-ant-usr-...` hoặc `sk-ant-api...`) lại thuộc nền tảng **Anthropic Developer Console** (`console.anthropic.com`), hoạt động theo cơ chế nạp tiền trả trước (prepaid credit balance).
+     - Trong file `apps/server/src/agentPolicy.ts` trước đây:
+       ```ts
+       if (process.env.CLAUDE_CODE_OAUTH_TOKEN) {
+         env.CLAUDE_CODE_OAUTH_TOKEN = process.env.CLAUDE_CODE_OAUTH_TOKEN.trim();
+       }
+       if (process.env.ANTHROPIC_API_KEY) {
+         env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY.trim();
+       }
+       ```
+     - Khi trên máy chủ Coolify (hoặc tệp `.env`) tồn tại CẢ HAI biến: `@anthropic-ai/claude-agent-sdk` mặc định **ưu tiên `ANTHROPIC_API_KEY` trước `CLAUDE_CODE_OAUTH_TOKEN`**.
+     - Do tài khoản API Console này có số dư bằng 0$ (chưa nạp tiền), máy chủ Anthropic lập tức từ chối và trả về lỗi: `Credit balance is too low`.
+  2. **Giải pháp xử lý và kiểm định**:
+     - **Ưu tiên tuyệt đối Claude Code OAuth (`apps/server/src/agentPolicy.ts`)**:
+       - Cập nhật khối lệnh môi trường agent: Khi `CLAUDE_CODE_OAUTH_TOKEN` tồn tại, hệ thống kích hoạt token OAuth và **chủ động `delete env.ANTHROPIC_API_KEY`**.
+       - Đảm bảo Claude Agent SDK luôn luôn định tuyến vào gói thuê bao Claude Pro của người dùng, không bao giờ rơi về tài khoản API Console trả phí.
+     - **Dọn sạch biến môi trường rác trên Coolify**:
+       - Đã gọi Coolify REST API xóa bỏ 2 biến môi trường cũ `ANTHROPIC_API_KEY` (UUID `lpfsjktjiftvw4mt4a7saul4` và `kylthaqjxll6c9mgcxmvng61`) vốn chứa key Console $0.
+       - Máy chủ Coolify hiện chỉ duy trì duy nhất token hợp lệ `CLAUDE_CODE_OAUTH_TOKEN` (`sk-ant-oat01-...`).
+     - **Kiểm định thực tế**:
+       - Chạy thử nghiệm trực tiếp qua SDK:
+         - Khi có cả 2 key -> Bị lỗi `Credit balance is too low`.
+         - Khi chỉ dùng `CLAUDE_CODE_OAUTH_TOKEN` -> Phản hồi thành công 100% (`Result: OK` với model `claude-sonnet-5-5`).
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/server/src/agentPolicy.ts`: Xóa `ANTHROPIC_API_KEY` khi đã có `CLAUDE_CODE_OAUTH_TOKEN` để cưỡng chế dùng subscription.
+  - `apps/server/src/agent.ts`: Thêm định dạng thông báo lỗi chi tiết giải thích cho người dùng về sự khác nhau giữa Claude Pro và API Console.
+  - `SESSION_LOG.md`: Ghi chép chi tiết theo RULE 13.
+- **Kết quả kiểm định & QA**:
+  - `npm run typecheck`: Pass 100% không lỗi.
+  - `check-design-system.mjs` & `check-i18n.mjs`: Sạch sẽ 100%.
+  - `npm run build -w apps/server`: Biên dịch thành công.
+
 ### [SESSION-2026-11-14-20:12] Khắc Phục Lỗi Tràn RAM (OOM) Gây Treo Máy Chủ Proxmox Khi Build Docker Image Trên CPU 72 Threads
 
 - **Thời gian**: 2026-11-14 20:12 (Múi giờ +07:00)
