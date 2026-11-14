@@ -71,12 +71,22 @@ export type UpdateChannel = "stable" | "latest";
 
 export const UPDATE_CHANNELS: UpdateChannel[] = ["stable", "latest"];
 
-/** Số luồng CPU thật của máy - nguồn cho default + trần của workers/concurrency */
-const cpuThreads = os.cpus().length;
-/** Số worker khuyên dùng: theo máy thật, trần 8 (nhiều hơn hiếm khi nhanh hơn đáng kể) */
-export const recommendedWorkers = Math.min(cpuThreads, 8);
-/** Trần chọn được trên UI: máy nhiều luồng được chọn tới đúng số luồng (tối thiểu 4) */
-export const maxWorkers = Math.max(cpuThreads, 4);
+/**
+ * Số luồng CPU khả dụng thực tế.
+ * Trong Docker / Linux container (như Coolify), os.cpus().length trả về số CPU của host vật lý (vd 72 cores),
+ * nhưng os.availableParallelism() đọc đúng cgroup quota được cấp cho container (vd 2 cores).
+ * Remotion crash nếu concurrency > availableParallelism(), vì vậy luôn phải dùng availableParallelism.
+ */
+export function getAvailableCores(): number {
+  return typeof os.availableParallelism === "function" ? os.availableParallelism() : os.cpus().length;
+}
+
+/** Số luồng CPU thật khả dụng của máy / container - nguồn cho default + trần của workers/concurrency */
+const cpuThreads = getAvailableCores();
+/** Số worker khuyên dùng: theo máy thật/container, trần 8 (nhiều hơn hiếm khi nhanh hơn đáng kể) */
+export const recommendedWorkers = Math.max(1, Math.min(cpuThreads, 8));
+/** Trần chọn được trên UI: theo số core khả dụng thực tế */
+export const maxWorkers = Math.max(cpuThreads, 1);
 
 export const DEFAULT_RENDER_SETTINGS: RenderSettings = {
   workers: recommendedWorkers,
@@ -109,7 +119,8 @@ const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(mi
 /** Kẹp range + ép kiểu một object bất kỳ về RenderSettings hợp lệ - dùng cho cả read lẫn write */
 function normalizeSettings(raw: Record<string, unknown>): RenderSettings {
   const base = { ...DEFAULT_RENDER_SETTINGS };
-  if (typeof raw.workers === "number") base.workers = clamp(Math.round(raw.workers), 0, maxWorkers);
+  const currentMax = Math.max(getAvailableCores(), 1);
+  if (typeof raw.workers === "number") base.workers = clamp(Math.round(raw.workers), 0, currentMax);
   if (typeof raw.browserGpu === "boolean") base.browserGpu = raw.browserGpu;
   if (typeof raw.gpuEncodeDraft === "boolean") base.gpuEncodeDraft = raw.gpuEncodeDraft;
   if (typeof raw.gpuEncodeFinal === "boolean") base.gpuEncodeFinal = raw.gpuEncodeFinal;
@@ -119,7 +130,7 @@ function normalizeSettings(raw: Record<string, unknown>): RenderSettings {
     base.updateChannel = raw.updateChannel as UpdateChannel;
   }
   if (typeof raw.remotionConcurrency === "number") {
-    base.remotionConcurrency = clamp(Math.round(raw.remotionConcurrency), 0, maxWorkers);
+    base.remotionConcurrency = clamp(Math.round(raw.remotionConcurrency), 0, currentMax);
   }
   if (typeof raw.queueConcurrency === "number") {
     base.queueConcurrency = clamp(Math.round(raw.queueConcurrency), 1, 4);
@@ -214,16 +225,17 @@ const RAM_TYPE_BY_SMBIOS: Record<number, string> = {
 export async function detectHardware(): Promise<HardwareInfo> {
   if (hardwareCache) return hardwareCache;
   const cpus = os.cpus();
+  const availableCores = getAvailableCores();
   const info: HardwareInfo = {
     platform: process.platform,
-    cores: cpus.length,
+    cores: availableCores,
     ramGb: Math.round(os.totalmem() / 1024 ** 3),
     gpuName: null,
     nvenc: false,
     videotoolbox: process.platform === "darwin",
     cpuModel: (cpus[0]?.model ?? "CPU").replace(/\((R|TM)\)/gi, "").replace(/\s+/g, " ").trim(),
-    cpuCores: null,
-    cpuThreads: cpus.length,
+    cpuCores: availableCores,
+    cpuThreads: availableCores,
     cpuMaxGhz: null,
     ramType: null,
     ramSpeedMhz: null,
@@ -313,8 +325,10 @@ export async function detectHardware(): Promise<HardwareInfo> {
 /** Argv flags tăng tốc cho `hyperframes render` - job đọc mỗi lần chạy */
 export function hyperframesSpeedArgs(draft: boolean): string[] {
   const s = readRenderSettings();
+  const available = getAvailableCores();
+  const safeWorkers = s.workers > 0 ? Math.min(s.workers, available) : 0;
   const parts: string[] = [];
-  if (s.workers > 0) parts.push("-w", String(s.workers));
+  if (safeWorkers > 0) parts.push("-w", String(safeWorkers));
   if (s.browserGpu) parts.push("--browser-gpu");
   if (s.fastCapture) parts.push("--experimental-fast-capture");
   if (draft ? s.gpuEncodeDraft : s.gpuEncodeFinal) parts.push("--gpu");
@@ -324,7 +338,11 @@ export function hyperframesSpeedArgs(draft: boolean): string[] {
 
 /** Argv --concurrency cho `remotion render/still` ([] nếu để mặc định Remotion) */
 export function remotionConcurrencyArgs(): string[] {
-  const c = readRenderSettings().remotionConcurrency;
+  const available = getAvailableCores();
+  const rawC = readRenderSettings().remotionConcurrency;
+  // Remotion ném lỗi nếu concurrency > availableCores (os.availableParallelism()).
+  // Do đó luôn kẹp trần an toàn theo available thực tế tại thời điểm render.
+  const c = rawC > 0 ? Math.min(rawC, available) : 0;
   return c > 0 ? ["--concurrency", String(c)] : [];
 }
 

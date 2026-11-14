@@ -6,6 +6,47 @@
 
 ---
 
+### [SESSION-2026-11-14-19:15] Khắc Phục Lỗi Remotion Render Concurrency Exceeded CPU Cores Trên Máy Chủ Coolify (Project test-ai)
+
+- **Thời gian**: 2026-11-14 19:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Bạn kiểm tra giúp tôi https://video.mtdd.io.vn/ đang có lỗi của project test ai"
+- **Phân tích kỹ thuật & Khắc phục triệt để**:
+  1. **Nguyên nhân cốt lõi**:
+     - Dự án `test-ai` trên máy chủ production (`https://video.mtdd.io.vn/`) gặp lỗi nghiêm trọng khi render bản nháp (job `assemble-draft` bị `status: failed`, mã thoát 1).
+     - Log chi tiết từ Remotion:
+       `Error: concurrency is set higher than the amount of CPU cores available. Available CPU cores: 2, value set: 8`
+       `at Object.validateConcurrency (/app/node_modules/@remotion/renderer/dist/validate-concurrency.js:24:23)`
+     - Trong file `apps/server/src/renderSettings.ts`:
+       - Trước đây sử dụng `os.cpus().length` để tính số luồng CPU của máy.
+       - Khi chạy trong môi trường container Docker trên Coolify, host vật lý có tới 72 cores (`os.cpus().length` đọc `/proc/cpuinfo` trả về 72).
+       - Do đó, `recommendedWorkers` được tính bằng `Math.min(cpuThreads, 8) = 8`, và mặc định `remotionConcurrency` bị đặt bằng 8.
+       - Tuy nhiên, container Docker chỉ được cấp hạn mức cgroup là 2 cores.
+       - Bộ dựng hình `@remotion/renderer` sử dụng `os.availableParallelism()` để kiểm tra số core khả dụng thực tế của container (trả về 2). Khi thấy giá trị tham số `--concurrency 8` > 2, Remotion lập tức ném ngoại lệ dừng render.
+     - Ngoài ra, project `test-ai` ban đầu được tạo với `sourceKind: "video"` nhưng chưa có footage tải lên, khiến AI Agent cảnh báo thiếu video nhưng cơ chế auto-resume của `finishMode: "draft"` tiếp tục retry cho đến khi AI tự tạo layer giả lập và gọi render.
+  2. **Giải pháp xử lý và tiêu chuẩn hóa**:
+     - **Sửa nhanh tức thì trên Production**:
+       - Gửi API `PUT /api/render-settings` điều chỉnh `remotionConcurrency: 2` và `workers: 2` trực tiếp trên server live.
+       - Kích hoạt lại job render draft `job_ECWhr0kWVH_H9MGKh9UCb` trên production: Remotion đã render thành công 100% 900 khung hình (`outputs/test-ai-draft.mp4`) không còn lỗi.
+     - **Chuẩn hóa mã nguồn (`apps/server/src/renderSettings.ts`)**:
+       - Thêm hàm `getAvailableCores()`: Sử dụng `os.availableParallelism()` nếu khả dụng (Node.js 18.14+) thay vì `os.cpus().length` thuần túy, phản ánh chính xác cgroup quota được cấp trong container Docker / Kubernetes.
+       - Điều chỉnh `cpuThreads = getAvailableCores()`, `recommendedWorkers = Math.max(1, Math.min(cpuThreads, 8))`, `maxWorkers = Math.max(cpuThreads, 1)`.
+       - Trong `normalizeSettings`: Kẹp trần `workers` và `remotionConcurrency` theo `Math.max(getAvailableCores(), 1)` động, đảm bảo ngay cả khi file `render-settings.json` lưu giá trị cũ lớn hơn thì khi đọc vào cũng tự động kẹp trần an toàn.
+       - Trong `remotionConcurrencyArgs()`: Luôn kẹp trần an toàn `Math.min(c, getAvailableCores())` trước khi truyền vào `--concurrency` cho Remotion CLI.
+       - Trong `hyperframesSpeedArgs()`: Kẹp an toàn số worker theo số core thực tế.
+       - Trong `detectHardware()`: Hiển thị đúng số core khả dụng của container trên tab Cấu hình / Tăng tốc, tránh gây hiểu nhầm cho người dùng.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/server/src/renderSettings.ts`: Dùng `os.availableParallelism()`, tự động kẹp trần an toàn cho Remotion concurrency và HyperFrames workers.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & QA**:
+  - `npm run typecheck`: Pass 100% không lỗi (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs`: Sạch sẽ 100%.
+  - `node apps/web/scripts/check-i18n.mjs`: Khớp 2281/2281 keys.
+  - `npm run build`: Server & Web biên dịch thành công 100%.
+  - Render thực tế trên production: Job `job_ECWhr0kWVH_H9MGKh9UCb` hoàn thành 100% (900/900 frames).
+
+---
+
 ### [SESSION-2026-11-12-21:15] Khắc Phục Lỗi Áp Đặt Rập Khuôn Skill Agency Kinetic Khi Chọn Các Skill Khác (tet-red-envelope-reveal)
 
 - **Thời gian**: 2026-11-12 21:15 (Múi giờ +07:00)
