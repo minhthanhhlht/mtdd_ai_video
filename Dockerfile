@@ -11,6 +11,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
+# Giới hạn bộ nhớ Node.js và số worker Next.js để không gây tràn RAM khi build trên máy chủ nhiều CPU
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    NODE_OPTIONS="--max-old-space-size=2048" \
+    NEXT_PRIVATE_BUILD_WORKERS=2 \
+    BUILD_MAX_CPUS=2
+
 COPY package.json package-lock.json ./
 COPY apps/web/package.json ./apps/web/
 COPY apps/server/package.json ./apps/server/

@@ -6,6 +6,39 @@
 
 ---
 
+### [SESSION-2026-11-14-20:12] Khắc Phục Lỗi Tràn RAM (OOM) Gây Treo Máy Chủ Proxmox Khi Build Docker Image Trên CPU 72 Threads
+
+- **Thời gian**: 2026-11-14 20:12 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "trang bị sập rồi bạn ơi"
+  - "t dùng promox của máy ở nhà t ấy"
+  - "t thấy chạy lên rồi đấy bạn sửa đi"
+- **Phân tích kỹ thuật & Khắc phục triệt để**:
+  1. **Nguyên nhân cốt lõi**:
+     - Máy chủ Proxmox ở nhà người dùng là hệ thống phần cứng mạnh mẽ có tới **72 CPU threads**.
+     - Khi Coolify kích hoạt lệnh `docker build` để đóng gói bản cập nhật:
+       - Trình biên dịch **Next.js 16 (Turbopack)** mặc định phát hiện 72 CPU cores của máy chủ vật lý và tự động tạo ra hàng chục worker biên dịch song song.
+       - Hàng chục compiler worker chạy cùng lúc đòi hỏi ngốn tới hàng chục GB RAM trong vài giây.
+       - Trong khi máy ảo (VM) trên Proxmox chỉ được cấp một lượng RAM hữu hạn, dẫn tới hiện tượng tràn RAM nghiêm trọng (Out-Of-Memory Kernel Lockup). Hệ điều hành máy ảo bị treo cứng, khiến toàn bộ các dịch vụ trên VM (`video.mtdd.io.vn`, `manage.mtdd.io.vn`, SSH port 22 và cả lệnh ping IP `42.119.173.18`) đều bị ngắt kết nối hoàn toàn (Cloudflare báo lỗi Timeout 524).
+  2. **Giải pháp chuẩn hóa**:
+     - **Giới hạn số worker biên dịch Next.js (`apps/web/next.config.ts`)**:
+       - Bổ sung cấu hình `cpus: Math.min(2, Math.max(1, process.env.BUILD_MAX_CPUS ? Number(process.env.BUILD_MAX_CPUS) : 2))` và `memoryBasedWorkersCount: true` vào khối `experimental`.
+       - Đảm bảo Next.js chỉ sử dụng đúng 2 luồng biên dịch, cân bằng tự động theo bộ nhớ thực tế.
+     - **Cưỡng chế giới hạn trong Dockerfile (`Dockerfile`)**:
+       - Đặt các biến môi trường `NEXT_TELEMETRY_DISABLED=1`, `NODE_OPTIONS="--max-old-space-size=2048"`, `NEXT_PRIVATE_BUILD_WORKERS=2`, `BUILD_MAX_CPUS=2` ngay tại bước build của Docker image.
+       - Khóa trần tiêu thụ bộ nhớ Node.js không vượt quá 2GB RAM.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `Dockerfile`: Bổ sung biến môi trường giới hạn worker và RAM cho tiến trình build.
+  - `apps/web/next.config.ts`: Giới hạn `cpus: 2` và bật `memoryBasedWorkersCount`.
+  - `SESSION_LOG.md`: Ghi chép chi tiết theo RULE 13.
+- **Kết quả kiểm định & QA**:
+  - `npm run typecheck`: Pass 100% không lỗi (`apps/server`, `apps/web`, `engines/remotion`).
+  - `node apps/web/scripts/check-design-system.mjs`: Sạch sẽ 100%.
+  - `node apps/web/scripts/check-i18n.mjs`: Khớp 2281/2281 keys.
+  - `npm run build -w apps/web`: Biên dịch thành công tuyệt đối, log ghi nhận: `Collecting page data using 2 workers ... Generating static pages using 2 workers (22/22)` với mức RAM tối thiểu.
+
+---
+
 ### [SESSION-2026-11-14-19:15] Khắc Phục Lỗi Remotion Render Concurrency Exceeded CPU Cores Trên Máy Chủ Coolify (Project test-ai)
 
 - **Thời gian**: 2026-11-14 19:15 (Múi giờ +07:00)

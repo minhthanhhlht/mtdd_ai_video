@@ -20,6 +20,9 @@ const nextConfig: NextConfig = {
     position: "bottom-right",
   },
   experimental: {
+    // Giới hạn số worker build Next.js (tối đa 2 luồng) và cân bằng theo RAM để tránh làm nghẽn Proxmox/VPS
+    cpus: Math.min(2, Math.max(1, process.env.BUILD_MAX_CPUS ? Number(process.env.BUILD_MAX_CPUS) : 2)),
+    memoryBasedWorkersCount: true,
     // Proxy rewrite mặc định timeout 30s - video lớn (media/stream) cần lâu hơn.
     // Trên LAN upload đi thẳng backend, nhưng qua domain công cộng thì mọi thứ
     // kể cả upload đều chui qua đây, nên hai mốc dưới là đường đi chính.
