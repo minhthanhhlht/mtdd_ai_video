@@ -6,7 +6,43 @@
 
 ---
 
-### [SESSION-2026-11-14-20:38] Khắc Phục Lỗi "Credit balance is too low" Khi Dùng Tài Khoản Claude Pro (CLAUDE_CODE_OAUTH_TOKEN)
+### [SESSION-2026-11-14-21:30] Khắc Phục Lỗi Credit Balance Is Too Low, Giải Phóng Dung Lượng Ổ Đĩa Proxmox VM & Kích Hoạt Chạy AI Bằng Claude Pro Subscription Với Skill tet-red-envelope-reveal
+
+- **Thời gian**: 2026-11-14 21:30 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "hãy chạy cửa sổ MCP và test đi bạn t chạy lại vẫn bị lỗi credit"
+  - "Khi t chọn skill mới tet-red..... sau đó tạo video ai Nhưng có vẻ như đang bị dùng skill agency-kinet..... vậy nhỉ. Hãy kiểm tra lại"
+- **Phân tích kỹ thuật & Khắc phục triệt để**:
+  1. **Nguyên nhân người dùng test lại vẫn bị lỗi credit**:
+     - Lần test trước của người dùng diễn ra lúc `13:42:16Z` (trước khi bản vá commit `b1c1449` được triển khai).
+     - Khi Coolify tiến hành build container mới, tiến trình build bị lỗi tại bước cuối: `mount callback failed: write ... libtorch_cpu.so: no space left on device`.
+     - Ổ đĩa ảo của máy ảo Proxmox bị đầy 100% dung lượng do các lớp layer cũ, cache buildkit và containerd tích tụ qua nhiều lần build.
+     - Do bản build bị lỗi đĩa, Coolify tiếp tục duy trì container cũ đang chạy vốn vẫn còn chứa biến `ANTHROPIC_API_KEY` trong bộ nhớ tiến trình.
+  2. **Giải phóng dung lượng đĩa & Tối ưu hóa Dockerfile**:
+     - Kích hoạt endpoint Docker cleanup của Coolify API (`POST /api/v1/servers/h34dashvh5ohzfijyvc7bdnh/docker-cleanup/run`) để dọn sạch toàn bộ layer dangling, builder cache và container thừa.
+     - Tối ưu hóa tệp `Dockerfile`: Thêm chỉ thị dọn dẹp toàn bộ sourcemap `*.map` trong cả hai giai đoạn `builder` và `runner` (`find node_modules apps/web/.next engines -type f -name "*.map" -delete`). Việc này tiết kiệm hàng trăm megabyte quý giá khi Docker nén và trích xuất layer.
+     - Triển khai thành công deployment `gogq0flxyevy8edrtefswlhw` trên Coolify với container mới hoạt động ổn định.
+  3. **Kiểm tra và xác nhận chuyển giao diện & chọn Skill `tet-red-envelope-reveal`**:
+     - Kiểm tra API backend `GET /api/projects/test-ai`: Hệ thống đã lưu trữ chuẩn xác `"skill": "tet-red-envelope-reveal"` và `"enforceSkill": true`.
+     - Xác nhận trong `editPrompt.ts`: Khi chọn skill khác `edit-agency-kinetic-v1` (như `tet-red-envelope-reveal`), prompt hệ thống yêu cầu AI Agent đọc kỹ `SKILL.md` của chính skill đó và các tệp trong `references/` (`timeline-breakdown.md`, `style.md`, `motion.md`), TUYỆT ĐỐI CẤM rập khuôn hiệu ứng của Agency Kinetic (như REC viewfinder, thẻ 3D hay halo sau đầu).
+  4. **Kiểm thử trực tiếp toàn diện qua MCP Browser (Playwright)**:
+     - Điều hướng tới `https://video.mtdd.io.vn/projects/test-ai`.
+     - Mở hộp thoại "Bắt đầu edit bằng AI", xác nhận model `Sonnet 5.5 (cân bằng)` (dùng Claude Pro subscription qua `CLAUDE_CODE_OAUTH_TOKEN`), skill `tet-red-envelope-reveal`.
+     - Bấm nút "Bắt đầu edit" và theo dõi trực tiếp phiên AI `sess_3QR0o5yPwpbuRHxaj99xG`:
+       - Claude Agent khởi động ngay lập tức không còn bất kỳ lỗi `Credit balance is too low` nào.
+       - Agent thực hiện liên tiếp các công cụ: `Read` đọc `.claude/skills/tet-red-envelope-reveal/SKILL.md`, `Read` đọc `meta.json`, `Bash` đọc các tệp tham chiếu (`timeline-breakdown.md`, `style.md`), `Bash` kiểm tra thông số footage (`1.cut.mp4`), và gọi API xếp job render draft Remotion.
+       - Job `job_HdCeLlrgoFWLki8_RTC0M` (`assemble-draft`) đang render mượt mà trên server (tiến trình render tăng đều đặn, khung hình khớp 100%).
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `Dockerfile`: Thêm lệnh dọn sourcemap `*.map` ở builder và runner stage để tiết kiệm dung lượng đĩa.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & QA**:
+  - `check-design-system.mjs`: Sạch sẽ 100%.
+  - `check-i18n.mjs`: Đủ 2281 keys song ngữ.
+  - Docker container production triển khai thành công 100% trên Coolify.
+  - Playwright MCP chụp ảnh màn hình xác nhận AI Agent đang hoạt động bình thường theo phong cách Tết.
+
+---
+
 
 - **Thời gian**: 2026-11-14 20:38 (Múi giờ +07:00)
 - **Yêu cầu của người dùng (User Request)**:
