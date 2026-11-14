@@ -32,6 +32,7 @@ COPY . .
 RUN npm run build \
     && npm prune --omit=dev \
     && npm cache clean --force \
+    && find node_modules apps/web/.next engines -type f -name "*.map" -delete 2>/dev/null || true \
     && rm -rf apps/web/.next/cache /root/.npm /tmp/*
 
 # Stage 2: Minimal runtime image
@@ -76,6 +77,7 @@ RUN mkdir -p .runtime/tmp .runtime/models .runtime/gemini-web apps/server/data v
     && rm -rf /app/.runtime/venv/lib/python*/site-packages/torch/test 2>/dev/null || true \
     && find /app/.runtime -type d \( -name "tests" -o -name "test" -o -name "__pycache__" \) -prune -exec rm -rf "{}" + 2>/dev/null || true \
     && find /app/.runtime -type f -name "*.pyc" -delete 2>/dev/null || true \
+    && find /app -type f -name "*.map" -delete 2>/dev/null || true \
     && rm -rf /root/.cache /tmp/*
 
 EXPOSE 6868
