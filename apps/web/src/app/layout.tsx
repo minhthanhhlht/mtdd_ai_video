@@ -49,7 +49,7 @@ const TOKEN_URL_SCRIPT = `try{var u=new URL(location.href),t=u.searchParams.get(
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="vi" suppressHydrationWarning>
-      <body>
+      <body suppressHydrationWarning>
         <script dangerouslySetInnerHTML={{ __html: CHUNK_GUARD_SCRIPT + TOKEN_URL_SCRIPT + THEME_SCRIPT }} />
         <StaleChunkGuard />
         <LanguageProvider>
