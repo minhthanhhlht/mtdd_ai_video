@@ -79,7 +79,8 @@ RUN mkdir -p .runtime/tmp .runtime/models .runtime/gemini-web apps/server/data v
     && /app/.runtime/venv/bin/pip install --no-cache-dir torch torchaudio --index-url https://download.pytorch.org/whl/cpu \
     && /app/.runtime/venv/bin/pip install --no-cache-dir vieneu soundfile \
     && rm -rf /app/.runtime/venv/lib/python*/site-packages/torch/include 2>/dev/null || true \
-    && rm -rf /app/.runtime/venv/lib/python*/site-packages/torch/test 2>/dev/null || true \
+    && rm -rf /app/.runtime/venv/lib/python*/site-packages/torch/test /app/.runtime/venv/lib/python*/site-packages/torch/bin 2>/dev/null || true \
+    && find /app/.runtime -type f -name "*.a" -delete 2>/dev/null || true \
     && find /app/.runtime -type d \( -name "tests" -o -name "test" -o -name "__pycache__" \) -prune -exec rm -rf "{}" + 2>/dev/null || true \
     && find /app/.runtime -type f -name "*.pyc" -delete 2>/dev/null || true \
     && find /app -type f -name "*.map" -delete 2>/dev/null || true \

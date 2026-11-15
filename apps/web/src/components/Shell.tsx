@@ -263,7 +263,7 @@ function AuthLoadingFallback() {
   const [showEscape, setShowEscape] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowEscape(true), 3500);
+    const timer = setTimeout(() => setShowEscape(true), 1200);
     return () => clearTimeout(timer);
   }, []);
 
@@ -284,6 +284,13 @@ function AuthLoadingFallback() {
           </div>
         </div>
       )}
+      <noscript>
+        <div className="mt-2 flex flex-col items-center gap-2">
+          <a href="/login" className="text-xs text-[var(--primary)] underline font-medium">
+            {t("shell.auth-to-login")}
+          </a>
+        </div>
+      </noscript>
     </div>
   );
 }

@@ -87,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Giới hạn timeout 6 giây để không bao giờ bị treo vô tận
       const fetchPromise = getMe();
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("AUTH_TIMEOUT")), 6000)
+        setTimeout(() => reject(new Error("AUTH_TIMEOUT")), 3500)
       );
       const res = await Promise.race([fetchPromise, timeoutPromise]);
 

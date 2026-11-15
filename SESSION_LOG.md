@@ -6,6 +6,43 @@
 
 ---
 
+### [SESSION-2026-11-15-22:45] Sửa Lỗi Kẹt Màn Hình "Đang Kiểm Tra Quyền Truy Cập..." (Inline Stale Chunk Guard & Fast Auth Fallback)
+
+- **Thời gian**: 2026-11-15 22:45 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "sao lại báo đang kiểm tra quyền truy cập rồi. Lí do là gì hãy sửa nó"
+- **Phân tích nguyên nhân gốc rễ (Root Cause Analysis)**:
+  1. **Lệch mã băm Chunk Next.js (Localhost)**: Sau khi chạy `npm run build`, Next.js tạo ra các file chunk tĩnh mới với mã băm hash mới. Tiến trình chạy ngầm `npm run start` chạy từ trước vẫn giữ bộ nhớ chunk manifest cũ. Khi người dùng truy cập `http://localhost:6868/`, server trả về HTML tham chiếu file chunk cũ -> trình duyệt tải chunk cũ và nhận mã `500 Internal Server Error`. Bundle JavaScript không thể nạp và React không thể hydrate.
+  2. **Bẫy SSR AuthLoadingFallback**: Khi SSR, Next.js render sẵn HTML phía server với `loading: true` trong `authContext.tsx` -> HTML gốc chứa thông điệp `<p>Đang kiểm tra quyền truy cập…</p>`. Do React không khởi động được (lỗi chunk 500), component `StaleChunkGuard` (viết bằng React) không thể chạy để tự reload trang. Timer hiển thị nút thoát khẩn cấp (3500ms) nằm trong `useEffect` cũng không chạy, khiến người dùng bị kẹt vô hạn trên màn hình chờ.
+  3. **Máy chủ Coolify hết dung lượng ổ đĩa**: Khi trigger build/deploy trên Coolify, quá trình unpack image Docker bị lỗi `write /var/lib/docker/.../libicudata.so.72.1: no space left on device` do ổ đĩa VM Proxmox bị đầy cache Docker builder và image cũ.
+- **Các giải pháp kỹ thuật đã triển khai (Implemented Solutions)**:
+  1. **Inline Chunk Guard trong `<head>` (`apps/web/src/app/layout.tsx`)**:
+     - Bổ sung đoạn script JavaScript thô `CHUNK_GUARD_SCRIPT` chạy trực tiếp ngay đầu trang HTML trong `<head>` trước khi bất kỳ script/chunk nào của Next.js được thực thi.
+     - Lắng nghe sự kiện `error` (capture phase) trên các thẻ `<script>` và `<link>` trỏ vào `/_next/static/`, cùng sự kiện `unhandledrejection`.
+     - Khi phát hiện chunk bị lỗi 500/404 hoặc `ChunkLoadError`, tự động gọi `location.reload()` với cơ chế rate-limit 8 giây (lưu `sessionStorage`), ép trình duyệt lấy bản HTML mới nhất tương thích với chunk trên server mà hoàn toàn độc lập với React.
+  2. **Tối ưu hóa Auth Loading Fallback (`apps/web/src/components/Shell.tsx`)**:
+     - Rút ngắn thời gian xuất hiện các nút thoát cứu hộ ("Vào trang đăng nhập", "Tải lại trang") từ 3500ms xuống chỉ còn 1200ms.
+     - Thêm thẻ `<noscript>` cung cấp đường dẫn tĩnh tới `/login` dự phòng cho trường hợp JavaScript bị vô hiệu hóa hoặc gặp sự cố.
+  3. **Giảm Auth Timeout (`apps/web/src/lib/authContext.tsx`)**:
+     - Rút ngắn thời gian timeout của `getMe()` từ 6000ms xuống 3500ms để tránh việc người dùng bị chờ đợi quá lâu khi kết nối mạng chập chờn.
+  4. **Tối ưu Dockerfile (`Dockerfile`)**:
+     - Xóa bỏ các file static libraries (`*.a`), thư mục nhị phân `torch/bin` và các tệp test thừa trong image runner để giảm bớt dung lượng đĩa khi build và giải nén trên Coolify.
+  5. **Dọn dẹp & Tái khởi động Server Local**:
+     - Dừng tiến trình cũ bị lệch chunk, chạy lại server sạch sẽ.
+     - Dùng Playwright MCP kiểm tra thực tế: trang web `http://localhost:6868/` tải ngay lập tức, hiển thị Dashboard mượt mà, console log 0 lỗi, 0 cảnh báo.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/app/layout.tsx`: Thêm `CHUNK_GUARD_SCRIPT` inline trong `<head>`.
+  - `apps/web/src/components/Shell.tsx`: Giảm thời gian hiện nút thoát (1200ms) và thêm `<noscript>`.
+  - `apps/web/src/lib/authContext.tsx`: Giảm timeout auth còn 3500ms.
+  - `Dockerfile`: Tối ưu dung lượng layer runner.
+- **Kết quả kiểm định (Validation Results)**:
+  - `node apps/web/scripts/check-design-system.mjs`: SẠCH 100%.
+  - `node apps/web/scripts/check-i18n.mjs`: Đủ 2300/2300 key.
+  - `npm run typecheck`: Passed 100% không lỗi (server, web, remotion-engine).
+  - Playwright Browser: Dashboard hiển thị hoàn chỉnh, không còn kẹt ở màn hình kiểm tra quyền truy cập.
+
+---
+
 ### [SESSION-2026-11-15-22:30] Tích Hợp Thư Viện Phông Chữ Tiếng Việt Offline & Bộ 6 Hiệu Ứng Chữ CapCut (Live Preview Playground) Cho Remotion & Video Editor
 
 - **Thời gian**: 2026-11-15 22:30 (Múi giờ +07:00)

@@ -28,6 +28,13 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Chống kẹt màn hình khi server deploy/build bản mới làm lệch mã băm chunk Next.js.
+ * Bắt lỗi resource script/link _next/static NGAY Ở ĐẦU TRANG trước khi React boot,
+ * tự động reload một lần để tải bundle mới nhất.
+ */
+const CHUNK_GUARD_SCRIPT = `try{window.addEventListener("error",function(e){var t=e.target;if(t&&(t.tagName==="SCRIPT"||t.tagName==="LINK")){var u=t.src||t.href||"";if(u.indexOf("/_next/static/")!==-1){var k="aiev_chunk_reload",last=Number(sessionStorage.getItem(k)||0);if(Date.now()-last>8000){sessionStorage.setItem(k,String(Date.now()));location.reload();}}}},true);window.addEventListener("unhandledrejection",function(e){var r=e.reason,m=(r&&r.message)||"";if(/loading chunk|chunkloaderror|failed to fetch dynamically imported|_next\\/static/i.test(m)){var k="aiev_chunk_reload",last=Number(sessionStorage.getItem(k)||0);if(Date.now()-last>8000){sessionStorage.setItem(k,String(Date.now()));location.reload();}}});}catch(e){}`;
+
 /** Chống FOUC: áp data-theme trước khi paint. Mặc định light. */
 const THEME_SCRIPT = `try{if(localStorage.getItem("theme")==="dark")document.documentElement.setAttribute("data-theme","dark")}catch(e){}`;
 
@@ -43,7 +50,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="vi" suppressHydrationWarning>
       <body>
-        <script dangerouslySetInnerHTML={{ __html: TOKEN_URL_SCRIPT + THEME_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: CHUNK_GUARD_SCRIPT + TOKEN_URL_SCRIPT + THEME_SCRIPT }} />
         <StaleChunkGuard />
         <LanguageProvider>
           <AuthProvider>
