@@ -35,6 +35,7 @@ export const TIMELINE_KEYS = [
   // EDITOR-V2: layer chồng. Thêm vào CUỐI và chỉ góp vào version khi có mặt
   // (xem versionOfRaw) - project chưa có layer giữ nguyên version cũ.
   "layers",
+  "captionStyle",
 ] as const;
 
 /**
@@ -42,7 +43,7 @@ export const TIMELINE_KEYS = [
  * chuỗi băm, để version của mọi project cũ (và mọi tab đang mở) không đổi chỉ
  * vì server biết thêm một khóa.
  */
-const VERSION_OPTIONAL_KEYS: readonly TimelineKey[] = ["layers"];
+const VERSION_OPTIONAL_KEYS: readonly TimelineKey[] = ["layers", "captionStyle"];
 
 export type TimelineKey = (typeof TIMELINE_KEYS)[number];
 
@@ -607,6 +608,32 @@ function validateSubtitles(v: unknown, is: Issues): void {
   });
 }
 
+function validateCaptionStyle(v: unknown, is: Issues): void {
+  if (!isObj(v)) {
+    is.add("captionStyle", "phải là object (gửi null để xóa)");
+    return;
+  }
+  const p = "captionStyle";
+  is.optEnum(v, "preset", p, [
+    "default",
+    "capcut-spring-pop",
+    "capcut-moving-pill",
+    "capcut-karaoke-sweep",
+    "capcut-stroke-solid",
+    "capcut-neon-flash",
+  ]);
+  is.optStr(v, "fontFamily", p);
+  is.optNum(v, "fontSizePx", p, 0, Infinity, true);
+  is.optStr(v, "activeColor", p);
+  is.optStr(v, "idleColor", p);
+  is.optStr(v, "keywordColor", p);
+  is.optStr(v, "boxColor", p);
+  is.optStr(v, "strokeColor", p);
+  is.optNum(v, "strokeWidth", p, 0);
+  is.optNum(v, "bottomPx", p, 0);
+  is.optEnum(v, "backdrop", p, ["blur", "solid", "none"]);
+}
+
 function validateSubtitleStyle(v: unknown, is: Issues): void {
   if (!isObj(v)) {
     is.add("subtitleStyle", "phải là object (gửi null để xóa)");
@@ -693,7 +720,7 @@ export function validateTimelinePatch(patch: Obj, projectDir: string): TimelineI
  * cũng phải hiểu y hệt - không thì xem trước chạy mà bấm render thì chết.
  * (`audio.music: null` và `audio.voice: null` thì zod nhận sẵn - giữ nguyên.)
  */
-const NULL_AS_ABSENT_KEYS = ["audio", "captions", "subtitles", "subtitleStyle", "overlays", "layers"] as const;
+const NULL_AS_ABSENT_KEYS = ["audio", "captions", "captionStyle", "subtitles", "subtitleStyle", "overlays", "layers"] as const;
 
 /**
  * Xóa các khóa `null` ở trên (và `audio.sfx: null`) - SỬA TẠI CHỖ object truyền
@@ -734,6 +761,7 @@ export function validateTimelineForRender(meta: ProjectMeta, projectDir: string)
   if (raw.captions !== null) validateCaptions(raw.captions, is);
   if (raw.subtitles !== null) validateSubtitles(raw.subtitles, is);
   if (raw.subtitleStyle !== null) validateSubtitleStyle(raw.subtitleStyle, is);
+  if (raw.captionStyle !== null) validateCaptionStyle(raw.captionStyle, is);
   if (raw.overlays !== null) validateOverlays(raw.overlays, is);
   if (raw.layers !== null) validateLayers(raw.layers, is);
   return is.list;

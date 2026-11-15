@@ -20,9 +20,12 @@
  */
 
 import type {
+  CaptionPreset,
+  CaptionStyle,
   Timeline,
   TimelineAudio,
   TimelineCaptionCue,
+  TimelineCaptionStyle,
   TimelineCaptionWord,
   TimelineHighlightCue,
   TimelineHighlightPart,
@@ -43,6 +46,8 @@ export type EditorSfx = TimelineSfx;
 export type EditorMusic = TimelineMusic;
 export type EditorCaptionWord = TimelineCaptionWord;
 export type EditorCaptionCue = TimelineCaptionCue;
+export type EditorCaptionStyle = TimelineCaptionStyle;
+export type { CaptionPreset, CaptionStyle, TimelineCaptionStyle, Timeline };
 export type EditorSubtitleCue = TimelineSubtitleCue;
 export type EditorSubtitleStyle = TimelineSubtitleStyle;
 export type EditorHighlightPart = TimelineHighlightPart;

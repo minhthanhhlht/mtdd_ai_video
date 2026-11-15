@@ -8,13 +8,9 @@ import {
 import type { MediaResolver } from "../media";
 
 /**
- * Font tiếng Việt nạp OFFLINE từ public/fonts (Inter, subset latin +
- * vietnamese) — dùng chung cho MỌI overlay của tầng lắp ráp (CaptionTrack,
- * HighlightTrack).
- *
- * Phải khai @font-face thủ công vì cần `unicode-range`: hai subset cùng
- * family/weight sẽ đè nhau nếu thiếu range → mất dấu tiếng Việt.
- * `@remotion/fonts` (loadFont) không nhận unicode-range nên không dùng ở đây.
+ * Font tiếng Việt nạp OFFLINE từ public/fonts (Inter, Montserrat, Be Vietnam Pro,
+ * Lexend, Space Grotesk) — dùng chung cho MỌI overlay của tầng lắp ráp
+ * (CaptionTrack, HighlightTrack, SubtitleTrack).
  */
 
 const LATIN_RANGE =
@@ -24,14 +20,79 @@ const VIETNAMESE_RANGE =
 
 export const VIETNAMESE_FONT_FAMILY = "CaptionInter";
 
+export interface FontPresetConfig {
+  id: string;
+  name: string;
+  family: string;
+  file?: string;
+  format?: string;
+  weight: number;
+  fallback: string;
+}
+
+export const BUILTIN_FONTS: Record<string, FontPresetConfig> = {
+  inter: {
+    id: "inter",
+    name: "Inter",
+    family: "CaptionInter",
+    weight: 700,
+    fallback: `'CaptionInter', 'Segoe UI', sans-serif`,
+  },
+  montserrat: {
+    id: "montserrat",
+    name: "Montserrat",
+    family: "CaptionMontserrat",
+    file: "fonts/montserrat-700.ttf",
+    format: "truetype",
+    weight: 700,
+    fallback: `'CaptionMontserrat', 'CaptionInter', 'Segoe UI', sans-serif`,
+  },
+  bevietnampro: {
+    id: "bevietnampro",
+    name: "Be Vietnam Pro",
+    family: "CaptionBeVietnamPro",
+    file: "fonts/bevietnampro-700.ttf",
+    format: "truetype",
+    weight: 700,
+    fallback: `'CaptionBeVietnamPro', 'CaptionInter', 'Segoe UI', sans-serif`,
+  },
+  lexend: {
+    id: "lexend",
+    name: "Lexend",
+    family: "CaptionLexend",
+    file: "fonts/lexend-700.ttf",
+    format: "truetype",
+    weight: 700,
+    fallback: `'CaptionLexend', 'CaptionInter', 'Segoe UI', sans-serif`,
+  },
+  spacegrotesk: {
+    id: "spacegrotesk",
+    name: "Space Grotesk",
+    family: "CaptionSpaceGrotesk",
+    file: "fonts/spacegrotesk-700.ttf",
+    format: "truetype",
+    weight: 700,
+    fallback: `'CaptionSpaceGrotesk', 'CaptionInter', 'Segoe UI', sans-serif`,
+  },
+};
+
+/**
+ * Trả về CSS font-family stack an toàn.
+ * Mọi stack đều KẾT bằng 'CaptionInter' để phòng ngừa ký tự tiếng Việt hiếm gặp.
+ */
+export function resolveFontStack(fontName?: string | null): string {
+  if (!fontName) return `'CaptionInter', 'Segoe UI', sans-serif`;
+  const clean = fontName.toLowerCase().replace(/[^a-z]/g, "");
+  if (BUILTIN_FONTS[clean]) {
+    return BUILTIN_FONTS[clean].fallback;
+  }
+  return `'${fontName}', 'CaptionInter', 'Segoe UI', sans-serif`;
+}
+
 const WEIGHTS = [600, 700, 800] as const;
 
 /**
- * Khối @font-face cho các overlay. Là HÀM của resolver (gọi lúc render), không
- * phải hằng số tính ở module scope: `staticFile()` chạy ở module scope thì
- * trong trình phát của dashboard nó trỏ vào public/ của Remotion - không tồn
- * tại ở đó, font 404 rồi cancelRender làm sập cả trang. Resolver mặc định là
- * staticFile nên chuỗi CSS khi render qua CLI giữ nguyên từng ký tự.
+ * Khối @font-face cho các overlay (Inter subset latin + vietnamese).
  */
 export const vietnameseFontFaceCss = (resolve: MediaResolver): string =>
   WEIGHTS.flatMap((weight) =>
@@ -48,33 +109,55 @@ export const vietnameseFontFaceCss = (resolve: MediaResolver): string =>
   font-display:block;
   src:url('${resolve(`fonts/inter-${subset}-${weight}.woff2`)}') format('woff2');
   unicode-range:${range};
-}`,
-    ),
-  ).join("\n");
+}`
+    )
+  ).join('\n');
 
 /**
- * Chặn render tới khi font thật sẵn sàng — nếu không, frame đầu vẽ bằng font
- * fallback rồi mới đổi, chữ nhảy vị trí giữa các frame.
- *
- * An toàn khi gọi từ nhiều component trong cùng một render: mỗi handle
- * delayRender được continue riêng.
- *
- * Lỗi nạp font: khi RENDER thì cancelRender (thà chết còn hơn xuất video mất
- * dấu); trong trình phát xem trước (@remotion/player) chỉ cảnh báo rồi cho
- * chạy tiếp bằng font dự phòng - một file font lỗi không được làm sập trang.
+ * Khối @font-face cho TẤT CẢ các font có sẵn trong hệ thống (Inter + Montserrat + Be Vietnam Pro + Lexend + Space Grotesk).
  */
-export const useVietnameseFont = (): void => {
-  const [handle] = useState(() => delayRender("Nạp font overlay (Inter VN)"));
+export const allFontsFaceCss = (resolve: MediaResolver): string => {
+  const interCss = vietnameseFontFaceCss(resolve);
+  const extraCss = Object.values(BUILTIN_FONTS)
+    .filter((f) => f.file)
+    .map(
+      (f) => `@font-face{
+  font-family:'${f.family}';
+  font-style:normal;
+  font-weight:${f.weight};
+  font-display:block;
+  src:url('${resolve(f.file!)}') format('${f.format || "truetype"}');
+}`
+    )
+    .join('\n');
+  return `${interCss}\n${extraCss}`;
+};
+
+/**
+ * Chặn render tới khi font thật sẵn sàng.
+ */
+export const useAllFonts = (activeFamily?: string): void => {
+  const [handle] = useState(() => delayRender("Nạp font overlay (All Fonts)"));
 
   useEffect(() => {
-    Promise.all(
-      WEIGHTS.map((weight) =>
+    const promises: Promise<unknown>[] = [
+      ...WEIGHTS.map((weight) =>
         document.fonts.load(
           `${weight} 60px '${VIETNAMESE_FONT_FAMILY}'`,
-          "tiếng Việt đủ dấu",
-        ),
+          "tiếng Việt đủ dấu"
+        )
       ),
-    )
+    ];
+    if (activeFamily) {
+      const clean = activeFamily.toLowerCase().replace(/[^a-z]/g, "");
+      const f = BUILTIN_FONTS[clean];
+      if (f?.family && f.family !== VIETNAMESE_FONT_FAMILY) {
+        promises.push(
+          document.fonts.load(`${f.weight} 60px '${f.family}'`, "tiếng Việt đủ dấu")
+        );
+      }
+    }
+    Promise.all(promises)
       .then(() => document.fonts.ready)
       .then(() => continueRender(handle))
       .catch((err: unknown) => {
@@ -86,5 +169,7 @@ export const useVietnameseFont = (): void => {
         }
         cancelRender(new Error(message));
       });
-  }, [handle]);
+  }, [handle, activeFamily]);
 };
+
+export const useVietnameseFont = (): void => useAllFonts();

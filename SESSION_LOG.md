@@ -6,6 +6,68 @@
 
 ---
 
+### [SESSION-2026-11-15-22:30] Tích Hợp Thư Viện Phông Chữ Tiếng Việt Offline & Bộ 6 Hiệu Ứng Chữ CapCut (Live Preview Playground) Cho Remotion & Video Editor
+
+- **Thời gian**: 2026-11-15 22:30 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Tôi muốn bạn gợi ý ý tưởng thêm font chữ và hiệu ứng chữ vào dự án bạn hãy đưa ra ý tưởng trước cho t xem nhé chưa làm gì vội"
+  - "Các hiệu ứng giống trong capcut nữa. Bạn đưa vào được không. chưa làm gì nhé hãy tìm hiểu trước"
+  - "có thể có cả chức năng preview trước font và hiệu ứng không bạn?"
+  - "Khi t chọn font với hiệu ứng r thì ai có áp dụng vào video của tôi không. Vì video của tôi ở dự án này là ai render mà"
+  - "Sau này muốn cập nhật thêm font với hiệu ứng thì sao"
+  - "Rồi hãy tổng hợp những gì chúng ta cần làm để thêm những gì liên quan đến font và hiệu ứng mà chúng ta vừa thảo luận để t review trước khi làm"
+  - Đã duyệt kế hoạch kỹ thuật `ke_hoach_font_chu_va_hieu_ung_capcut.md`.
+- **Phân tích kỹ thuật & Kiến trúc triển khai**:
+  1. **Thư viện font tiếng Việt Offline (Zero CDN reliance)**:
+     - Tải 4 bộ font Google Fonts full-charset tiếng Việt chất lượng cao: `Montserrat` (Đậm nét, hiện đại), `Be Vietnam Pro` (Thiết kế chuẩn ngữ âm tiếng Việt), `Lexend` (Dễ đọc tối ưu), `Space Grotesk` (Cá tính, công nghệ) kèm `Inter` sẵn có.
+     - Lưu trữ tại `engines/remotion/public/fonts/` và `apps/web/public/fonts/`.
+     - Cấu trúc font fallback an toàn: Mọi font stack đều kết thúc bằng `'CaptionInter', 'Segoe UI', sans-serif`, đảm bảo nếu gặp ký tự Unicode hiếm thì rơi về Inter mà không bao giờ mất dấu tiếng Việt hay vỡ layout.
+  2. **Bộ 6 Preset hoạt ảnh phụ đề kiểu CapCut**:
+     - `default`: Giữ nguyên 100% phong cách gốc Noti.vn/GĐT (màu #19c8ff, glow xanh ngọc, scale nhẹ).
+     - `capcut-spring-pop`: Hiệu ứng nảy vật lý Remotion `spring()` sống động (nảy 1.25x -> về 1.08x), viền stroke tương phản cao, bóng đổ đậm nét.
+     - `capcut-moving-pill`: Khối nền viên thuốc (pill badge) đổi màu nổi bật chạy theo từng từ được đọc.
+     - `capcut-karaoke-sweep`: Hiệu ứng quét màu gradient mượt mà từ trái qua phải của từng từ bằng `background-clip: text` & `interpolate(frame)`.
+     - `capcut-stroke-solid`: Ban đầu là chữ viền rỗng (hollow outlined), khi giọng đọc tới thì chuyển thành chữ đặc (solid fill) rực rỡ và nảy nhẹ.
+     - `capcut-neon-flash`: Phong cách Cyberpunk với phát sáng đa tầng Neon và chớp sáng 2 frame đầu khi từ bắt đầu được đọc.
+  3. **Tương thích ngược tuyệt đối (RULE 14) & Đồng bộ kiến trúc**:
+     - Schema manifest: Bổ sung `captionStyleSchema` (tùy chọn) vào `manifestSchema` trong Remotion engine. Nếu không có `captionStyle`, video hiển thị 100% như cũ (`preset: "default"`).
+     - Timeline Engine & Server: Thêm `"captionStyle"` vào `TIMELINE_KEYS` và `VERSION_OPTIONAL_KEYS` trong `apps/server/src/timeline.ts`. Vì thuộc `VERSION_OPTIONAL_KEYS`, các project cũ không có trường này sẽ giữ nguyên mã băm version, không bị xung đột phiên bản.
+     - Xử lý atomic patch: Hỗ trợ `changedKeysPatch`, `validateTimelinePatch`, `dropNullOptionalKeys`, `setCaptionStyle` trong `ops.ts` và `store.ts`.
+     - Claude AI Agent Prompt: Cập nhật `apps/server/src/editPrompt.ts` để agent tôn trọng `captionStyle` trong `meta.json` khi chỉnh sửa timeline.
+  4. **Live Preview Component & Vietnamese Text Playground (`TextEffectPicker.tsx`)**:
+     - Thiết kế giao diện theo đúng Design System chuẩn mực (RULE 01): chỉ dùng 3 bậc thang chữ (`text-sm`, `text-meta`, `text-xs`), nhịp khoảng cách 4/8/12/16/24px, design tokens, các UI primitive (`<Panel>`, `<Button>`, `<Field>`, `<Segmented>`, `<Badge>`).
+     - 6 thẻ preset với animation chạy thử trực tiếp khi hover hoặc khi bật play.
+     - Khu vực Text Playground cho phép người dùng gõ câu tiếng Việt tùy ý hoặc bấm nhanh các câu test dấu ("Ăn cơm trưa, uống trà sữa phố Huế", "Phát triển ứng dụng truyền hình số đa nền tảng",...) với nút Play/Pause mô phỏng đọc karaoke từng từ theo thời gian thực mà không cần render.
+     - Bộ công cụ chỉnh màu trực quan (Active color, Keyword color, Idle color, Backdrop blur/solid/none, Font size, Bottom offset).
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `engines/remotion/public/fonts/*.ttf`: Bộ 4 font tiếng Việt offline.
+  - `apps/web/public/fonts/*.ttf`: Bản sao font dùng cho Web UI.
+  - `engines/remotion/src/components/vietnameseFont.ts`: Định nghĩa `BUILTIN_FONTS`, `resolveFontStack`, `allFontsFaceCss`, `useAllFonts`.
+  - `engines/remotion/src/manifest.ts`: Bổ sung `CAPTION_PRESETS`, `captionStyleSchema`, `CaptionStyle`.
+  - `engines/remotion/src/Assemble.tsx`: Đưa `captionStyle` vào `<CaptionTrack>`.
+  - `engines/remotion/src/components/CaptionTrack.tsx`: Hiện thực chi tiết 6 hiệu ứng CapCut và font tiếng Việt.
+  - `apps/server/src/timeline.ts`: Cập nhật `TIMELINE_KEYS`, `VERSION_OPTIONAL_KEYS`, `validateCaptionStyle`, `dropNullOptionalKeys`.
+  - `apps/server/src/editPrompt.ts`: Hướng dẫn Claude AI Agent bảo toàn `captionStyle`.
+  - `apps/web/src/lib/api.ts`: Bổ sung kiểu `CaptionStyle`, `CaptionPreset`, `TimelineCaptionStyle` vào `Timeline` và `TimelinePatch`.
+  - `apps/web/src/components/editor/types.ts`: Re-export các kiểu caption.
+  - `apps/web/src/components/editor/ops.ts`: Hàm thuần khiết `setCaptionStyle`, chuẩn hóa `normalizeTimeline`.
+  - `apps/web/src/components/editor/store.ts`: Xử lý diff patch `captionStyle` trong `changedKeysPatch`.
+  - `apps/web/src/components/editor/TextEffectPicker.tsx`: Component Live Preview & Vietnamese Text Playground hoàn chỉnh.
+  - `apps/web/src/components/editor/Inspector.tsx`: Tích hợp `TextEffectPicker` vào bảng thuộc tính Caption.
+  - `apps/web/src/app/globals.css`: Đăng ký `@font-face` cho 4 font tiếng Việt.
+  - `apps/web/src/lib/locales/vi.ts`: Thêm đầy đủ nhãn và mô tả song ngữ tiếng Việt.
+  - `apps/web/src/lib/locales/en.ts`: Thêm đầy đủ nhãn và mô tả song ngữ tiếng Anh.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & QA**:
+  - `check-design-system.mjs`: Sạch sẽ 100%.
+  - `check-i18n.mjs`: Đủ cả 2300 key (0 key thiếu).
+  - `npm test -w engines/remotion`: Toàn bộ 22/22 unit tests vượt qua 100%.
+  - `npm run typecheck`: 0 lỗi trên toàn bộ 3 workspace (`server`, `web`, `remotion-engine`).
+  - `npm run build`: Hoàn thành xuất sắc 100% 22 static/dynamic routes.
+
+---
+
+
 ### [SESSION-2026-11-15-21:15] Khắc Phục Lỗi Kết Nối Điện Thoại Trên Domain video.mtdd.io.vn: Tự Động Nhận Diện Public Host Domain Cho Mã QR & Cài Đặt Cloudflared Vào Dockerfile
 
 - **Thời gian**: 2026-11-15 21:15 (Múi giờ +07:00)

@@ -109,6 +109,7 @@ import {
   type Selection,
 } from "./ops";
 import { usePlayheadFrame } from "./playback";
+import { TextEffectPicker } from "./TextEffectPicker";
 import { TYPING_COALESCE_MS } from "./store";
 import { sceneDurationFrames, type SceneSpan } from "./timing";
 
@@ -221,6 +222,7 @@ export function Inspector({
             key={`c${selection.index}`}
             index={selection.index}
             cue={timeline.captions[selection.index]}
+            timeline={timeline}
           />
         ) : null;
         break;
@@ -888,7 +890,7 @@ function CaptionSentenceField({ index, cue, idPrefix }: { index: number; cue: Ti
   );
 }
 
-function CaptionForm({ index, cue }: { index: number; cue: TimelineCaptionCue }) {
+function CaptionForm({ index, cue, timeline }: { index: number; cue: TimelineCaptionCue; timeline: Timeline }) {
   const { t, tf } = useT();
   const { fps, edit } = useEditor();
   const [wordIndex, setWordIndex] = useState(0);

@@ -4351,6 +4351,30 @@ export interface TimelineSubtitleCue {
   [key: string]: unknown;
 }
 
+export type CaptionPreset =
+  | "default"
+  | "capcut-spring-pop"
+  | "capcut-moving-pill"
+  | "capcut-karaoke-sweep"
+  | "capcut-stroke-solid"
+  | "capcut-neon-flash";
+
+export interface CaptionStyle {
+  preset: CaptionPreset;
+  fontFamily?: string;
+  fontSizePx?: number;
+  activeColor?: string;
+  idleColor?: string;
+  keywordColor?: string;
+  boxColor?: string;
+  strokeColor?: string;
+  strokeWidth?: number;
+  bottomPx?: number;
+  backdrop?: "blur" | "solid" | "none";
+}
+
+export type TimelineCaptionStyle = Partial<CaptionStyle> & { [key: string]: unknown };
+
 /** Kiểu phụ đề - mọi field tùy chọn (thiếu = mặc định của SubtitleTrack). */
 export type TimelineSubtitleStyle = Partial<SubtitleStyle> & { [key: string]: unknown };
 
@@ -4376,6 +4400,7 @@ export interface Timeline {
   scenes: TimelineScene[];
   audio: TimelineAudio;
   captions: TimelineCaptionCue[];
+  captionStyle?: TimelineCaptionStyle;
   subtitles: TimelineSubtitleCue[];
   /** Vắng mặt = mặc định; KHÔNG bao giờ null trong bản server trả về. */
   subtitleStyle?: TimelineSubtitleStyle;
@@ -4392,8 +4417,9 @@ export interface Timeline {
  * giữ nguyên. `subtitleStyle: null` = xóa kiểu phụ đề (về mặc định);
  * `layers: null` = xóa khóa layers.
  */
-export type TimelinePatch = Partial<Omit<Timeline, "subtitleStyle" | "layers">> & {
+export type TimelinePatch = Partial<Omit<Timeline, "subtitleStyle" | "captionStyle" | "layers">> & {
   subtitleStyle?: TimelineSubtitleStyle | null;
+  captionStyle?: TimelineCaptionStyle | null;
   layers?: Layer[] | null;
 };
 

@@ -287,6 +287,7 @@ export function changedKeysPatch(tl: Timeline, saved: Timeline | null): Timeline
   if (!saved || tl.subtitles !== saved.subtitles) patch.subtitles = tl.subtitles;
   if (!saved || tl.overlays !== saved.overlays) patch.overlays = tl.overlays;
   if (!saved || tl.subtitleStyle !== saved.subtitleStyle) patch.subtitleStyle = tl.subtitleStyle ?? null;
+  if (!saved || tl.captionStyle !== saved.captionStyle) patch.captionStyle = tl.captionStyle ?? null;
   // `layers` (v2) là khóa TÙY CHỌN: không đổi thì không gửi. Rỗng/vắng thì gửi
   // `null` (= xóa khóa) thay vì `[]` - project chưa từng dùng layer giữ meta.json
   // y như cũ, kể cả sau khi thêm rồi hoàn tác/xóa hết layer.

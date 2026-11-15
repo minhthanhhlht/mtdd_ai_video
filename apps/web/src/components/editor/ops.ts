@@ -26,6 +26,7 @@ import type {
   TimelineScene,
   TimelineSfx,
   TimelineSubtitleCue,
+  TimelineCaptionStyle,
   TimelineSubtitleStyle,
   TimelineZoom,
   TimelineZoomKey,
@@ -1116,6 +1117,20 @@ export function removeCaptionWord(tl: Timeline, cueIndex: number, wordIndex: num
   };
 }
 
+export function setCaptionStyle(
+  tl: Timeline,
+  patch: Partial<TimelineCaptionStyle> | null,
+): Timeline {
+  if (patch === null) {
+    if (tl.captionStyle === undefined) return tl;
+    const next = { ...tl };
+    delete next.captionStyle;
+    return next;
+  }
+  const next = applyPatch(tl.captionStyle ?? {}, patch);
+  return next === tl.captionStyle ? tl : { ...tl, captionStyle: next };
+}
+
 export function setSubtitleStyle(
   tl: Timeline,
   patch: Partial<TimelineSubtitleStyle> | null,
@@ -1253,7 +1268,8 @@ export function normalizeTimeline(tl: Timeline): Timeline {
     Array.isArray(audio.sfx) &&
     audio.voice !== undefined &&
     audio.music !== undefined &&
-    raw.subtitleStyle !== null;
+    raw.subtitleStyle !== null &&
+    raw.captionStyle !== null;
   if (ok) return tl;
   const next: Timeline = {
     ...tl,
@@ -1269,6 +1285,7 @@ export function normalizeTimeline(tl: Timeline): Timeline {
     },
   };
   if (raw.subtitleStyle === null) delete next.subtitleStyle;
+  if (raw.captionStyle === null) delete next.captionStyle;
   return next;
 }
 

@@ -1079,14 +1079,14 @@ export function buildEditorChatPrompt(input: {
     lines.push("");
     lines.push(
       `- Project nằm tại \`video-projects/${id}/\` (${meta.width}x${meta.height}, ${meta.fps}fps). ` +
-        "`meta.json` là nguồn sự thật DUY NHẤT của timeline - các khóa `scenes`, `audio`, `captions`, " +
+        "`meta.json` là nguồn sự thật DUY NHẤT của timeline - các khóa `scenes`, `audio`, `captions`, `captionStyle`, " +
         "`subtitles`, `subtitleStyle`, `overlays`, `layers` (schema ở `engines/remotion/src/manifest.ts`). " +
         "Đơn vị: `scenes[].from/to` là GIÂY trong file nguồn; `audio.sfx[].atFrame` và mọi cue " +
         "(`from`, `durationInFrames`, `words[].start/end`) là FRAME TUYỆT ĐỐI; `audio.music.speech` là GIÂY.",
     );
     lines.push(
       "- Trường của trình chỉnh sửa v2 (đều tùy chọn, thiếu = hành vi cũ - người dùng có thể đã đặt, GIỮ " +
-        "nguyên nếu không được yêu cầu đổi): scene có `fit`, `transform` (x/y là độ dịch -1..1, scale, " +
+        "nguyên nếu không được yêu cầu đổi): `captionStyle` (preset: default|capcut-spring-pop|capcut-moving-pill|capcut-karaoke-sweep|capcut-stroke-solid|capcut-neon-flash, fontFamily: inter|montserrat|bevietnampro|lexend|spacegrotesk); scene có `fit`, `transform` (x/y là độ dịch -1..1, scale, " +
         "rotate, flipH/flipV), `crop` (0..0.45 mỗi cạnh), `color` (preset + brightness/contrast/saturation/" +
         "temperature/tint/hue/vignette/blur), `volume`, `fadeInSec`/`fadeOutSec`, `speed` (0.25..4, thời " +
         "lượng = (to-from)/speed), `transition.type`; `audio.sfx[]` và `audio.music` có `fadeInSec`/" +

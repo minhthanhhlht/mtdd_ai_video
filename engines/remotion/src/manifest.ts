@@ -209,6 +209,36 @@ export const captionCueSchema = z.looseObject({
 });
 
 /**
+ * Kiểu dáng & hoạt ảnh phụ đề karaoke (CapCut presets, custom fonts).
+ * preset = 'default' (mặc định Noti/GĐT), các kiểu CapCut: 'capcut-spring-pop',
+ * 'capcut-moving-pill', 'capcut-karaoke-sweep', 'capcut-stroke-solid', 'capcut-neon-flash'.
+ */
+export const CAPTION_PRESETS = [
+  "default",
+  "capcut-spring-pop",
+  "capcut-moving-pill",
+  "capcut-karaoke-sweep",
+  "capcut-stroke-solid",
+  "capcut-neon-flash",
+] as const;
+
+export type CaptionPreset = (typeof CAPTION_PRESETS)[number];
+
+export const captionStyleSchema = z.looseObject({
+  preset: z.enum(CAPTION_PRESETS).default("default"),
+  fontFamily: z.string().optional(),
+  fontSizePx: z.number().positive().optional(),
+  activeColor: z.string().optional(),
+  idleColor: z.string().optional(),
+  keywordColor: z.string().optional(),
+  boxColor: z.string().optional(),
+  strokeColor: z.string().optional(),
+  strokeWidth: z.number().min(0).optional(),
+  bottomPx: z.number().min(0).optional(),
+  backdrop: z.enum(["blur", "solid", "none"]).optional(),
+});
+
+/**
  * Một câu phụ đề THƯỜNG (tính năng "Dịch video") - khác `captionCueSchema`:
  * không karaoke theo từ, chỉ một khối chữ hiện trong khoảng thời gian của nó.
  * `from`/`durationInFrames` theo FRAME TUYỆT ĐỐI trên timeline composition,
@@ -443,6 +473,7 @@ export const manifestSchema = z.looseObject({
    * video-pipeline). Rỗng = không overlay; scene HyperFrames tự lo chữ của nó.
    */
   captions: z.array(captionCueSchema).default([]),
+  captionStyle: captionStyleSchema.optional(),
   /**
    * Phụ đề THƯỜNG của tính năng "Dịch video" (bản dịch, không karaoke).
    * Rỗng = không có. Chạy song song được với captions[] - xem Assemble.tsx.
@@ -468,6 +499,7 @@ export type Music = z.infer<typeof musicSchema>;
 export type Zoom = z.infer<typeof zoomSchema>;
 export type CaptionWord = z.infer<typeof captionWordSchema>;
 export type CaptionCue = z.infer<typeof captionCueSchema>;
+export type CaptionStyle = z.infer<typeof captionStyleSchema>;
 export type CueTransform = z.infer<typeof cueTransformSchema>;
 export type SubtitleCue = z.infer<typeof subtitleCueSchema>;
 export type SubtitleStyle = z.infer<typeof subtitleStyleSchema>;

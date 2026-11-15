@@ -1883,3 +1883,33 @@ textarea.input {
   white-space: nowrap;
 }
 }
+
+/* ============ Caption Overlay Fonts ============ */
+@font-face {
+  font-family: 'CaptionMontserrat';
+  src: url('/fonts/montserrat-700.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'CaptionBeVietnamPro';
+  src: url('/fonts/bevietnampro-700.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'CaptionLexend';
+  src: url('/fonts/lexend-700.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'CaptionSpaceGrotesk';
+  src: url('/fonts/spacegrotesk-700.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}

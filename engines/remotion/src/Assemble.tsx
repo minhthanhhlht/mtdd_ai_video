@@ -24,7 +24,7 @@ import { useMediaErrorProps, useMediaSrc } from "./media";
  * chuyển cảnh (`transition.type`, mặc định crossfade) do <Transition> xử lý.
  */
 export const Assemble: React.FC<Manifest> = (manifest) => {
-  const { scenes, audio, fps, captions, overlays, watermark, subtitles, subtitleStyle } =
+  const { scenes, audio, fps, captions, overlays, watermark, subtitles, subtitleStyle, captionStyle } =
     manifest;
   // Manifest dựng tay (Studio demo, props cũ) có thể chưa qua parse → thiếu default
   const layers = manifest.layers ?? [];
@@ -91,7 +91,7 @@ export const Assemble: React.FC<Manifest> = (manifest) => {
       ) : null}
 
       {/* Phụ đề karaoke nằm TRÊN mọi scene, dưới không có gì — overlay cuối cùng */}
-      {captions.length > 0 ? <CaptionTrack captions={captions} /> : null}
+      {captions.length > 0 ? <CaptionTrack captions={captions} style={captionStyle} /> : null}
 
       {/* Voice: xương sống sync — một track chạy suốt từ frame 0 */}
       {audio.voice ? <Audio src={mediaSrc(audio.voice)} {...errorProps(audio.voice)} /> : null}
