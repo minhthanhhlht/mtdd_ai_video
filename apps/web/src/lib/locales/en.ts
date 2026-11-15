@@ -647,6 +647,8 @@ export const en: Record<string, string> = {
     "Anyone with the Internet link can open this project's upload page - turn it off when you're done.",
   "phone.tunnel-active":
     "Internet route via Cloudflare Tunnel - works over 4G/5G. Remember to keep cloudflared running on this machine.",
+  "phone.public-domain-active":
+    "Connected via Internet (server domain) - phone works over 4G/5G, no shared WiFi required.",
   "phone.session-note":
     "The link only works while this window is open - closing it locks the link.",
   // Replaces the line above when the Internet route was turned on from this modal

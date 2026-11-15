@@ -53,6 +53,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsndfile1 \
     && rm -rf /var/lib/apt/lists/* /var/cache/apt/* /usr/share/doc /usr/share/man /usr/share/locale/* /tmp/*
 
+# Cài đặt cloudflared để hỗ trợ Cloudflare Quick Tunnel / Named Tunnel khi chạy trong container Docker
+RUN ARCH=$(dpkg --print-architecture) \
+    && curl -fsSL "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${ARCH}" -o /usr/local/bin/cloudflared \
+    && chmod +x /usr/local/bin/cloudflared
+
 ENV PORT=6868 \
     SERVER_PORT=6869 \
     NODE_ENV=production \

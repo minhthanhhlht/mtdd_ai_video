@@ -647,6 +647,8 @@ export const vi: Record<string, string> = {
     "Link Internet ai có cũng mở được trang upload của project này - tắt khi dùng xong.",
   "phone.tunnel-active":
     "Đường Internet qua Cloudflare Tunnel - dùng được với 4G/5G. Nhớ bật cloudflared trên máy này.",
+  "phone.public-domain-active":
+    "Đang kết nối qua Internet (tên miền máy chủ) - điện thoại dùng được qua 4G/5G, không cần cùng WiFi.",
   "phone.session-note":
     "Link chỉ dùng được khi cửa sổ này đang mở - đóng là khóa.",
   // Hiện thay cho dòng trên khi đường Internet được bật từ chính modal này

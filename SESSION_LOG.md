@@ -6,6 +6,55 @@
 
 ---
 
+### [SESSION-2026-11-15-21:15] Khắc Phục Lỗi Kết Nối Điện Thoại Trên Domain video.mtdd.io.vn: Tự Động Nhận Diện Public Host Domain Cho Mã QR & Cài Đặt Cloudflared Vào Dockerfile
+
+- **Thời gian**: 2026-11-15 21:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "trang video.mtdd chỗ kết nối với điện thoại tại sao không có phần kết nối qua cloudflare mà trên localhost thì lại có phần kết nối này nhỉ. Hãy kiểm tra"
+- **Phân tích kỹ thuật & Bản chất sự khác biệt**:
+  1. **Nguyên nhân Localhost có phần kết nối Cloudflare**:
+     - Máy phát triển Windows cục bộ đã có sẵn binary `cloudflared.exe` (qua winget / PATH / start/bin / .runtime/bin).
+     - Khi mở modal "Kết nối điện thoại" hoặc trang Kết nối (`/connections`), API `/api/tunnel` kiểm tra và phát hiện `cloudflared` tồn tại -> trả về `installed: true`.
+     - Vì `installed: true` và tunnel chưa chạy, giao diện kích hoạt `canStartTunnel = true` -> Hiển thị nút "Bật đường Internet" (Cloudflare Tunnel) trong modal và cho phép bật tunnel.
+  2. **Nguyên nhân Production (`video.mtdd.io.vn`) không có**:
+     - Bản production chạy trong Docker container (Debian Linux) trên Proxmox VE qua Coolify.
+     - Trong tệp `Dockerfile` giai đoạn runner trước đó chưa cài đặt binary `cloudflared` cho Linux.
+     - Do đó, `/api/tunnel` trả về `installed: false` -> Modal ẩn nút "Bật đường Internet" và hiển thị thông báo "Chưa cài cloudflared trên máy chủ".
+  3. **Vấn đề cốt lõi của tính năng kết nối điện thoại trên Production**:
+     - Bản thân trang `https://video.mtdd.io.vn` ĐÃ LÀ một domain Internet công khai được cấu hình HTTPS/SSL qua Coolify / Traefik proxy. Người dùng truy cập bằng domain này từ máy tính thì điện thoại hoàn toàn có thể kết nối thẳng vào `https://video.mtdd.io.vn/m/:id?k=:token` từ bất kỳ mạng nào (4G, 5G, WiFi bất kỳ) mà không cần tạo Cloudflare Tunnel trung gian.
+     - Tuy nhiên, trước đây `PhoneConnectModal.tsx` chỉ biết 2 trường hợp: (a) có `lan.tunnelDomain` từ Cloudflare; hoặc (b) rơi về danh sách IP card mạng nội bộ (`lan.ips[0]`).
+     - Trên Docker, card mạng chỉ có IP ảo nội bộ `10.0.1.9`. Vì vậy mã QR bị trỏ sai thành `http://10.0.1.9:6868/m/...` — khiến điện thoại khi quét mã không thể nào kết nối được vào máy chủ!
+- **Giải pháp xử lý triệt để**:
+  1. **Tự động nhận diện Public Host Domain trong PhoneConnectModal**:
+     - Xuất hàm `isLocalNetworkHost` từ `apps/web/src/lib/api.ts` để kiểm tra host truy cập.
+     - Trong `PhoneConnectModal.tsx`, khi người dùng đang ở trên domain công cộng (`!isLocalNetworkHost(window.location.hostname)` như `video.mtdd.io.vn`), hệ thống tự động:
+       - Ưu tiên chọn đường Internet làm mặc định (`video.mtdd.io.vn (Internet)`).
+       - Sinh mã QR trỏ thẳng tới `https://video.mtdd.io.vn/m/${projectId}?k=${token}`.
+       - Hiển thị banner trạng thái kết nối Internet tên miền máy chủ (`phone.public-domain-active`).
+       - Ẩn các thông báo không cần thiết về việc cài đặt `cloudflared` khi đã ở trên domain public.
+     - Vẫn bảo toàn 100% tính năng Cloudflare Quick Tunnel / Named Tunnel khi chạy ở localhost.
+  2. **Bổ sung fallback domain phía Backend (`apps/server/src/index.ts`)**:
+     - Trong `/api/lan-info`, hỗ trợ nhận diện thêm biến môi trường `PUBLIC_URL` hoặc `APP_URL` nếu được cấu hình trên container.
+  3. **Cài đặt sẵn `cloudflared` vào image Docker (`Dockerfile`)**:
+     - Thêm lệnh tải binary `cloudflared-linux-${ARCH}` chính thức từ GitHub Releases của Cloudflare vào `/usr/local/bin/cloudflared` trong giai đoạn runner.
+     - Đảm bảo khi container Docker chạy độc lập thì tính năng Cloudflare Tunnel trong trang Kết nối vẫn sẵn sàng hoạt động.
+  4. **Cập nhật song ngữ (`vi.ts`, `en.ts`)**:
+     - Bổ sung key `phone.public-domain-active` giải thích rõ việc điện thoại có thể truy cập qua 4G/5G bằng domain máy chủ.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `Dockerfile`: Cài đặt binary `cloudflared` cho Linux container trong giai đoạn runner.
+  - `apps/server/src/index.ts`: Bổ sung fallback `PUBLIC_URL` / `APP_URL` cho endpoint `/api/lan-info`.
+  - `apps/web/src/lib/api.ts`: Export hàm `isLocalNetworkHost` (bổ sung hỗ trợ IPv6 loopback).
+  - `apps/web/src/components/PhoneConnectModal.tsx`: Tự động nhận diện public host domain, sinh QR public chuẩn xác, giữ tương thích ngược với Cloudflare Tunnel cục bộ.
+  - `apps/web/src/lib/locales/vi.ts`: Thêm bản dịch tiếng Việt cho `phone.public-domain-active`.
+  - `apps/web/src/lib/locales/en.ts`: Thêm bản dịch tiếng Anh cho `phone.public-domain-active`.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & QA**:
+  - `check-design-system.mjs`: Sạch sẽ 100%.
+  - `check-i18n.mjs`: Đủ 2282 key (0 key thiếu).
+  - `npm run typecheck`: Đạt chuẩn 100% trên cả 3 package (`server`, `web`, `remotion-engine`).
+  - `npm run build`: Hoàn thành xuất sắc 100% 22 static/dynamic routes.
+
+---
 ### [SESSION-2026-11-14-21:30] Khắc Phục Lỗi Credit Balance Is Too Low, Giải Phóng Dung Lượng Ổ Đĩa Proxmox VM & Kích Hoạt Chạy AI Bằng Claude Pro Subscription Với Skill tet-red-envelope-reveal
 
 - **Thời gian**: 2026-11-14 21:30 (Múi giờ +07:00)

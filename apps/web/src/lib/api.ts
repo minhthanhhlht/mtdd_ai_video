@@ -770,9 +770,12 @@ export type ImageGenStep = "all" | "background" | "compose";
  * Truy cập đang ở cùng mạng với máy chủ hay không - quyết định có gọi thẳng
  * cổng backend được không. Tunnel/domain công cộng chỉ mở duy nhất cổng web.
  */
-function isLocalNetworkHost(host: string): boolean {
+export function isLocalNetworkHost(host: string): boolean {
   return (
     host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "::1" ||
+    host === "[::1]" ||
     /^127\./.test(host) ||
     /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.)/.test(
       host

@@ -402,11 +402,16 @@ app.get("/api/lan-info", (_req: Request, res: Response) => {
     ip.startsWith("192.168.") ? 0 : ip.startsWith("10.") ? 1 : ip.startsWith("172.") ? 2 : 3;
   ips.sort((a, b) => rank(a) - rank(b));
   // Domain Cloudflare Tunnel - Quick Tunnel đang chạy (URL sống) ưu tiên hơn
-  // TUNNEL_DOMAIN trong .env; env thì bỏ protocol/path nếu user lỡ dán kèm
-  const rawTunnel = (process.env.TUNNEL_DOMAIN ?? "").trim();
+  // TUNNEL_DOMAIN trong .env (hoặc PUBLIC_URL / APP_URL); env thì bỏ protocol/path nếu user lỡ dán kèm
+  const rawDomain = (
+    process.env.TUNNEL_DOMAIN ||
+    process.env.PUBLIC_URL ||
+    process.env.APP_URL ||
+    ""
+  ).trim();
   const tunnelDomain =
     quickTunnelHostname() ??
-    (rawTunnel.replace(/^[a-z]+:\/\//i, "").replace(/[/?#].*$/, "").trim() || null);
+    (rawDomain.replace(/^[a-z]+:\/\//i, "").replace(/[/?#].*$/, "").trim() || null);
   res.json({ ips, webPort: Number(process.env.WEB_PORT || 6868), tunnelDomain });
 });
 app.use("/media", mediaRouter);

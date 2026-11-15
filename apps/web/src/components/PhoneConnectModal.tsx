@@ -8,6 +8,7 @@ import {
   createUploadSession,
   getLanInfo,
   getTunnelStatus,
+  isLocalNetworkHost,
   revokeUploadSession,
   startTunnel,
   stopTunnel,
@@ -99,8 +100,11 @@ export function PhoneConnectModal({
       .then((info) => {
         if (!alive) return;
         setLan(info);
-        // Có Cloudflare Tunnel → mặc định đi đường Internet (dùng được 4G/5G)
-        setSel(info.tunnelDomain ? TUNNEL_OPTION : info.ips[0] ?? null);
+        // Có Cloudflare Tunnel hoặc đang chạy trên public domain → mặc định đi đường Internet
+        const isPub =
+          typeof window !== "undefined" && !isLocalNetworkHost(window.location.hostname);
+        const hasInternet = Boolean(info.tunnelDomain || isPub);
+        setSel(hasInternet ? TUNNEL_OPTION : info.ips[0] ?? null);
       })
       .catch((e) => {
         if (alive) setError(e instanceof Error ? e.message : String(e));
@@ -183,11 +187,19 @@ export function PhoneConnectModal({
     return () => window.removeEventListener("pagehide", onPageHide);
   }, [open]);
 
-  const viaTunnel = sel === TUNNEL_OPTION && !!lan?.tunnelDomain;
+  const isPublicHost =
+    typeof window !== "undefined" && !isLocalNetworkHost(window.location.hostname);
+  const currentHost = typeof window !== "undefined" ? window.location.host : null;
+  const currentProtocol = typeof window !== "undefined" ? window.location.protocol : "https:";
+
+  const internetDomain = lan?.tunnelDomain || (isPublicHost ? currentHost : null);
+  const isNativePublicHost = !lan?.tunnelDomain && isPublicHost;
+
+  const viaInternet = sel === TUNNEL_OPTION && !!internetDomain;
   const url =
     lan && sel && token
-      ? viaTunnel
-        ? `https://${lan.tunnelDomain}/m/${projectId}?k=${token}`
+      ? viaInternet
+        ? `${lan.tunnelDomain ? "https:" : currentProtocol}//${internetDomain}/m/${projectId}?k=${token}`
         : `http://${sel}:${lan.webPort}/m/${projectId}?k=${token}`
       : null;
 
@@ -273,7 +285,7 @@ export function PhoneConnectModal({
 
   /** Có nút "Bật đường Internet" trong footer hay không. */
   const canStartTunnel = Boolean(
-    !viaTunnel && tunnel?.installed && !tunnel.running
+    !viaInternet && !isPublicHost && tunnel?.installed && !tunnel.running
   );
 
   return (
@@ -322,11 +334,11 @@ export function PhoneConnectModal({
         </p>
       )}
 
-      {lan && lan.ips.length === 0 && !lan.tunnelDomain && (
+      {lan && lan.ips.length === 0 && !internetDomain && (
         <Banner tone="danger" message={t("phone.no-ip")} />
       )}
 
-      {lan && lan.ips.length + (lan.tunnelDomain ? 1 : 0) > 1 && (
+      {lan && lan.ips.length + (internetDomain ? 1 : 0) > 1 && (
         <Field label={t("phone.ip-label")} htmlFor="phone-network">
           <select
             id="phone-network"
@@ -336,9 +348,9 @@ export function PhoneConnectModal({
           >
             {/* KHÔNG emoji làm icon (kể cả trong <option>) - dự án cấm hẳn.
                 Chữ "(Internet)" đã nói đủ ý mà máy đọc màn hình vẫn đọc được. */}
-            {lan.tunnelDomain && (
+            {internetDomain && (
               <option value={TUNNEL_OPTION}>
-                {`${lan.tunnelDomain} (Internet)`}
+                {`${internetDomain} (Internet)`}
               </option>
             )}
             {lan.ips.map((addr) => (
@@ -377,26 +389,35 @@ export function PhoneConnectModal({
         {startedHere ? t("phone.session-note-tunnel") : t("phone.session-note")}
       </p>
 
-      {viaTunnel ? (
-        // Đang đi đường Internet qua Cloudflare Tunnel - không cần cùng WiFi
-        <Banner tone="info" message={t("phone.tunnel-active")}>
-          {/* Link Internet là public - nhắc tắt khi xong, kèm nút tắt tại chỗ */}
-          <p className="mt-1 text-sm text-[var(--text-muted)]">
-            {t("phone.tunnel-warn")}{" "}
-            <button
-              type="button"
-              className="font-medium text-[var(--primary)] hover:underline disabled:opacity-50"
-              onClick={() => void handleStopTunnel()}
-              disabled={tunnelBusy !== null}
-            >
-              {t("phone.tunnel-stop")}
-            </button>
-          </p>
+      {viaInternet ? (
+        // Đang đi đường Internet qua domain public hoặc Cloudflare Tunnel - không cần cùng WiFi
+        <Banner
+          tone="info"
+          message={
+            isNativePublicHost
+              ? t("phone.public-domain-active")
+              : t("phone.tunnel-active")
+          }
+        >
+          {/* Link Internet là public - nếu là tunnel tạm thì nhắc tắt khi xong */}
+          {!isNativePublicHost && (
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
+              {t("phone.tunnel-warn")}{" "}
+              <button
+                type="button"
+                className="font-medium text-[var(--primary)] hover:underline disabled:opacity-50"
+                onClick={() => void handleStopTunnel()}
+                disabled={tunnelBusy !== null}
+              >
+                {t("phone.tunnel-stop")}
+              </button>
+            </p>
+          )}
         </Banner>
       ) : (
         <Banner tone="info" message={t("phone.note")}>
-          {/* Dùng ngoài mạng LAN (4G/5G) - cloudflared chưa cài thì chỉ đường */}
-          {tunnel && !tunnel.installed && (
+          {/* Dùng ngoài mạng LAN (4G/5G) - cloudflared chưa cài thì chỉ đường (chỉ hiện khi đang ở local) */}
+          {!isPublicHost && tunnel && !tunnel.installed && (
             <p className="mt-1 flex items-start gap-1 text-sm text-[var(--text-muted)]">
               <span className="min-w-0 flex-1">
                 {t("phone.tunnel-missing")}{" "}
@@ -414,8 +435,8 @@ export function PhoneConnectModal({
             </p>
           )}
 
-          {/* Tunnel đã chạy sẵn nhưng QR đang trỏ IP LAN → mời đổi sang link Internet */}
-          {tunnel?.running && lan?.tunnelDomain && (
+          {/* Tunnel đã chạy sẵn hoặc có domain nhưng QR đang trỏ IP LAN → mời đổi sang link Internet */}
+          {internetDomain && (
             <p className="mt-1 text-sm text-[var(--text-muted)]">
               {t("phone.tunnel-ready")}{" "}
               <button
