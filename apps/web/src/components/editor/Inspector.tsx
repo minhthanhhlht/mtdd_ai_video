@@ -175,16 +175,20 @@ export function Inspector({
 }) {
   const { t, tf } = useT();
   const { selection, readOnly } = useEditor();
+  const [activeTab, setActiveTab] = useState<"props" | "textEffects">("props");
 
   let body: ReactNode;
   let title = t("editor.inspector.title");
   if (!selection) {
     body = (
-      <EmptyState
-        icon={MousePointerClick}
-        title={t("editor.inspector.empty-title")}
-        description={t("editor.inspector.empty")}
-      />
+      <div className="flex flex-col gap-3">
+        <EmptyState
+          icon={MousePointerClick}
+          title={t("editor.inspector.empty-title")}
+          description={t("editor.inspector.empty-with-effects")}
+        />
+        <TextEffectPicker timeline={timeline} idPrefix="inspector-global" />
+      </div>
     );
   } else if (!isWellFormed(timeline, selection)) {
     // Dữ liệu sai kiểu (thường do AI ghi tay meta.json): không dựng form trên
@@ -314,8 +318,17 @@ export function Inspector({
       }}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold">{title}</h2>
-        {selection && <SelectionActions actions={actions} selection={selection} />}
+        <Segmented
+          label={t("editor.inspector.tab-label")}
+          value={activeTab}
+          onChange={(val) => setActiveTab(val as "props" | "textEffects")}
+          options={[
+            { value: "props", label: selection ? title : t("editor.inspector.tab-props") },
+            { value: "textEffects", label: t("editor.inspector.tab-effects") },
+          ]}
+          className="shrink-0"
+        />
+        {selection && activeTab === "props" && <SelectionActions actions={actions} selection={selection} />}
       </div>
       {locked && (
         <Banner
@@ -330,7 +343,11 @@ export function Inspector({
       )}
       <fieldset disabled={readOnly} className="flex min-w-0 flex-col gap-3">
         {missingFile && <Banner tone="danger" message={tf("editor.media.missing", { file: missingFile })} />}
-        {body}
+        {activeTab === "textEffects" ? (
+          <TextEffectPicker timeline={timeline} idPrefix="inspector-tab-effects" />
+        ) : (
+          body
+        )}
       </fieldset>
     </section>
   );
@@ -1008,6 +1025,7 @@ function CaptionForm({ index, cue, timeline }: { index: number; cue: TimelineCap
         </Panel>
       )}
       <CuePositionSection kind="captions" index={index} cue={cue} idPrefix={id} />
+      <TextEffectPicker timeline={timeline} idPrefix={`${id}-effects`} />
     </>
   );
 }

@@ -6,6 +6,35 @@
 
 ---
 
+### [SESSION-2026-11-15-23:00] Tích Hợp Hiển Thị Bảng Chọn Phông Chữ & Hiệu Ứng CapCut (Inspector View & Caption Form) Trong Trình Biên Tập Video
+
+- **Thời gian**: 2026-11-15 23:00 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Phần font với hiệu ứng ở đâu ấy nhỉ?"
+- **Phân tích nguyên nhân & Vị trí hiển thị**:
+  1. Trong commit trước (`9afc360`), các file thư viện phông chữ Việt hóa offline (`Inter`, `Montserrat`, `Be Vietnam Pro`, `Lexend`, `Space Grotesk`), 6 preset hoạt ảnh chữ CapCut (`capcut-spring-pop`, `capcut-moving-pill`, `capcut-karaoke-sweep`, `capcut-stroke-solid`, `capcut-neon-flash`) và component UI `TextEffectPicker.tsx` đã được xây dựng hoàn thiện.
+  2. Tuy nhiên, trong `Inspector.tsx`, `TextEffectPicker` mới chỉ được import mà chưa được render vào giao diện của `CaptionForm`, đồng thời thanh Inspector bên phải khi chưa chọn phần tử (`!selection`) chỉ hiển thị màn hình trống (`EmptyState`), khiến người dùng không biết tìm công cụ này ở đâu.
+- **Các giải pháp kỹ thuật đã triển khai (Implemented Solutions)**:
+  1. **Tạo Tab Chuyển Đổi Trên Đầu Inspector (`apps/web/src/components/editor/Inspector.tsx`)**:
+     - Thêm thanh điều khiển `<Segmented>` trên đầu Inspector cho phép chuyển đổi tức thì giữa:
+       - **"Thuộc tính" (Properties)**: Hiển thị form chỉnh sửa của phần tử đang chọn trên timeline.
+       - **"Font & Hiệu ứng chữ ✨" (Fonts & Text Effects ✨)**: Hiển thị trực tiếp toàn bộ bảng công cụ `TextEffectPicker`.
+  2. **Hiển thị trực tiếp khi chưa chọn phần tử trên Timeline**:
+     - Khi mở Video Editor và chưa click vào track nào trên timeline, Inspector hiển thị thông điệp hướng dẫn kèm ngay bảng cấu hình Phông chữ & Hiệu ứng CapCut để người dùng tùy chỉnh ngay cho video mà không cần phải tìm kiếm.
+  3. **Tích hợp sâu vào `CaptionForm`**:
+     - Khi người dùng bấm vào một câu phụ đề Karaoke bất kỳ trên timeline, `CaptionForm` tự động đính kèm bảng `TextEffectPicker` ở cuối form, hỗ trợ chỉnh font và hiệu ứng trực tiếp.
+  4. **Cập nhật i18n & Kiểm định chuẩn Design System**:
+     - Bổ sung các key bản dịch song ngữ `vi.ts` và `en.ts`: `editor.inspector.tab-label`, `editor.inspector.tab-props`, `editor.inspector.tab-effects`, `editor.inspector.empty-with-effects`.
+     - Kiểm định thành công: `check-design-system.mjs` sạch 100%, `check-i18n.mjs` đủ 2303 key, `typecheck` passed 100%, `next build` hoàn tất.
+     - Playwright MCP kiểm tra thực tế: Bảng chọn font và hiệu ứng CapCut hiển thị rực rỡ, đầy đủ 6 preset kèm live preview và ô gõ thử tiếng Việt.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/editor/Inspector.tsx`
+  - `apps/web/src/lib/locales/vi.ts`
+  - `apps/web/src/lib/locales/en.ts`
+  - `SESSION_LOG.md`
+
+---
+
 ### [SESSION-2026-11-15-22:45] Sửa Lỗi Kẹt Màn Hình "Đang Kiểm Tra Quyền Truy Cập..." (Inline Stale Chunk Guard & Fast Auth Fallback)
 
 - **Thời gian**: 2026-11-15 22:45 (Múi giờ +07:00)
