@@ -142,6 +142,16 @@ function isModelId(v: string): boolean {
   return /^[a-z0-9][a-z0-9.-]{2,80}$/i.test(v);
 }
 
+export const CAPTION_PRESETS = [
+  "default",
+  "capcut-spring-pop",
+  "capcut-moving-pill",
+  "capcut-karaoke-sweep",
+  "capcut-stroke-solid",
+  "capcut-neon-flash",
+] as const;
+export type CaptionPreset = (typeof CAPTION_PRESETS)[number];
+
 export interface Brief {
   /** Video dựng từ đâu - xem SourceKind */
   sourceKind: SourceKind;
@@ -166,6 +176,12 @@ export interface Brief {
   autoCutLevel: TrimAggressiveness;
   /** Có tạo phụ đề (karaoke) không */
   subtitles: boolean;
+  /** Phông chữ tiếng Việt cho phụ đề karaoke (null = mặc định "inter") */
+  captionFont: string | null;
+  /** Hiệu ứng hoạt ảnh phụ đề CapCut (null = mặc định "default") */
+  captionPreset: CaptionPreset | null;
+  /** Màu sắc chữ đang đọc karaoke (null = mặc định "#19c8ff") */
+  captionColor: string | null;
   /** BẬT = AI tự phân tích source, tự chọn keyword để highlight */
   highlightEnabled: boolean;
   /** (Nâng cao, tùy chọn) chỉ định thêm keyword thủ công */
@@ -244,6 +260,9 @@ export function defaultBrief(): Brief {
     autoCut: true,
     autoCutLevel: "default",
     subtitles: true,
+    captionFont: null,
+    captionPreset: null,
+    captionColor: null,
     highlightEnabled: true,
     highlightKeywords: [],
     keyLayoutEnabled: true,
@@ -298,6 +317,9 @@ export function briefOf(meta: ProjectMeta): Brief {
     base.autoCutLevel = b.autoCutLevel as TrimAggressiveness;
   }
   if (typeof b.subtitles === "boolean") base.subtitles = b.subtitles;
+  if (typeof b.captionFont === "string" && b.captionFont.trim()) base.captionFont = b.captionFont.trim();
+  if (CAPTION_PRESETS.includes(b.captionPreset as CaptionPreset)) base.captionPreset = b.captionPreset as CaptionPreset;
+  if (typeof b.captionColor === "string" && b.captionColor.trim()) base.captionColor = b.captionColor.trim();
   if (typeof b.highlightEnabled === "boolean") base.highlightEnabled = b.highlightEnabled;
   if (Array.isArray(b.highlightKeywords)) {
     base.highlightKeywords = b.highlightKeywords.filter(
@@ -426,6 +448,14 @@ export function applyBriefPatch(
   }
   bool("autoCut");
   bool("subtitles");
+  nullableStr("captionFont");
+  if ("captionPreset" in body) {
+    if (body.captionPreset !== null && !CAPTION_PRESETS.includes(body.captionPreset as CaptionPreset)) {
+      bad(`captionPreset phải là null hoặc một trong: ${CAPTION_PRESETS.join(" | ")}`);
+    }
+    brief.captionPreset = (body.captionPreset as CaptionPreset) || null;
+  }
+  nullableStr("captionColor");
   bool("highlightEnabled");
   strList("highlightKeywords");
   bool("keyLayoutEnabled");

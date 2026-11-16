@@ -355,6 +355,15 @@ export function createChildProject(input: CreateChildProjectInput): ProjectSumma
     // Truy vết nguồn gốc - hữu ích khi xem lại project con sinh từ đâu
     parentId: input.parentId,
     brief,
+    ...(brief.captionFont || brief.captionPreset || brief.captionColor
+      ? {
+          captionStyle: {
+            preset: brief.captionPreset ?? "default",
+            ...(brief.captionFont ? { fontFamily: brief.captionFont } : {}),
+            ...(brief.captionColor ? { activeColor: brief.captionColor } : {}),
+          },
+        }
+      : {}),
     scenes: (input.scenes ?? []).map((s) => ({ ...s })),
     audio: input.audio ? JSON.parse(JSON.stringify(input.audio)) : { voice: null, sfx: [] },
     output: null,

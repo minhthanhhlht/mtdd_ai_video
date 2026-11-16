@@ -165,6 +165,14 @@ export function ProjectBriefCard({
           {styleDisplayName(stylesData, form.styleId, t)}
         </span>
       </div>
+      {form.subtitles && (form.captionFont || form.captionPreset) && (
+        <div className="flex gap-2">
+          <span className={summaryRowLabel}>{t("brief.badge-caption-style")}</span>
+          <span className="min-w-0 flex-1 truncate font-medium">
+            {form.captionFont ? form.captionFont.toUpperCase() : "INTER"} · {form.captionPreset ?? "default"}
+          </span>
+        </div>
+      )}
       <div className="flex gap-2">
         <span className={summaryRowLabel}>Skill</span>
         <span className="min-w-0 flex-1 truncate">

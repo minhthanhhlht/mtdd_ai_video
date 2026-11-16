@@ -6,6 +6,48 @@
 
 ---
 
+### [SESSION-2026-11-16-14:15] Tích Hợp Lựa Chọn Phông Chữ & Hiệu Ứng Hoạt Ảnh CapCut Vào Kịch Bản Edit (Brief) Cho Mọi Quy Trình Tạo Video
+
+- **Thời gian**: 2026-11-16 14:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "vậy lúc tạo kịch bản edit không chọn được font à. tôi muốn chọn cả lúc đó nữa"
+- **Phân tích kỹ thuật & Kiến trúc**:
+  1. **Nhu cầu cấu hình từ đầu**: Khi tạo kịch bản edit (Brief) cho Videos Project, Text-to-Video hoặc Auto Cut, người dùng muốn chọn sẵn kiểu phông chữ tiếng Việt và hiệu ứng CapCut để AI tự động áp dụng ngay khi dựng video, không cần phải đợi tới lúc mở trình biên tập timeline mới chọn.
+  2. **Mở rộng Schema `Brief`**:
+     - Bổ sung 3 trường vào `Brief`: `captionFont: string | null`, `captionPreset: CaptionPreset | null`, `captionColor: string | null` trong cả server (`apps/server/src/meta.ts`) và client (`apps/web/src/lib/api.ts`).
+     - Cập nhật `defaultBrief()`, `briefOf()`, `applyBriefPatch()` đảm bảo tương thích ngược 100% (RULE 14).
+  3. **Mở rộng Biểu mẫu Kịch bản edit (`apps/web/src/components/BriefFields.tsx`)**:
+     - Khi công tắc "Tạo phụ đề" (`subtitles`) được bật, bung ra các trường con thụt lề chuẩn nhịp (`SUBFIELDS`):
+       - **Phông chữ phụ đề**: Dropdown chọn 5 phông chữ Việt hóa offline (`Inter`, `Montserrat`, `Be Vietnam Pro`, `Lexend`, `Space Grotesk`).
+       - **Hiệu ứng hoạt ảnh CapCut**: Dropdown chọn 6 preset hoạt ảnh (`Mặc định`, `CapCut Spring Pop`, `CapCut Moving Pill`, `CapCut Karaoke Sweep`, `CapCut Viền Đổ Đặc`, `CapCut Neon Flash`).
+       - **Màu chữ đang đọc**: Bộ chọn màu kèm 6 ô swatch màu nhanh (`Cyan`, `Blue`, `Yellow`, `Pink`, `Green`, `White`).
+       - **Khung xem trước trực tiếp (Live Preview)**: Hiển thị câu mẫu tiếng Việt áp dụng ngay phông chữ và màu sắc vừa chọn.
+     - Dùng chung cho cả trang **Videos Project**, **Auto cut videos**, và **Text to video**.
+  4. **Cưỡng chế AI Agent & Đồng bộ Timeline**:
+     - Cập nhật `apps/server/src/editPrompt.ts`: Khi `brief.subtitles` bật có kèm cấu hình font/preset, prompt cưỡng chế AI Agent khi dựng video bắt buộc phải ghi cấu hình `captionStyle` vào `meta.json`.
+     - Cập nhật `PUT /api/projects/:id/brief` (`apps/server/src/routes/projects.ts`) và `createChildProject` (`apps/server/src/childProject.ts`): Tự động đồng bộ sang `meta.captionStyle` để Remotion Player và Render Pipeline nhận diện ngay tức thì.
+  5. **Tóm tắt Compact (`apps/web/src/components/ProjectBriefCard.tsx`)**:
+     - Hiển thị dòng tóm tắt `Font & Hiệu ứng` (ví dụ `MONTSERRAT · capcut-spring-pop`) ngay trên thẻ tóm tắt compact của project.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/server/src/meta.ts`
+  - `apps/server/src/editPrompt.ts`
+  - `apps/server/src/routes/projects.ts`
+  - `apps/server/src/childProject.ts`
+  - `apps/web/src/lib/api.ts`
+  - `apps/web/src/components/BriefFields.tsx`
+  - `apps/web/src/components/ProjectBriefCard.tsx`
+  - `apps/web/src/components/editor/TextEffectPicker.tsx`
+  - `apps/web/src/lib/locales/vi.ts`
+  - `apps/web/src/lib/locales/en.ts`
+- **Kết quả kiểm định (Validation Results)**:
+  - `node apps/web/scripts/check-design-system.mjs`: SẠCH 100%.
+  - `node apps/web/scripts/check-i18n.mjs`: Đủ 2317/2317 key song ngữ vi/en.
+  - `npm run typecheck`: Passed 100% không lỗi (server, web, remotion-engine).
+  - `npm run build`: Build thành công cả server và web.
+  - Playwright MCP: Thử nghiệm bật "Tạo phụ đề" trong kịch bản edit, toàn bộ ô chọn phông chữ, hiệu ứng CapCut, màu sắc và khung xem trước hiển thị mượt mà.
+
+---
+
 ### [SESSION-2026-11-15-23:00] Tích Hợp Hiển Thị Bảng Chọn Phông Chữ & Hiệu Ứng CapCut (Inspector View & Caption Form) Trong Trình Biên Tập Video
 
 - **Thời gian**: 2026-11-15 23:00 (Múi giờ +07:00)

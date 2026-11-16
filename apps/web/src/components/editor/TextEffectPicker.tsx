@@ -79,7 +79,7 @@ const QUICK_TEST_PHRASES = [
   "Hiệu ứng chữ CapCut chuyên nghiệp",
 ];
 
-const COLOR_SWATCHES = [
+export const COLOR_SWATCHES = [
   { label: "Cyan", value: "#19c8ff" },
   { label: "Blue", value: "#2563eb" },
   { label: "Yellow", value: "#ffea00" },

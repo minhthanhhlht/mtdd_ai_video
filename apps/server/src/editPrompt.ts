@@ -258,6 +258,14 @@ function briefSwitchLines(id: string, brief: Brief, mode: "edit" | "editor"): st
         : "Không - không tạo phụ đề"
     }`,
   );
+  if (brief.subtitles && (brief.captionFont || brief.captionPreset || brief.captionColor)) {
+    lines.push(
+      "  BẮT BUỘC thiết lập `captionStyle` trong `meta.json`: " +
+        `preset: "${brief.captionPreset || "default"}", fontFamily: "${brief.captionFont || "inter"}"` +
+        (brief.captionColor ? `, activeColor: "${brief.captionColor}"` : "") +
+        ". AI phải tuân thủ đúng phong cách phụ đề này khi tạo hoặc chỉnh sửa timeline.",
+    );
+  }
   if (brief.highlightEnabled) {
     lines.push(
       "- Làm nổi bật key chính: Có - TỰ phân tích nội dung/transcript của video, chọn ra các keyword " +

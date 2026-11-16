@@ -17,6 +17,7 @@ import {
   getPrompts,
   getSkills,
   type Brief,
+  type CaptionPreset,
   type MusicMode,
   type PromptTemplate,
   type SfxMode,
@@ -36,6 +37,7 @@ import {
 import { useProviders } from "@/components/ModelPicker";
 import { StyleSelect } from "@/components/StyleSelect";
 import { VideoStyleSelect } from "@/components/VideoStyleSelect";
+import { BUILTIN_FONT_OPTIONS, COLOR_SWATCHES } from "@/components/editor/TextEffectPicker";
 import { useT } from "@/lib/i18n";
 
 /**
@@ -67,6 +69,9 @@ export const DEFAULT_BRIEF: Brief = {
   autoCut: true,
   autoCutLevel: "default",
   subtitles: true,
+  captionFont: null,
+  captionPreset: null,
+  captionColor: null,
   highlightEnabled: true,
   highlightKeywords: [],
   keyLayoutEnabled: true,
@@ -315,6 +320,93 @@ export function BriefFields({
           label={t("brief.subtitles-label")}
           hint={t("brief.subtitles-hint")}
         />
+        {value.subtitles && (
+          <div className={SUBFIELDS}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Field
+                label={t("brief.caption-font")}
+                htmlFor="brief-caption-font"
+                hint={t("brief.caption-font-hint")}
+              >
+                <select
+                  id="brief-caption-font"
+                  className="input"
+                  value={value.captionFont ?? "inter"}
+                  onChange={(e) => set("captionFont", e.target.value)}
+                >
+                  {BUILTIN_FONT_OPTIONS.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field
+                label={t("brief.caption-preset")}
+                htmlFor="brief-caption-preset"
+                hint={t("brief.caption-preset-hint")}
+              >
+                <select
+                  id="brief-caption-preset"
+                  className="input"
+                  value={value.captionPreset ?? "default"}
+                  onChange={(e) => set("captionPreset", e.target.value as CaptionPreset)}
+                >
+                  <option value="default">{t("editor.caption.preset.default")}</option>
+                  <option value="capcut-spring-pop">{t("editor.caption.preset.spring-pop")}</option>
+                  <option value="capcut-moving-pill">{t("editor.caption.preset.moving-pill")}</option>
+                  <option value="capcut-karaoke-sweep">{t("editor.caption.preset.karaoke-sweep")}</option>
+                  <option value="capcut-stroke-solid">{t("editor.caption.preset.stroke-solid")}</option>
+                  <option value="capcut-neon-flash">{t("editor.caption.preset.neon-flash")}</option>
+                </select>
+              </Field>
+            </div>
+
+            <Field label={t("brief.caption-color")} hint={t("brief.caption-color-hint")}>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={value.captionColor && value.captionColor.startsWith("#") ? value.captionColor : "#19c8ff"}
+                  onChange={(e) => set("captionColor", e.target.value)}
+                  className="w-8 h-8 rounded-[var(--radius)] border border-[var(--border)] cursor-pointer p-0 bg-transparent"
+                />
+                <div className="flex items-center gap-1">
+                  {COLOR_SWATCHES.map((swatch) => (
+                    <button
+                      key={swatch.value}
+                      type="button"
+                      title={swatch.label}
+                      onClick={() => set("captionColor", swatch.value)}
+                      style={{ backgroundColor: swatch.value }}
+                      className={`w-6 h-6 rounded-full border border-black/30 hover:scale-110 transition-transform cursor-pointer ${
+                        (value.captionColor ?? "#19c8ff") === swatch.value ? "ring-2 ring-[var(--primary)] scale-110" : ""
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </Field>
+
+            <div className="p-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] flex flex-col gap-1">
+              <span className="text-xs text-[var(--text-muted)] font-medium">
+                {t("brief.caption-preview")}:
+              </span>
+              <div
+                className="text-sm font-bold truncate"
+                style={{
+                  fontFamily: (
+                    BUILTIN_FONT_OPTIONS.find((f) => f.id === (value.captionFont ?? "inter")) ??
+                    BUILTIN_FONT_OPTIONS[0]
+                  ).family,
+                  color: value.captionColor ?? "#19c8ff",
+                }}
+              >
+                Khám phá video AI đỉnh cao cùng Noti.vn
+              </div>
+            </div>
+          </div>
+        )}
         <SwitchField
           id="brief-highlight"
           checked={value.highlightEnabled}

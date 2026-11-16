@@ -334,6 +334,15 @@ router.put("/:id/brief", (req, res) => {
   const body = (req.body ?? {}) as Record<string, unknown>;
   const brief: Brief = applyBriefPatch(briefOf(meta), body, styleExists);
   meta.brief = brief;
+  if (brief.captionFont || brief.captionPreset || brief.captionColor) {
+    const curStyle = (meta as Record<string, unknown>).captionStyle as Record<string, unknown> | undefined;
+    (meta as Record<string, unknown>).captionStyle = {
+      ...(curStyle ?? {}),
+      preset: brief.captionPreset ?? curStyle?.preset ?? "default",
+      ...(brief.captionFont ? { fontFamily: brief.captionFont } : {}),
+      ...(brief.captionColor ? { activeColor: brief.captionColor } : {}),
+    };
+  }
   writeMeta(id, meta);
   res.json(brief);
 });

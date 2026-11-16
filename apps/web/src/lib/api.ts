@@ -248,6 +248,12 @@ export interface Brief {
    */
   autoCutLevel: TrimAggressiveness;
   subtitles: boolean;
+  /** Phông chữ tiếng Việt cho phụ đề karaoke (null = mặc định "inter") */
+  captionFont?: string | null;
+  /** Hiệu ứng hoạt ảnh phụ đề CapCut (null = mặc định "default") */
+  captionPreset?: CaptionPreset | null;
+  /** Màu sắc chữ đang đọc karaoke (null = mặc định "#19c8ff") */
+  captionColor?: string | null;
   /** BẬT = AI tự phân tích source, chọn keyword và highlight. */
   highlightEnabled: boolean;
   /** (Nâng cao, tùy chọn) chỉ định thêm keyword thủ công. */
