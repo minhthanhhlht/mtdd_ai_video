@@ -176,7 +176,7 @@ export function ProjectBriefCard({
       <div className="flex gap-2">
         <span className={summaryRowLabel}>Skill</span>
         <span className="min-w-0 flex-1 truncate">
-          {form.skill ?? t("brief.ai-pick-skill")}
+          {form.skill === "none" ? t("brief.skill-none") : (form.skill ?? t("brief.ai-pick-skill"))}
         </span>
       </div>
       <div className="flex gap-2">

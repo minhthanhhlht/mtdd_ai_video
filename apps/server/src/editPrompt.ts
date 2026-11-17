@@ -135,7 +135,7 @@ function sourceLines(id: string, brief: Brief): string[] {
       : "- Ảnh: \"Ảnh minh họa AI\" đang TẮT - KHÔNG tạo ảnh AI (server cũng từ chối). Chỉ dùng ảnh có sẵn trong " +
           "`assets/`; còn lại dựng hoàn toàn bằng chữ + đồ họa HTML/SVG.",
   );
-  if (!brief.skill) {
+  if (!brief.skill && brief.skill !== "none") {
     lines.push(
       "- Skill gợi ý cho video toàn chữ: `noti-tiktok-full-text` (khung dọc) hoặc `noti-youtube-edit` chế độ B " +
         "(khung ngang) - skill talking-head (cần mặt người/footage) KHÔNG hợp.",
@@ -793,7 +793,14 @@ export function buildEditPrompt(input: {
 
   // --- Skill
   lines.push("## Skill");
-  if (brief.skill) {
+  if (brief.skill === "none") {
+    lines.push(
+      "Người dùng ĐÃ CHỌN: KHÔNG DÙNG SKILL NÀO. Tuyệt đối KHÔNG đọc hay áp dụng bất kỳ skill nào trong `.claude/skills/`. " +
+        "Dựng video theo đúng các yêu cầu cốt lõi trong kịch bản (cắt nhịp, phụ đề, âm thanh, bố cục theo brief), " +
+        "không tự ý thêm các lớp đồ họa, chuyển động phức tạp hay khuôn mẫu visual đặc thù của các skill.",
+      "",
+    );
+  } else if (brief.skill) {
     const skillRelPath = `.claude/skills/${brief.skill}/SKILL.md`;
     lines.push(
       `Dùng skill \`${brief.skill}\` làm quy trình chính - đọc \`${skillRelPath}\` và bắt buộc tuân theo.`,

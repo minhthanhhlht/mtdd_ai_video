@@ -6,6 +6,49 @@
 
 ---
 
+### [SESSION-2026-11-17-20:10] Bổ Sung Tuỳ Chọn "Không (Không Dùng Skill)" Vào Bộ Chọn Skill Trong Kịch Bản Edit (Brief)
+
+- **Thời gian**: 2026-11-17 20:10 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Phần chọn skill trong edit t muốn có thêm option "Không". Tức là k dùng skill nào."
+- **Phân tích kỹ thuật & Kiến trúc**:
+  1. **Nhu cầu bỏ qua Skill Template**:
+     - Trước đây, `skill` trong `Brief` chỉ có 2 trạng thái: hoặc là chọn một skill cụ thể (ví dụ `edit-agency-kinetic-v1`, `noti-tiktok-full-text`...), hoặc để trống/null với ý nghĩa "Để AI tự chọn" (`brief.ai-pick-skill`). Khi để trống, AI Agent luôn tự động chọn 1 skill để áp dụng.
+     - Người dùng muốn có thêm lựa chọn rõ ràng: **"Không"** (`none`), tức là hoàn toàn không dùng bất kỳ skill hay khuôn mẫu visual/animation phức tạp nào, chỉ dựng video cơ bản thuần túy theo nội dung kịch bản (cắt ghép, phụ đề, âm thanh cơ bản).
+  2. **Giá trị đặc biệt "none"**:
+     - Trong `apps/server/src/meta.ts`, hàm kiểm tra skill `isSkillName` chấp nhận mọi chuỗi kebab-case hợp lệ bao gồm "none". Do đó, `skill: "none"` hoàn toàn tương thích với schema và dữ liệu hiện có mà không cần migration DB hay phá vỡ kiểu dữ liệu (RULE 14).
+  3. **Biểu mẫu kịch bản edit (`apps/web/src/components/BriefFields.tsx`)**:
+     - Thêm `<option value="none">{t("brief.skill-none")}</option>` ngay dưới option "Để AI tự chọn".
+     - Xử lý khi chọn "none" thì gán giá trị "none" thay vì `null`.
+     - Ẩn hộp kiểm "Cưỡng chế áp dụng skill 100%" (`brief-enforce-skill`) khi người dùng chọn "Không (không dùng skill)".
+  4. **Tóm tắt Compact (`apps/web/src/components/ProjectBriefCard.tsx`)**:
+     - Hiển thị tóm tắt chính xác: nếu `form.skill === "none"`, hiển thị "Không (không dùng skill)".
+  5. **Chỉ dẫn AI Agent dựng video (`apps/server/src/editPrompt.ts`)**:
+     - Khi `brief.skill === "none"`:
+       - Không đưa ra gợi ý skill cho video toàn chữ.
+       - Thêm chỉ dẫn chi tiết rõ ràng: *"Người dùng ĐÃ CHỌN: KHÔNG DÙNG SKILL NÀO. Tuyệt đối KHÔNG đọc hay áp dụng bất kỳ skill nào trong `.claude/skills/`. Dựng video theo đúng các yêu cầu cốt lõi trong kịch bản (cắt nhịp, phụ đề, âm thanh, bố cục theo brief), không tự ý thêm các lớp đồ họa, chuyển động phức tạp hay khuôn mẫu visual đặc thù của các skill."*
+  6. **Đa ngôn ngữ & Giao diện (i18n & Tokens)**:
+     - Thêm `brief.skill-none` ("Không (không dùng skill)" / "None (do not use any skill)").
+     - Cập nhật gợi ý `brief.skill-hint` ở cả 2 ngôn ngữ `vi.ts` và `en.ts`.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/server/src/editPrompt.ts`
+  - `apps/web/src/components/BriefFields.tsx`
+  - `apps/web/src/components/ProjectBriefCard.tsx`
+  - `apps/web/src/lib/locales/vi.ts`
+  - `apps/web/src/lib/locales/en.ts`
+  - `SESSION_LOG.md`
+- **Kết quả kiểm định (Validation Results)**:
+  - `node apps/web/scripts/check-design-system.mjs`: SẠCH 100%.
+  - `node apps/web/scripts/check-i18n.mjs`: Đầy đủ 2318/2318 key song ngữ vi/en.
+  - `npm run typecheck`: Passed 100% không lỗi across 3 workspaces (`server`, `web`, `remotion-engine`).
+  - `npm run build`: Build thành công cả server và web.
+  - Playwright MCP: Đã xác thực trên `http://localhost:6868/projects/test-video`:
+    - Option "Không (không dùng skill)" hiển thị đúng trong dropdown.
+    - Khi chọn "Không (không dùng skill)", hộp kiểm "Cưỡng chế áp dụng skill 100%" tự động ẩn đi.
+    - Khi chọn một skill cụ thể, hộp kiểm cưỡng chế xuất hiện lại bình thường.
+
+---
+
 ### [SESSION-2026-11-16-14:15] Tích Hợp Lựa Chọn Phông Chữ & Hiệu Ứng Hoạt Ảnh CapCut Vào Kịch Bản Edit (Brief) Cho Mọi Quy Trình Tạo Video
 
 - **Thời gian**: 2026-11-16 14:15 (Múi giờ +07:00)

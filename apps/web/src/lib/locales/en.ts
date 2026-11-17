@@ -508,6 +508,7 @@ export const en: Record<string, string> = {
   "brief.illustrations": "AI illustrations",
   "brief.ai-choose": "AI decides",
   "brief.ai-pick-skill": "Let the AI choose",
+  "brief.skill-none": "None (do not use any skill)",
 
   // ===== Brief card =====
   "brief.title": "Edit script (Brief)",
@@ -594,7 +595,7 @@ export const en: Record<string, string> = {
   "brief.gemini-warning": "GEMINI_API_KEY required (Connections tab) - without it, the AI skips illustrations.",
   "brief.style-hint": "The output must follow this style 100% - overriding any color/font rules in skills/prompts.",
   "brief.skill-label": "Skill used for editing",
-  "brief.skill-hint": "A saved editing workflow/style - leave empty and the AI picks a suitable skill.",
+  "brief.skill-hint": "A saved editing workflow/style. Choose \"None\" to edit without any skill template, or \"Let the AI choose\".",
   "brief.enforce-skill-label": "Enforce 100% skill components on all videos",
   "brief.enforce-skill-hint": "Forcefully applies all graphics, typography, motions and characteristic effects of the chosen skill to all videos (even without a speaking person). Uncheck to let AI reason flexibly based on footage.",
   "brief.sfx-hint": "Effect sounds (whoosh, pop…) the AI inserts on the video's beats.",

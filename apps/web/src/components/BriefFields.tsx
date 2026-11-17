@@ -664,13 +664,17 @@ export function BriefFields({
           id="brief-skill"
           className="input"
           value={value.skill ?? ""}
-          onChange={(e) => set("skill", e.target.value || null)}
+          onChange={(e) => {
+            const v = e.target.value;
+            set("skill", v === "none" ? "none" : (v || null));
+          }}
         >
           <option value="">{t("brief.ai-pick-skill")}</option>
+          <option value="none">{t("brief.skill-none")}</option>
           {/* Skill đã lưu nhưng không (còn) trong danh sách (đã xóa/đổi tên) →
               vẫn hiện bằng tên thô thay vì select trắng trơn giữ giá trị ẩn -
               cùng cách xử lý với styleId (StyleSelect) và illustrationModel */}
-          {value.skill !== null && !skills.some((s) => s.name === value.skill) && (
+          {value.skill !== null && value.skill !== "none" && !skills.some((s) => s.name === value.skill) && (
             <option value={value.skill}>{value.skill}</option>
           )}
           {skills.map((s) => (
@@ -684,7 +688,7 @@ export function BriefFields({
         </select>
       </Field>
 
-      {value.skill && (
+      {value.skill && value.skill !== "none" && (
         <div className="pl-2">
           <CheckboxField
             id="brief-enforce-skill"

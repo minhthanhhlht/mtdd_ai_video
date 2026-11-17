@@ -508,6 +508,7 @@ export const vi: Record<string, string> = {
   "brief.illustrations": "Ảnh minh họa AI",
   "brief.ai-choose": "AI tự chọn",
   "brief.ai-pick-skill": "Để AI tự chọn",
+  "brief.skill-none": "Không (không dùng skill)",
 
   // ===== Brief card =====
   "brief.title": "Kịch bản edit (Brief)",
@@ -594,7 +595,7 @@ export const vi: Record<string, string> = {
   "brief.gemini-warning": "Cần GEMINI_API_KEY (tab Kết nối) - nếu thiếu, AI sẽ bỏ qua phần minh họa.",
   "brief.style-hint": "Sản phẩm bắt buộc tuân theo style này 100% - ghi đè mọi quy định màu/font trong skill/prompt.",
   "brief.skill-label": "Skill dùng để edit",
-  "brief.skill-hint": "Quy trình/phong cách edit đã lưu sẵn - để trống thì AI tự chọn skill phù hợp.",
+  "brief.skill-hint": "Quy trình/phong cách edit đã lưu sẵn. Chọn \"Không\" để dựng cơ bản thuần túy, hoặc \"Để AI tự chọn\".",
   "brief.enforce-skill-label": "Cưỡng chế áp dụng skill 100% cho mọi video",
   "brief.enforce-skill-hint": "Bắt buộc dựng đủ toàn bộ đồ họa, typography, chuyển động và hiệu ứng đặc trưng của skill đã chọn cho mọi video (kể cả khi video không có người nói). Bỏ chọn để AI tự suy luận linh hoạt theo footage.",
   "brief.sfx-hint": "Âm thanh hiệu ứng (whoosh, pop…) AI chèn theo nhịp video.",
