@@ -6,6 +6,35 @@
 
 ---
 
+### [SESSION-2026-11-17-22:30] Tích Hợp Thêm Phông Chữ Viết Tay "HLT-Sneaker-Script" Vào Hệ Thống Biên Tập & Render Video
+
+- **Thời gian**: 2026-11-17 22:30 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "hãy thêm font HLT-Sneaker-Script từ đường dẫn D:\AI\font vào nhé"
+- **Phân tích kỹ thuật & Kiến trúc**:
+  1. Phông chữ `HLT-Sneaker-Script.ttf` (Family: `HLT Sneaker Script`, PostScript: `HLTSneakerScript`) là phông chữ viết tay (script/cursive) đậm chất nghệ thuật, rất phù hợp cho các tiêu đề/phụ đề video TikTok/Shorts năng động.
+  2. Đồng bộ hóa phông chữ vào 2 tầng kiến trúc:
+     - **Web UI & Trình soạn thảo**: Sao chép tệp `hlt-sneaker-script.ttf` vào `apps/web/public/fonts/`. Khai báo `@font-face` cho `CaptionHltSneakerScript` trong `globals.css` (`font-weight: 100 900`). Bổ sung vào danh sách `BUILTIN_FONT_OPTIONS` (`hltsneakerscript` - "HLT Sneaker Script (Viết tay)") trong `TextEffectPicker.tsx`.
+     - **Remotion Assembler**: Sao chép tệp `hlt-sneaker-script.ttf` vào `engines/remotion/public/fonts/`. Khai báo cấu hình `hltsneakerscript` trong `BUILTIN_FONTS` (`vietnameseFont.ts`), font stack `fallback: 'CaptionHltSneakerScript', 'CaptionInter', 'Segoe UI', cursive, sans-serif`, hỗ trợ dynamic `@font-face` và font preloading.
+     - **AI Agent Edit Prompt**: Cập nhật danh sách font hỗ trợ trong `editPrompt.ts` để AI Agent có thể chủ động đề xuất hoặc áp dụng font này khi dựng video.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/public/fonts/hlt-sneaker-script.ttf`
+  - `engines/remotion/public/fonts/hlt-sneaker-script.ttf`
+  - `apps/web/src/app/globals.css`
+  - `apps/web/src/components/editor/TextEffectPicker.tsx`
+  - `engines/remotion/src/components/vietnameseFont.ts`
+  - `apps/server/src/editPrompt.ts`
+  - `SESSION_LOG.md`
+- **Kết quả kiểm định (Validation Results)**:
+  - `node apps/web/scripts/check-design-system.mjs`: SẠCH 100%.
+  - `node apps/web/scripts/check-i18n.mjs`: Đầy đủ 2318/2318 key song ngữ vi/en.
+  - `npm test -w engines/remotion`: 22/22 tests passed 100%.
+  - `npm run typecheck`: Passed 100% across all workspaces (`server`, `web`, `remotion-engine`).
+  - `npm run build`: Build thành công cả server và web.
+  - Tiếp tục thực hiện Git push và kích hoạt deploy lên Coolify để người dùng kiểm định trực tiếp trên `video.mtdd.io.vn`.
+
+---
+
 ### [SESSION-2026-11-17-21:30] Củng Cố Toàn Diện Chống Tràn Card & Thân WorkspaceBlock (min-w-0, max-w-full)
 
 - **Thời gian**: 2026-11-17 21:30 (Múi giờ +07:00)

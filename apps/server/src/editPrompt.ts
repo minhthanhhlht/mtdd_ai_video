@@ -1101,7 +1101,7 @@ export function buildEditorChatPrompt(input: {
     );
     lines.push(
       "- Trường của trình chỉnh sửa v2 (đều tùy chọn, thiếu = hành vi cũ - người dùng có thể đã đặt, GIỮ " +
-        "nguyên nếu không được yêu cầu đổi): `captionStyle` (preset: default|capcut-spring-pop|capcut-moving-pill|capcut-karaoke-sweep|capcut-stroke-solid|capcut-neon-flash, fontFamily: inter|montserrat|bevietnampro|lexend|spacegrotesk); scene có `fit`, `transform` (x/y là độ dịch -1..1, scale, " +
+        "nguyên nếu không được yêu cầu đổi): `captionStyle` (preset: default|capcut-spring-pop|capcut-moving-pill|capcut-karaoke-sweep|capcut-stroke-solid|capcut-neon-flash, fontFamily: inter|montserrat|bevietnampro|lexend|spacegrotesk|hltsneakerscript); scene có `fit`, `transform` (x/y là độ dịch -1..1, scale, " +
         "rotate, flipH/flipV), `crop` (0..0.45 mỗi cạnh), `color` (preset + brightness/contrast/saturation/" +
         "temperature/tint/hue/vignette/blur), `volume`, `fadeInSec`/`fadeOutSec`, `speed` (0.25..4, thời " +
         "lượng = (to-from)/speed), `transition.type`; `audio.sfx[]` và `audio.music` có `fadeInSec`/" +

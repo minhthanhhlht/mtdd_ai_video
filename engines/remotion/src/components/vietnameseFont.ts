@@ -74,6 +74,15 @@ export const BUILTIN_FONTS: Record<string, FontPresetConfig> = {
     weight: 700,
     fallback: `'CaptionSpaceGrotesk', 'CaptionInter', 'Segoe UI', sans-serif`,
   },
+  hltsneakerscript: {
+    id: "hltsneakerscript",
+    name: "HLT Sneaker Script",
+    family: "CaptionHltSneakerScript",
+    file: "fonts/hlt-sneaker-script.ttf",
+    format: "truetype",
+    weight: 400,
+    fallback: `'CaptionHltSneakerScript', 'CaptionInter', 'Segoe UI', cursive, sans-serif`,
+  },
 };
 
 /**
@@ -124,7 +133,7 @@ export const allFontsFaceCss = (resolve: MediaResolver): string => {
       (f) => `@font-face{
   font-family:'${f.family}';
   font-style:normal;
-  font-weight:${f.weight};
+  font-weight:${f.weight === 400 ? "100 900" : f.weight};
   font-display:block;
   src:url('${resolve(f.file!)}') format('${f.format || "truetype"}');
 }`

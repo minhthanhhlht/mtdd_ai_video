@@ -31,6 +31,7 @@ export const BUILTIN_FONT_OPTIONS: readonly FontOption[] = [
   { id: "bevietnampro", name: "Be Vietnam Pro (Chuẩn Việt)", family: "'CaptionBeVietnamPro', 'CaptionInter', sans-serif" },
   { id: "lexend", name: "Lexend (Dễ đọc)", family: "'CaptionLexend', 'CaptionInter', sans-serif" },
   { id: "spacegrotesk", name: "Space Grotesk (Công nghệ)", family: "'CaptionSpaceGrotesk', 'CaptionInter', sans-serif" },
+  { id: "hltsneakerscript", name: "HLT Sneaker Script (Viết tay)", family: "'CaptionHltSneakerScript', 'CaptionInter', cursive, sans-serif" },
 ];
 
 export interface PresetCardInfo {
