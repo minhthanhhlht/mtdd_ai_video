@@ -1371,7 +1371,7 @@ export default function ProjectDetailPage() {
             }
           >
             {brief ? (
-              <div className="flex flex-col gap-4">
+              <div className="flex min-w-0 flex-col gap-4">
                 <p className="text-meta text-[var(--text-muted)]">
                   {briefSaved ? t("common.saved") : t("project.brief-autosave")}
                 </p>

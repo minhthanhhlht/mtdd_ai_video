@@ -54,7 +54,7 @@ const LINK_BTN =
  * viền, thêm border-t cho mỗi vùng bung nữa là ba tầng đường kẻ lồng nhau
  * trong đúng một hộp 12px - mắt không còn đọc ra cái nào thuộc cái nào.
  */
-const SUBFIELDS = "flex flex-col gap-3 pl-4";
+const SUBFIELDS = "flex min-w-0 flex-col gap-3 pl-4";
 
 export const DEFAULT_BRIEF: Brief = {
   sourceKind: "video",
@@ -206,7 +206,7 @@ export function BriefFields({
   return (
     <fieldset
       disabled={disabled}
-      className={`flex flex-col gap-4 ${disabled ? "opacity-60" : ""}`}
+      className={`flex min-w-0 flex-col gap-4 ${disabled ? "opacity-60" : ""}`}
     >
       {/* 1. Mô tả video gốc */}
       {showSource && (
@@ -232,9 +232,9 @@ export function BriefFields({
         htmlFor="brief-notes"
         hint={t("brief.notes-hint")}
       >
-        <div className="mb-2 flex items-center gap-2">
+        <div className="mb-2 flex min-w-0 items-center gap-2">
           <select
-            className="input flex-1"
+            className="input min-w-0 flex-1"
             value=""
             onChange={(e) => applyPrompt(e.target.value)}
             aria-label={t("brief.use-prompt-aria")}
@@ -322,7 +322,7 @@ export function BriefFields({
         />
         {value.subtitles && (
           <div className={SUBFIELDS}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex flex-col gap-3">
               <Field
                 label={t("brief.caption-font")}
                 htmlFor="brief-caption-font"
@@ -364,14 +364,14 @@ export function BriefFields({
             </div>
 
             <Field label={t("brief.caption-color")} hint={t("brief.caption-color-hint")}>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <input
                   type="color"
                   value={value.captionColor && value.captionColor.startsWith("#") ? value.captionColor : "#19c8ff"}
                   onChange={(e) => set("captionColor", e.target.value)}
-                  className="w-8 h-8 rounded-[var(--radius)] border border-[var(--border)] cursor-pointer p-0 bg-transparent"
+                  className="w-8 h-8 shrink-0 rounded-[var(--radius)] border border-[var(--border)] cursor-pointer p-0 bg-transparent"
                 />
-                <div className="flex items-center gap-1">
+                <div className="flex flex-wrap items-center gap-1">
                   {COLOR_SWATCHES.map((swatch) => (
                     <button
                       key={swatch.value}
@@ -379,7 +379,7 @@ export function BriefFields({
                       title={swatch.label}
                       onClick={() => set("captionColor", swatch.value)}
                       style={{ backgroundColor: swatch.value }}
-                      className={`w-6 h-6 rounded-full border border-black/30 hover:scale-110 transition-transform cursor-pointer ${
+                      className={`w-6 h-6 shrink-0 rounded-full border border-black/30 hover:scale-110 transition-transform cursor-pointer ${
                         (value.captionColor ?? "#19c8ff") === swatch.value ? "ring-2 ring-[var(--primary)] scale-110" : ""
                       }`}
                     />
@@ -388,7 +388,7 @@ export function BriefFields({
               </div>
             </Field>
 
-            <div className="p-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] flex flex-col gap-1">
+            <div className="p-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] flex min-w-0 flex-col gap-1">
               <span className="text-xs text-[var(--text-muted)] font-medium">
                 {t("brief.caption-preview")}:
               </span>

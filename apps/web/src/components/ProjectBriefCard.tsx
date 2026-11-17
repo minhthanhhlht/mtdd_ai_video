@@ -228,7 +228,7 @@ export function ProjectBriefCard({
         ) : undefined
       }
     >
-      <div className="flex flex-col gap-4">
+      <div className="flex min-w-0 flex-col gap-4">
         {error && (
           <ErrorBanner message={t("brief.save-error")} detail={error} />
         )}

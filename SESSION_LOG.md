@@ -6,6 +6,43 @@
 
 ---
 
+### [SESSION-2026-11-17-20:40] Khắc Phục Lỗi Tràn Giao Diện (Horizontal Overflow) Trong Card Kịch Bản Edit (Brief)
+
+- **Thời gian**: 2026-11-17 20:40 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Chỗ giao diện này bị tràn ra này. Từ giờ bạn không cần test trên local hãy đợi deploy lên coolify và test luôn ở trên đó nhé. video.mtdd.io.vn" kèm hình ảnh giao diện cột 2 (Yêu cầu & thiết lập) bị tràn mép phải đè sang cột 3 (Tiến trình & kết quả), khiến nút "Quản lý prompt" và nội dung textarea bị cắt khuất.
+- **Phân tích nguyên nhân gốc rễ (Root Cause Analysis)**:
+  1. **Đặc tính mặc định của thẻ HTML `<fieldset>`**:
+     - Thẻ `<fieldset>` trong chuẩn CSS/HTML mặc định có `min-inline-size: min-content;` (không tự thu nhỏ về 0 khi nằm trong flex/grid container nếu không gán rõ `min-width: 0`).
+     - Khi nằm trong cột workspace (`width ~350-370px`), nếu có bất kỳ phần tử con nào có intrinsic width lớn hơn 330px, toàn bộ `<fieldset>` bị ép bung rộng ra ngoài card (`offsetWidth` đạt 372px so với lòng card chỉ 334px).
+  2. **Hàng chọn prompt mẫu + nút Quản lý prompt**:
+     - Hàng `div.flex.items-center.gap-2` chứa `<select className="input flex-1">` và nút `<Link className="shrink-0">Quản lý prompt</Link>`.
+     - Vì `<select>` là flex item có `min-width: auto` (tính theo độ dài nội dung option dài nhất ~242px), cộng với link `Quản lý prompt` (120px) và gap 8px khiến tổng chiều rộng là 371.5px > 334.5px, đẩy toác mép phải của card.
+  3. **Lưới chọn font và preset phụ đề (`sm:grid-cols-2`)**:
+     - Cột workspace chỉ rộng ~350px nhưng class `sm:grid-cols-2` kích hoạt theo breakpoint màn hình desktop (`sm: >= 640px`), ép 2 dropdown chọn font và preset hoạt ảnh CapCut xếp thành 2 cột hẹp (mỗi cột ~150px) khiến chữ bị ép nghẹt và tăng intrinsic width.
+  4. **Các ô swatch màu phụ đề**:
+     - Thiếu `flex-wrap` khiến hàng 6 nút màu có thể ép container khi hiển thị ở viewport nhỏ.
+- **Giải pháp & Các tệp tin tác động (Files Changed)**:
+  1. `apps/web/src/app/globals.css`:
+     - Bổ sung `min-width: 0;` cho `.card` và `.input` để bảo vệ tất cả card và form input trong toàn bộ hệ thống không bị tràn container.
+     - Bổ sung CSS reset: `fieldset { min-width: 0; min-inline-size: 0; }`.
+  2. `apps/web/src/components/BriefFields.tsx`:
+     - Thêm `min-w-0` vào `SUBFIELDS` và `<fieldset>`.
+     - Thêm `min-w-0` vào hàng chọn prompt và `<select className="input min-w-0 flex-1">`.
+     - Đổi cụm chọn Font & Preset phụ đề thành `flex flex-col gap-3` (xếp dọc chuẩn từng hàng, mỗi dropdown chiếm trọn 100% bề ngang thoáng đãng).
+     - Thêm `flex-wrap` và `shrink-0` cho hàng màu phụ đề `captionColor`.
+     - Thêm `min-w-0` cho khung xem trước `caption-preview`.
+  3. `apps/web/src/app/projects/[id]/page.tsx` & `ProjectBriefCard.tsx`:
+     - Thêm `min-w-0` cho thẻ `<div>` bao ngoài `<BriefFields />`.
+- **Kết quả kiểm định (Validation Results)**:
+  - `node apps/web/scripts/check-design-system.mjs`: SẠCH 100%.
+  - `node apps/web/scripts/check-i18n.mjs`: Đầy đủ 2318/2318 key song ngữ vi/en.
+  - `npm run typecheck`: Passed 100% không lỗi across 3 workspaces (`server`, `web`, `remotion-engine`).
+  - `npm run build`: Build thành công cả server và web.
+  - Tuân thủ chỉ dẫn người dùng: không chạy test Playwright ở local, đẩy code lên nhánh `main` và kích hoạt deploy lên Coolify để người dùng kiểm tra trực tiếp trên `video.mtdd.io.vn`.
+
+---
+
 ### [SESSION-2026-11-17-20:10] Bổ Sung Tuỳ Chọn "Không (Không Dùng Skill)" Vào Bộ Chọn Skill Trong Kịch Bản Edit (Brief)
 
 - **Thời gian**: 2026-11-17 20:10 (Múi giờ +07:00)
