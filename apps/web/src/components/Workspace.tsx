@@ -238,7 +238,7 @@ export function WorkspaceBlock({
           trong là các card tự đi lấy dữ liệu (VoicePicker, StyleSelect,
           ProjectQcCard…), tháo ra lắp lại là bắt chúng fetch lại từ đầu mỗi lần
           bấm gấp/mở - vài cú bấm thành một cơn bão request. */}
-      <div id={id} hidden={isCollapsed}>
+      <div id={id} hidden={isCollapsed} className="min-w-0 max-w-full">
         {children}
       </div>
     </Card>

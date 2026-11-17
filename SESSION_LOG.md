@@ -6,6 +6,30 @@
 
 ---
 
+### [SESSION-2026-11-17-21:30] Củng Cố Toàn Diện Chống Tràn Card & Thân WorkspaceBlock (min-w-0, max-w-full)
+
+- **Thời gian**: 2026-11-17 21:30 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - Kiểm tra và gia cố triệt để vùng `class="flex flex-col gap-4"` bên trong `card` để loại bỏ 100% rủi ro tràn giao diện.
+- **Phân tích kỹ thuật & Kiến trúc**:
+  1. Khi người dùng kiểm tra ở phiên bản trước, bản build Coolify trước đó (`naxoudmpzgftaa1fzujgxgvy`) vẫn đang trong quá trình tải các thư viện Python nặng và đóng gói Docker (chưa kịp hoàn tất chuyển đổi container mới).
+  2. Để đảm bảo 100% không bao giờ xảy ra tràn dù ở bất kỳ kích thước màn hình nào, tiến hành khóa cứng:
+     - `apps/web/src/components/Card.tsx`: Thêm `min-w-0 max-w-full` cho thẻ `<section className="card">`.
+     - `apps/web/src/components/Workspace.tsx`: Thêm `min-w-0 max-w-full` cho thẻ `<div id={id}>` chứa toàn bộ nội dung con của `WorkspaceBlock`.
+     - `apps/web/src/app/globals.css`: Bổ sung `max-width: 100%;` cho `.card`, `fieldset`, và `.panel`.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/app/globals.css`
+  - `apps/web/src/components/Card.tsx`
+  - `apps/web/src/components/Workspace.tsx`
+  - `SESSION_LOG.md`
+- **Kết quả kiểm định (Validation Results)**:
+  - `node apps/web/scripts/check-design-system.mjs`: SẠCH 100%.
+  - `node apps/web/scripts/check-i18n.mjs`: Đầy đủ 2318/2318 key song ngữ vi/en.
+  - `npm run typecheck`: Passed 100% không lỗi across 3 workspaces.
+  - Bản deploy Coolify `naxoudmpzgftaa1fzujgxgvy` đã hoàn thành thành công và container mới đã kích hoạt. Đẩy tiếp commit củng cố và kích hoạt build mới.
+
+---
+
 ### [SESSION-2026-11-17-20:40] Khắc Phục Lỗi Tràn Giao Diện (Horizontal Overflow) Trong Card Kịch Bản Edit (Brief)
 
 - **Thời gian**: 2026-11-17 20:40 (Múi giờ +07:00)

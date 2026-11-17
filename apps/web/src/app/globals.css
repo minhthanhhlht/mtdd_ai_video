@@ -400,11 +400,13 @@ html[data-panel="collapsed"] {
   box-shadow: var(--shadow-card);
   padding: 16px;
   min-width: 0;
+  max-width: 100%;
 }
 
 fieldset {
   min-width: 0;
   min-inline-size: 0;
+  max-width: 100%;
 }
 
 .table {
@@ -491,6 +493,8 @@ fieldset {
   border-radius: var(--radius);
   background: var(--bg-subtle);
   padding: 12px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* Nhãn in hoa cỡ nhỏ - tiêu đề cột workspace, tiêu đề nhóm trong trang cấu

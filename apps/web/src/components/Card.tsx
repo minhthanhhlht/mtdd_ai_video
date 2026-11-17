@@ -24,7 +24,7 @@ export function Card({
   className?: string;
 }) {
   return (
-    <section className={`card ${className}`}>
+    <section className={`card min-w-0 max-w-full ${className}`}>
       {/* flex-wrap: cột hẹp (bố cục 3 cột ở 1280-1536px) không đủ chỗ cho tiêu đề
           + nút trên một hàng. Không cho wrap thì tiêu đề bị bóp vỡ thành nhiều dòng
           CÒN nút vẫn tràn ra ngoài card - đã gặp thật ở card "Nguồn & Asset".
