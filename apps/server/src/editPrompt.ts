@@ -7,6 +7,7 @@ import { activeVideoStyleId, projectDirOf, SOURCE_ARTICLE_REL } from "./meta.js"
 import type { Brief, FileInfoWithDescription, FinishMode, ProjectMeta } from "./meta.js";
 import type { MusicEntry } from "./routes/music.js";
 import type { SfxEntry } from "./routes/sfx.js";
+import { readFontLibrary } from "./routes/fonts.js";
 import type { StyleDesign } from "./styles.js";
 import { getVideoStyle, type VideoStyle } from "./videoStyles.js";
 
@@ -1099,9 +1100,12 @@ export function buildEditorChatPrompt(input: {
         "Đơn vị: `scenes[].from/to` là GIÂY trong file nguồn; `audio.sfx[].atFrame` và mọi cue " +
         "(`from`, `durationInFrames`, `words[].start/end`) là FRAME TUYỆT ĐỐI; `audio.music.speech` là GIÂY.",
     );
+    const fontFamilies =
+      readFontLibrary().map((f) => f.id).join("|") ||
+      "inter|montserrat|bevietnampro|lexend|spacegrotesk|hltsneakerscript";
     lines.push(
       "- Trường của trình chỉnh sửa v2 (đều tùy chọn, thiếu = hành vi cũ - người dùng có thể đã đặt, GIỮ " +
-        "nguyên nếu không được yêu cầu đổi): `captionStyle` (preset: default|capcut-spring-pop|capcut-moving-pill|capcut-karaoke-sweep|capcut-stroke-solid|capcut-neon-flash, fontFamily: inter|montserrat|bevietnampro|lexend|spacegrotesk|hltsneakerscript); scene có `fit`, `transform` (x/y là độ dịch -1..1, scale, " +
+        `nguyên nếu không được yêu cầu đổi): \`captionStyle\` (preset: default|capcut-spring-pop|capcut-moving-pill|capcut-karaoke-sweep|capcut-stroke-solid|capcut-neon-flash, fontFamily: ${fontFamilies}); scene có \`fit\`, \`transform\` (x/y là độ dịch -1..1, scale, ` +
         "rotate, flipH/flipV), `crop` (0..0.45 mỗi cạnh), `color` (preset + brightness/contrast/saturation/" +
         "temperature/tint/hue/vignette/blur), `volume`, `fadeInSec`/`fadeOutSec`, `speed` (0.25..4, thời " +
         "lượng = (to-from)/speed), `transition.type`; `audio.sfx[]` và `audio.music` có `fadeInSec`/" +

@@ -1,0 +1,56 @@
+[
+  {
+    "id": "inter",
+    "name": "Inter (Mặc định)",
+    "family": "CaptionInter",
+    "file": "fonts/inter-vietnamese-700.woff2",
+    "format": "woff2",
+    "weight": 700,
+    "isBuiltin": true
+  },
+  {
+    "id": "montserrat",
+    "name": "Montserrat (Đậm nét)",
+    "family": "CaptionMontserrat",
+    "file": "fonts/montserrat-700.ttf",
+    "format": "truetype",
+    "weight": 700,
+    "isBuiltin": true
+  },
+  {
+    "id": "bevietnampro",
+    "name": "Be Vietnam Pro (Chuẩn Việt)",
+    "family": "CaptionBeVietnamPro",
+    "file": "fonts/bevietnampro-700.ttf",
+    "format": "truetype",
+    "weight": 700,
+    "isBuiltin": true
+  },
+  {
+    "id": "lexend",
+    "name": "Lexend (Dễ đọc)",
+    "family": "CaptionLexend",
+    "file": "fonts/lexend-700.ttf",
+    "format": "truetype",
+    "weight": 700,
+    "isBuiltin": true
+  },
+  {
+    "id": "spacegrotesk",
+    "name": "Space Grotesk (Công nghệ)",
+    "family": "CaptionSpaceGrotesk",
+    "file": "fonts/spacegrotesk-700.ttf",
+    "format": "truetype",
+    "weight": 700,
+    "isBuiltin": true
+  },
+  {
+    "id": "hltsneakerscript",
+    "name": "HLT Sneaker Script (Viết tay)",
+    "family": "CaptionHltSneakerScript",
+    "file": "fonts/hlt-sneaker-script.ttf",
+    "format": "truetype",
+    "weight": 400,
+    "isBuiltin": true
+  }
+]

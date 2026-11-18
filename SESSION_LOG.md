@@ -5176,3 +5176,73 @@
 - **Trạng thái & Bước kế tiếp (Next Steps / Handover)**:
   - Thực hiện Git commit, push lên `origin main` và kích hoạt triển khai Coolify theo RULE 15.
   - Hướng dẫn người dùng các bước trích xuất cookie từ Google Chrome F12 và cấu hình vào `/connections`.
+
+
+---
+
+### [SESSION-2026-11-18-14:15] Hệ thống Quản lý Phông chữ Động (Dynamic Custom Font Management) & Fix Tràn Giao diện Brief Card
+
+- **Thời gian**: 2026-11-18 14:15 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  1. Sửa lỗi giao diện Brief (`<fieldset>` bên trong `<section class="card">`) bị tràn ngang lấn sang cột "TIẾN TRÌNH & KẾT QUẢ", che khuất nút và textarea.
+  2. Bổ sung font chữ `HLT-Sneaker-Script` từ đường dẫn `D:\AI\font`.
+  3. Xây dựng hệ thống Quản lý Phông chữ Động (Dynamic Font Management) cho phép người dùng tự tải lên font (`.ttf`, `.otf`, `.woff`, `.woff2`) trực tiếp trên Web UI mà không cần sửa code hay build lại server.
+  4. Tuân thủ chỉ đạo: không test trên local, triển khai lên Coolify và kiểm thử trực tiếp trên `video.mtdd.io.vn`.
+- **Giải pháp kiến trúc & Thay đổi mã nguồn (Architectural Solution & Changes)**:
+  1. **Sửa dứt điểm tràn layout Brief (`fieldset min-width: 0`)**:
+     - Phát hiện nguyên nhân cốt lõi trong HTML/CSS: `<fieldset>` có quy tắc user-agent mặc định `min-inline-size: min-content`. Trong CSS Grid/Flexbox, bất kỳ phần tử con nào có intrinsic width lớn đều ép fieldset bung rộng vượt khung chứa.
+     - Đặt `min-w-0 max-w-full` và reset CSS `fieldset { min-width: 0; min-inline-size: 0; max-width: 100%; }`.
+     - Điều chỉnh layout: Bỏ ép 2 cột hẹp `sm:grid-cols-2` ở chọn font/preset phụ đề, thêm `flex-wrap` và `shrink-0` cho các swatch màu.
+  2. **Tầng lưu trữ & Chỉ mục phông chữ (`assets/fonts/`)**:
+     - Tạo thư mục master `assets/fonts/` và file chỉ mục `library.json` khởi tạo với 6 phông chữ tiếng Việt chuẩn (Inter, Montserrat, Be Vietnam Pro, Lexend, Space Grotesk, HLT Sneaker Script) với cờ `isBuiltin: true`.
+     - Đồng bộ phông chữ `HLT-Sneaker-Script.ttf` vào thư viện.
+  3. **Bộ phân tích Header nhị phân TTF/OTF Zero-dependency (`apps/server/src/fontParser.ts`)**:
+     - Kiểm tra magic bytes an toàn (RULE 10): TTF (`0x00010000`, `true`), OTF (`OTTO`), WOFF (`wOFF`), WOFF2 (`wOF2`). Chặn tuyệt đối file giả mạo đuôi.
+     - Trích xuất bảng `name` (Name ID 1: Font Family, Name ID 4: Full Name) và bảng `OS/2` (`usWeightClass`) để lấy chính xác độ đậm nhạt của font mà không cần thêm bất kỳ thư viện npm bên ngoài nào.
+  4. **Tầng API Backend (`apps/server/src/routes/fonts.ts`)**:
+     - `GET /api/fonts`: Trả về danh sách font khả dụng từ `library.json`.
+     - `POST /api/fonts`: Tải lên font mới (giới hạn 15MB qua multer), phân tích tên & độ đậm, khử khuẩn tên file, lưu vào `assets/fonts/`, tự động copy sang `apps/web/public/fonts/` và `engines/remotion/public/fonts/`, đồng bộ `customFonts.json` sang Remotion.
+     - `DELETE /api/fonts/:id`: Xóa font tùy chỉnh (chặn tuyệt đối xóa font hệ thống có `isBuiltin: true`).
+     - Đăng ký router tại `/api/fonts` trong `apps/server/src/index.ts`.
+  5. **Tầng Web UI & Dynamic CSS Injection**:
+     - Client API: Bổ sung `getFonts`, `uploadFont`, `deleteFont` vào `apps/web/src/lib/api.ts`.
+     - Hook `useFonts()` trong `apps/web/src/lib/fonts.ts` với cơ chế cache toàn cục và thông báo tức thì cho các component lắng nghe.
+     - Component `<DynamicFontStyles />`: Tự động inject thẻ `<style>` chứa `@font-face` cho toàn bộ custom font vào DOM `layout.tsx`.
+     - Cập nhật dropdown chọn font trong `BriefFields.tsx` và `TextEffectPicker.tsx` nạp dữ liệu động từ `useFonts()`.
+     - Trang Quản lý Phông chữ `apps/web/src/app/fonts/page.tsx`:
+       - Tuân thủ 100% RULE 01 (Thang chữ 3 bậc, token biến CSS, primitives `<Card>`, `<Panel>`, `<Button>`, `<IconButton>`, `<Badge>`, `<EmptyState>`).
+       - Tích hợp **Live Type Tester** cho phép gõ thử văn bản tiếng Việt có dấu với nhiều cỡ chữ (16px, 20px, 24px, 32px, 40px) để kiểm tra dấu tiếng Việt trước khi dùng.
+       - Hộp thoại `<ConfirmDeleteModal>` xác nhận xóa font tùy chỉnh.
+       - Thêm mục "Phông chữ" (`/fonts`) vào thanh điều hướng `Shell.tsx` và liên kết nhanh trong `BriefFields.tsx`.
+       - Bổ sung 100% key đa ngôn ngữ trong `locales/vi.ts` và `locales/en.ts`.
+  6. **Đồng bộ Remotion Engine & AI Agent Prompt**:
+     - `engines/remotion/src/components/vietnameseFont.ts`: Nạp font tùy chỉnh từ `customFonts.json`, tạo `@font-face` trong `allFontsFaceCss`, giữ vững nguyên tắc fallback `'CaptionInter'`.
+     - `apps/server/src/editPrompt.ts`: Tự động đọc danh sách font khả dụng từ `readFontLibrary()` để Claude AI prompt luôn nhận diện được font mới thêm.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `assets/fonts/library.json`: Chỉ mục phông chữ master.
+  - `apps/server/src/config.ts`: Thêm `fontsDir`, `webFontsDir`, `remotionCustomFontsJson`.
+  - `apps/server/src/fontParser.ts`: Bộ phân tích header binary TTF/OTF.
+  - `apps/server/src/routes/fonts.ts`: Router API `/api/fonts`.
+  - `apps/server/src/index.ts`: Mount `/api/fonts`.
+  - `apps/server/src/editPrompt.ts`: Tích hợp danh mục font động vào AI prompt.
+  - `engines/remotion/src/customFonts.json`: File sync custom fonts cho Remotion.
+  - `engines/remotion/src/components/vietnameseFont.ts`: Hỗ trợ font động trong Remotion.
+  - `apps/web/src/lib/api.ts`: API client cho fonts.
+  - `apps/web/src/lib/fonts.ts`: Hook `useFonts()`.
+  - `apps/web/src/components/DynamicFontStyles.tsx`: Dynamic `@font-face` injection.
+  - `apps/web/src/app/layout.tsx`: Nhúng `<DynamicFontStyles />`.
+  - `apps/web/src/components/Shell.tsx`: Thêm mục nav `/fonts`.
+  - `apps/web/src/components/BriefFields.tsx`: Dùng `useFonts()`, liên kết Quản lý phông chữ.
+  - `apps/web/src/components/editor/TextEffectPicker.tsx`: Dùng `useFonts()`.
+  - `apps/web/src/app/fonts/page.tsx`: Trang Quản lý phông chữ & Live Type Tester.
+  - `apps/web/src/lib/locales/vi.ts`, `apps/web/src/lib/locales/en.ts`: Song ngữ i18n.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `node apps/web/scripts/check-design-system.mjs` → **Hệ thống thiết kế: sạch (0 lỗi, 100% token/primitives)**.
+  - `node apps/web/scripts/check-i18n.mjs` → **2343/2343 key hợp lệ, đầy đủ song ngữ vi/en**.
+  - `npm test -w engines/remotion` → **22/22 tests passed**.
+  - `npm run typecheck` → **Pass 100% cả 3 workspaces (`server`, `web`, `remotion-engine`)**.
+  - `npm run build` → **Compiled successfully 23 routes Next.js Turbopack & backend TypeScript**.
+- **Trạng thái & Bước kế tiếp (Next Steps / Handover)**:
+  - Thực hiện commit, đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15.
+  - Thông báo cho người dùng kiểm thử trực tiếp trên production `https://video.mtdd.io.vn`.

@@ -208,6 +208,12 @@ export const paths = {
   voicesDir: path.join(repoRoot, "assets", "voices"),
   /** Thư viện nhạc nền dùng chung (library.json + file nhạc) */
   musicDir: path.join(repoRoot, "assets", "music"),
+  /** Thư viện phông chữ tiếng Việt dùng chung (library.json + file .ttf/.otf/.woff2) */
+  fontsDir: path.join(repoRoot, "assets", "fonts"),
+  /** Thư mục phông chữ phục vụ Web UI (Next.js public/fonts) */
+  webFontsDir: path.join(repoRoot, "apps", "web", "public", "fonts"),
+  /** File json đồng bộ danh sách font tùy chỉnh cho Remotion engine */
+  remotionCustomFontsJson: path.join(repoRoot, "engines", "remotion", "src", "customFonts.json"),
   outputsDir: path.join(repoRoot, "outputs"),
   importsDir: path.join(repoRoot, "imports"),
   skillsDir: path.join(repoRoot, ".claude", "skills"),

@@ -1673,6 +1673,32 @@ export const patchMusic = (
 export const deleteMusic = (file: string) =>
   request<void>(`/api/music/${encodeURIComponent(file)}`, { method: "DELETE" });
 
+// ============ Phông chữ (Fonts) ============
+
+export interface FontEntry {
+  id: string;
+  name: string;
+  family: string;
+  file: string;
+  format: "truetype" | "opentype" | "woff" | "woff2";
+  weight: number;
+  isBuiltin: boolean;
+  uploadedAt?: string;
+  fileSize?: number;
+}
+
+export const getFonts = () => request<FontEntry[]>("/api/fonts");
+
+export const uploadFont = (file: File, name?: string) => {
+  const form = new FormData();
+  form.append("file", file);
+  if (name) form.append("name", name);
+  return request<FontEntry>(`${serverOrigin()}/api/fonts`, { method: "POST", body: form });
+};
+
+export const deleteFont = (id: string) =>
+  request<{ ok: boolean; id: string }>(`/api/fonts/${encodeURIComponent(id)}`, { method: "DELETE" });
+
 // ============ Assets ============
 
 export type AssetScope = "imports" | "outputs" | "project";

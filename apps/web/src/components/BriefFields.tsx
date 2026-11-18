@@ -9,7 +9,7 @@
  * Chỗ nào lưu, lưu đi đâu là việc của component cha.
  */
 
-import { AlertTriangle, Loader2, Plus, ScrollText } from "lucide-react";
+import { AlertTriangle, Loader2, Plus, ScrollText, Type } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
@@ -38,6 +38,7 @@ import { useProviders } from "@/components/ModelPicker";
 import { StyleSelect } from "@/components/StyleSelect";
 import { VideoStyleSelect } from "@/components/VideoStyleSelect";
 import { BUILTIN_FONT_OPTIONS, COLOR_SWATCHES } from "@/components/editor/TextEffectPicker";
+import { useFonts } from "@/lib/fonts";
 import { useT } from "@/lib/i18n";
 
 /**
@@ -136,6 +137,7 @@ export function BriefFields({
   disabled?: boolean;
 }) {
   const { t, tf } = useT();
+  const { fonts } = useFonts();
   const showStyle = show?.styleId ?? true;
   const showSource = show?.sourceDescription ?? true;
 
@@ -328,18 +330,27 @@ export function BriefFields({
                 htmlFor="brief-caption-font"
                 hint={t("brief.caption-font-hint")}
               >
-                <select
-                  id="brief-caption-font"
-                  className="input"
-                  value={value.captionFont ?? "inter"}
-                  onChange={(e) => set("captionFont", e.target.value)}
-                >
-                  {BUILTIN_FONT_OPTIONS.map((f) => (
-                    <option key={f.id} value={f.id}>
-                      {f.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-2">
+                  <select
+                    id="brief-caption-font"
+                    className="input flex-1 min-w-0"
+                    value={value.captionFont ?? "inter"}
+                    onChange={(e) => set("captionFont", e.target.value)}
+                  >
+                    {fonts.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.name}
+                      </option>
+                    ))}
+                  </select>
+                  <Link
+                    href="/fonts"
+                    className="inline-flex w-fit items-center gap-1 text-sm font-medium text-[var(--primary)] hover:underline shrink-0"
+                  >
+                    <Type size={14} strokeWidth={2} />
+                    {t("brief.manage-fonts")}
+                  </Link>
+                </div>
               </Field>
 
               <Field
@@ -396,9 +407,12 @@ export function BriefFields({
                 className="text-sm font-bold truncate"
                 style={{
                   fontFamily: (
-                    BUILTIN_FONT_OPTIONS.find((f) => f.id === (value.captionFont ?? "inter")) ??
+                    fonts.find((f) => f.id === (value.captionFont ?? "inter")) ??
+                    fonts[0] ??
                     BUILTIN_FONT_OPTIONS[0]
-                  ).family,
+                  ).family
+                    ? `'${(fonts.find((f) => f.id === (value.captionFont ?? "inter")) ?? fonts[0] ?? BUILTIN_FONT_OPTIONS[0]).family}', 'CaptionInter', sans-serif`
+                    : "'CaptionInter', sans-serif",
                   color: value.captionColor ?? "#19c8ff",
                 }}
               >

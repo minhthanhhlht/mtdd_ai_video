@@ -8,6 +8,7 @@ import "./globals.css";
 import { FAVICON } from "@/lib/brand";
 import { Shell } from "@/components/Shell";
 import { StaleChunkGuard } from "@/components/StaleChunkGuard";
+import { DynamicFontStyles } from "@/components/DynamicFontStyles";
 import { LanguageProvider } from "@/lib/i18n";
 import { EventsProvider } from "@/lib/useEvents";
 import { AuthProvider } from "@/lib/authContext";
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: CHUNK_GUARD_SCRIPT + TOKEN_URL_SCRIPT + THEME_SCRIPT }} />
         <StaleChunkGuard />
         <LanguageProvider>
+          <DynamicFontStyles />
           <AuthProvider>
             <EventsProvider>
               <Shell>{children}</Shell>

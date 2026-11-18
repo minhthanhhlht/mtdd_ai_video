@@ -13,6 +13,7 @@ import { useEditor } from "./EditorContext";
 import { NumberField } from "./fields";
 import { setCaptionStyle } from "./ops";
 import type { CaptionPreset, Timeline } from "@/lib/api";
+import { useFonts } from "@/lib/fonts";
 
 export interface TextEffectPickerProps {
   timeline: Timeline;
@@ -119,8 +120,18 @@ export function TextEffectPicker({ timeline, idPrefix }: TextEffectPickerProps) 
     return () => clearInterval(interval);
   }, [isPlaying, words.length]);
 
+  const { fonts } = useFonts();
+  const fontOptions: FontOption[] = fonts.map((f) => ({
+    id: f.id,
+    name: f.name,
+    family: f.family ? `'${f.family}', 'CaptionInter', sans-serif` : "'CaptionInter', sans-serif",
+  }));
+
   const selectedFontObj =
-    BUILTIN_FONT_OPTIONS.find((f) => f.id === currentFont) ?? BUILTIN_FONT_OPTIONS[0];
+    fontOptions.find((f) => f.id === currentFont) ??
+    BUILTIN_FONT_OPTIONS.find((f) => f.id === currentFont) ??
+    fontOptions[0] ??
+    BUILTIN_FONT_OPTIONS[0];
 
   const handleSelectPreset = (preset: CaptionPreset) => {
     edit((tl) => setCaptionStyle(tl, { preset }));
@@ -298,7 +309,7 @@ export function TextEffectPicker({ timeline, idPrefix }: TextEffectPickerProps) 
             value={currentFont}
             onChange={(e) => handleSelectFont(e.target.value)}
           >
-            {BUILTIN_FONT_OPTIONS.map((f) => (
+            {fontOptions.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.name}
               </option>

@@ -6,11 +6,12 @@ import {
   getRemotionEnvironment,
 } from "remotion";
 import type { MediaResolver } from "../media";
+import customFontsData from "../customFonts.json";
 
 /**
  * Font tiếng Việt nạp OFFLINE từ public/fonts (Inter, Montserrat, Be Vietnam Pro,
- * Lexend, Space Grotesk) — dùng chung cho MỌI overlay của tầng lắp ráp
- * (CaptionTrack, HighlightTrack, SubtitleTrack).
+ * Lexend, Space Grotesk, HLT Sneaker Script + Custom Fonts tải lên) — dùng chung
+ * cho MỌI overlay của tầng lắp ráp (CaptionTrack, HighlightTrack, SubtitleTrack).
  */
 
 const LATIN_RANGE =
@@ -85,15 +86,47 @@ export const BUILTIN_FONTS: Record<string, FontPresetConfig> = {
   },
 };
 
+interface RawCustomFont {
+  id?: string;
+  name?: string;
+  family?: string;
+  file?: string;
+  format?: string;
+  weight?: number;
+}
+
+const CUSTOM_FONTS: Record<string, FontPresetConfig> = {};
+if (Array.isArray(customFontsData)) {
+  for (const item of customFontsData as RawCustomFont[]) {
+    if (item && item.id && item.family) {
+      const clean = item.id.toLowerCase().replace(/[^a-z0-9]/g, "");
+      CUSTOM_FONTS[clean] = {
+        id: item.id,
+        name: item.name || item.id,
+        family: item.family,
+        file: item.file,
+        format: item.format || "truetype",
+        weight: item.weight || 400,
+        fallback: `'${item.family}', 'CaptionInter', 'Segoe UI', sans-serif`,
+      };
+    }
+  }
+}
+
+export const ALL_FONTS: Record<string, FontPresetConfig> = {
+  ...BUILTIN_FONTS,
+  ...CUSTOM_FONTS,
+};
+
 /**
  * Trả về CSS font-family stack an toàn.
  * Mọi stack đều KẾT bằng 'CaptionInter' để phòng ngừa ký tự tiếng Việt hiếm gặp.
  */
 export function resolveFontStack(fontName?: string | null): string {
   if (!fontName) return `'CaptionInter', 'Segoe UI', sans-serif`;
-  const clean = fontName.toLowerCase().replace(/[^a-z]/g, "");
-  if (BUILTIN_FONTS[clean]) {
-    return BUILTIN_FONTS[clean].fallback;
+  const clean = fontName.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (ALL_FONTS[clean]) {
+    return ALL_FONTS[clean].fallback;
   }
   return `'${fontName}', 'CaptionInter', 'Segoe UI', sans-serif`;
 }
@@ -123,11 +156,11 @@ export const vietnameseFontFaceCss = (resolve: MediaResolver): string =>
   ).join('\n');
 
 /**
- * Khối @font-face cho TẤT CẢ các font có sẵn trong hệ thống (Inter + Montserrat + Be Vietnam Pro + Lexend + Space Grotesk).
+ * Khối @font-face cho TẤT CẢ các font có sẵn trong hệ thống (Inter + Built-in + Custom tải lên).
  */
 export const allFontsFaceCss = (resolve: MediaResolver): string => {
   const interCss = vietnameseFontFaceCss(resolve);
-  const extraCss = Object.values(BUILTIN_FONTS)
+  const extraCss = Object.values(ALL_FONTS)
     .filter((f) => f.file)
     .map(
       (f) => `@font-face{
@@ -158,8 +191,8 @@ export const useAllFonts = (activeFamily?: string): void => {
       ),
     ];
     if (activeFamily) {
-      const clean = activeFamily.toLowerCase().replace(/[^a-z]/g, "");
-      const f = BUILTIN_FONTS[clean];
+      const clean = activeFamily.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const f = ALL_FONTS[clean];
       if (f?.family && f.family !== VIETNAMESE_FONT_FAMILY) {
         promises.push(
           document.fonts.load(`${f.weight} 60px '${f.family}'`, "tiếng Việt đủ dấu")
