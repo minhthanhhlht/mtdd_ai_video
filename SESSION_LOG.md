@@ -5246,3 +5246,36 @@
 - **Trạng thái & Bước kế tiếp (Next Steps / Handover)**:
   - Thực hiện commit, đẩy Git lên `origin main` và kích hoạt triển khai Coolify theo RULE 15.
   - Thông báo cho người dùng kiểm thử trực tiếp trên production `https://video.mtdd.io.vn`.
+
+
+---
+
+### [SESSION-2026-11-18-20:22] Bổ sung Phân trang Hiển thị cho Danh sách Phông chữ (/fonts)
+
+- **Thời gian**: 2026-11-18 20:22 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - Bổ sung tính năng phân trang (pagination) hiển thị cho danh sách phông chữ trong trang Quản lý phông chữ (`/fonts`), chuẩn bị cho việc người dùng thêm nhiều font mới sau này mà không bị dài trang.
+- **Giải pháp kiến trúc & Thay đổi mã nguồn (Architectural Solution & Changes)**:
+  1. **Tầng Giao diện Web UI (`apps/web/src/app/fonts/page.tsx`)**:
+     - Bổ sung state `page` (mặc định 1) và `pageSize` (mặc định 6 font / trang, hỗ trợ các tùy chọn 6, 12, 24).
+     - Tự động reset `page = 1` khi người dùng nhập từ khóa tìm kiếm (`search`) hoặc sau khi tải lên font mới.
+     - Tự động lùi về trang trước (`page - 1`) nếu xóa font cuối cùng của trang hiện tại.
+     - Xây dựng thanh điều khiển phân trang tuân thủ 100% RULE 01:
+       - Hiển thị thông số: `"Trang X / Y (Tổng Z phông chữ)"` qua `tf("fonts.page-info", ...)`.
+       - Dropdown chọn số lượng font trên mỗi trang (6, 12, 24).
+       - Nút điều hướng "Trước" (`ChevronLeft`) và "Sau" (`ChevronRight`).
+       - Dãy nút số trang (Page pills) hiển thị thông minh với dấu ba chấm (`...`) khi có nhiều trang.
+  2. **Đa ngôn ngữ i18n (`locales/vi.ts`, `locales/en.ts`)**:
+     - Bổ sung các key song ngữ: `fonts.page-info`, `fonts.prev-page`, `fonts.next-page`, `fonts.per-page`.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `apps/web/src/app/fonts/page.tsx`: Tích hợp phân trang cho danh sách font.
+  - `apps/web/src/lib/locales/vi.ts`, `apps/web/src/lib/locales/en.ts`: Bổ sung key i18n phân trang.
+  - `SESSION_LOG.md`: Ghi chép chi tiết phiên làm việc theo RULE 13.
+- **Kết quả kiểm định & Kiểm thử (Verification & QA)**:
+  - `node apps/web/scripts/check-design-system.mjs` → **Hệ thống thiết kế: sạch (100% token/primitives)**.
+  - `node apps/web/scripts/check-i18n.mjs` → **2347/2347 key hợp lệ, 0 key thiếu**.
+  - `npm test -w engines/remotion` → **22/22 tests passed**.
+  - `npm run typecheck` → **Pass 100% cả 3 workspaces (`apps/server`, `apps/web`, `engines/remotion`)**.
+  - `npm run build` → **Compiled successfully 23 static/dynamic routes Next.js Turbopack & backend TypeScript**.
+- **Trạng thái & Bước kế tiếp (Next Steps / Handover)**:
+  - Commit mã nguồn, đẩy lên `origin main` và kích hoạt triển khai Coolify theo RULE 15.

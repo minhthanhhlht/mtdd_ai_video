@@ -3590,4 +3590,8 @@ export const vi: Record<string, string> = {
   "fonts.empty": "Không tìm thấy phông chữ nào.",
   "fonts.load-error": "Không thể tải danh sách phông chữ.",
   "fonts.weight": "Độ đậm: {weight}",
+  "fonts.page-info": "Trang {page} / {totalPages} (Tổng {total} phông chữ)",
+  "fonts.prev-page": "Trước",
+  "fonts.next-page": "Sau",
+  "fonts.per-page": "{n} font / trang",
 };

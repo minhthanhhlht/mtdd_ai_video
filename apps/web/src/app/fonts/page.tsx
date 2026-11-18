@@ -4,6 +4,8 @@ import React, { useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   FileText,
   Loader2,
   Search,
@@ -42,12 +44,14 @@ export default function FontsPage() {
   );
   const [testSize, setTestSize] = useState<number>(24);
 
-  // State tìm kiếm & xóa
+  // State tìm kiếm, phân trang & xóa
   const [search, setSearch] = useState<string>("");
+  const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(6);
   const [deletingFont, setDeletingFont] = useState<FontEntry | null>(null);
   const [deleteLoading, setDeleteLoading] = useState<boolean>(false);
 
-  // Lọc danh sách font
+  // Lọc danh sách font theo từ khóa
   const filteredFonts = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return fonts;
@@ -58,6 +62,20 @@ export default function FontsPage() {
         f.family.toLowerCase().includes(q)
     );
   }, [fonts, search]);
+
+  // Tính toán phân trang
+  const totalPages = Math.max(1, Math.ceil(filteredFonts.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+
+  const paginatedFonts = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredFonts.slice(start, start + pageSize);
+  }, [filteredFonts, currentPage, pageSize]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
+    setPage(1);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -94,6 +112,7 @@ export default function FontsPage() {
       setUploadSuccess(`${t("fonts.upload.success")}: ${created.name}`);
       setSelectedFile(null);
       setCustomName("");
+      setPage(1); // Chuyển về trang đầu để người dùng thấy font mới ngay
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -110,6 +129,10 @@ export default function FontsPage() {
     try {
       await removeFont(deletingFont.id);
       setDeletingFont(null);
+      // Nếu xóa phần tử cuối cùng của trang thì lùi trang
+      if (paginatedFonts.length === 1 && currentPage > 1) {
+        setPage((p) => Math.max(1, p - 1));
+      }
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -234,7 +257,7 @@ export default function FontsPage() {
         </div>
       </Card>
 
-      {/* KHỐI 3: Danh sách phông chữ */}
+      {/* KHỐI 3: Danh sách phông chữ có phân trang */}
       <Card
         title={tf("fonts.list.title", { n: filteredFonts.length })}
         actions={
@@ -247,7 +270,7 @@ export default function FontsPage() {
               <input
                 type="text"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={handleSearchChange}
                 placeholder={t("fonts.search.placeholder")}
                 aria-label={t("fonts.search.aria")}
                 className="input pl-8 py-1 text-sm h-8 w-48 sm:w-64"
@@ -268,53 +291,151 @@ export default function FontsPage() {
             description=""
           />
         ) : (
-          <div className="flex flex-col gap-3">
-            {filteredFonts.map((f) => (
-              <Panel key={f.id} className="p-4 flex flex-col gap-3">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] pb-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-bold text-[var(--text)]">
-                      {f.name}
-                    </span>
-                    <Badge
-                      tone={f.isBuiltin ? "muted" : "success"}
-                      label={f.isBuiltin ? t("fonts.builtin") : t("fonts.custom")}
-                      dot={false}
-                    />
-                    <Badge
-                      tone="muted"
-                      label={`.${f.format === "truetype" ? "ttf" : f.format === "opentype" ? "otf" : f.format}`}
-                      dot={false}
-                    />
-                    <span className="text-xs text-[var(--text-muted)]">
-                      {tf("fonts.weight", { weight: f.weight })}
-                    </span>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
+              {paginatedFonts.map((f) => (
+                <Panel key={f.id} className="p-4 flex flex-col gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border)] pb-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-bold text-[var(--text)]">
+                        {f.name}
+                      </span>
+                      <Badge
+                        tone={f.isBuiltin ? "muted" : "success"}
+                        label={f.isBuiltin ? t("fonts.builtin") : t("fonts.custom")}
+                        dot={false}
+                      />
+                      <Badge
+                        tone="muted"
+                        label={`.${f.format === "truetype" ? "ttf" : f.format === "opentype" ? "otf" : f.format}`}
+                        dot={false}
+                      />
+                      <span className="text-xs text-[var(--text-muted)]">
+                        {tf("fonts.weight", { weight: f.weight })}
+                      </span>
+                    </div>
+
+                    {!f.isBuiltin && (
+                      <IconButton
+                        label={t("fonts.delete.title")}
+                        tone="danger"
+                        onClick={() => setDeletingFont(f)}
+                      >
+                        <Trash2 size={14} />
+                      </IconButton>
+                    )}
                   </div>
 
-                  {!f.isBuiltin && (
-                    <IconButton
-                      label={t("fonts.delete.title")}
-                      tone="danger"
-                      onClick={() => setDeletingFont(f)}
-                    >
-                      <Trash2 size={14} />
-                    </IconButton>
-                  )}
-                </div>
+                  {/* Live Preview Text Box */}
+                  <div
+                    className="py-2 px-3 rounded-[var(--radius)] bg-[var(--surface-raised)] border border-[var(--border)] min-w-0 overflow-x-auto"
+                    style={{
+                      fontFamily: `'${f.family}', 'CaptionInter', sans-serif`,
+                      fontSize: `${testSize}px`,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {testText || "Tiếng Việt đủ dấu: Ă Â Đ Ê Ô Ơ Ư"}
+                  </div>
+                </Panel>
+              ))}
+            </div>
 
-                {/* Live Preview Text Box */}
-                <div
-                  className="py-2 px-3 rounded-[var(--radius)] bg-[var(--surface-raised)] border border-[var(--border)] min-w-0 overflow-x-auto"
-                  style={{
-                    fontFamily: `'${f.family}', 'CaptionInter', sans-serif`,
-                    fontSize: `${testSize}px`,
-                    lineHeight: 1.4,
-                  }}
-                >
-                  {testText || "Tiếng Việt đủ dấu: Ă Â Đ Ê Ô Ơ Ư"}
+            {/* Thanh điều khiển phân trang */}
+            {filteredFonts.length > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-[var(--border)]">
+                {/* Thông tin số trang & tổng số font */}
+                <span className="text-meta text-[var(--text-muted)]">
+                  {tf("fonts.page-info", {
+                    page: currentPage,
+                    totalPages,
+                    total: filteredFonts.length,
+                  })}
+                </span>
+
+                {/* Các nút phân trang */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Bộ chọn số lượng font / trang */}
+                  <select
+                    className="input h-8 py-1 px-2 text-xs"
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    aria-label={t("fonts.per-page")}
+                  >
+                    <option value={6}>{tf("fonts.per-page", { n: 6 })}</option>
+                    <option value={12}>{tf("fonts.per-page", { n: 12 })}</option>
+                    <option value={24}>{tf("fonts.per-page", { n: 24 })}</option>
+                  </select>
+
+                  {/* Nút Trước */}
+                  <Button
+                    variant="secondary"
+                    small
+                    disabled={currentPage <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    className="gap-1 h-8"
+                  >
+                    <ChevronLeft size={14} />
+                    <span>{t("fonts.prev-page")}</span>
+                  </Button>
+
+                  {/* Các nút số trang */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter(
+                          (p) =>
+                            p === 1 ||
+                            p === totalPages ||
+                            Math.abs(p - currentPage) <= 1
+                        )
+                        .reduce<(number | string)[]>((acc, p, idx, arr) => {
+                          if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) {
+                            acc.push("...");
+                          }
+                          acc.push(p);
+                          return acc;
+                        }, [])
+                        .map((p, idx) =>
+                          typeof p === "string" ? (
+                            <span
+                              key={`ellipsis-${idx}`}
+                              className="px-1 text-xs text-[var(--text-muted)]"
+                            >
+                              ...
+                            </span>
+                          ) : (
+                            <Button
+                              key={p}
+                              variant={p === currentPage ? "primary" : "secondary"}
+                              small
+                              onClick={() => setPage(p)}
+                              className="w-8 h-8 p-0 justify-center text-xs"
+                            >
+                              {p}
+                            </Button>
+                          )
+                        )}
+                    </div>
+                  )}
+
+                  {/* Nút Sau */}
+                  <Button
+                    variant="secondary"
+                    small
+                    disabled={currentPage >= totalPages}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    className="gap-1 h-8"
+                  >
+                    <span>{t("fonts.next-page")}</span>
+                    <ChevronRight size={14} />
+                  </Button>
                 </div>
-              </Panel>
-            ))}
+              </div>
+            )}
           </div>
         )}
       </Card>

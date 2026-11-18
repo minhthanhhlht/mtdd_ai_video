@@ -3597,4 +3597,8 @@ export const en: Record<string, string> = {
   "fonts.empty": "No fonts found.",
   "fonts.load-error": "Failed to load fonts.",
   "fonts.weight": "Weight: {weight}",
+  "fonts.page-info": "Page {page} of {totalPages} ({total} fonts)",
+  "fonts.prev-page": "Prev",
+  "fonts.next-page": "Next",
+  "fonts.per-page": "{n} / page",
 };
