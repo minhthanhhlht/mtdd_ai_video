@@ -6,6 +6,28 @@
 
 ---
 
+### [SESSION-2026-11-21-10:20] Khắc Phục Lỗi Chọn Phông Chữ Không Áp Dụng Ngay Vào Trình Phát Remotion Trong Video Editor
+
+- **Thời gian**: 2026-11-21 10:20 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Lúc ở trong trình chỉnh sửa tại sao tôi chọn font mà không thấy được áp dụng luôn vào timeline"
+- **Phân tích nguyên nhân gốc rễ (Root Cause Analysis)**:
+  1. Trong `apps/web/src/components/editor/PreviewPlayer.tsx`, hàm `buildPreviewManifest` chịu trách nhiệm tổng hợp dữ liệu `raw` từ `timeline` và kiểm tra hợp lệ qua `manifestSchema.safeParse(raw)` trước khi chuyển giao vào Remotion Composition `<Assemble {...manifest} />`.
+  2. Tại dòng 252-258, `raw` chuyển giao `captions`, `subtitles`, `subtitleStyle`, `overlays`, `layers`, `watermark`, nhưng **hoàn toàn bỏ quên `captionStyle`** (`timeline.captionStyle`).
+  3. Mặc dù `TextEffectPicker.tsx` đã cập nhật chính xác `timeline.captionStyle` thông qua `setCaptionStyle(tl, { fontFamily: fontId })` và lưu vào store, nhưng do `buildPreviewManifest` bỏ sót trường này, đối tượng `manifest` gửi vào Remotion Player luôn có `captionStyle: undefined`.
+  4. Hệ quả: Remotion `<CaptionTrack captions={captions} style={captionStyle} />` luôn nhận `undefined` cho `style`, dẫn đến việc luôn fallback về phông chữ mặc định (`CaptionInter`) và bỏ qua hoàn toàn phông chữ, màu sắc, hay preset CapCut mà người dùng vừa chọn.
+- **Giải pháp & Các tệp tin tác động (Files Changed)**:
+  - `apps/web/src/components/editor/PreviewPlayer.tsx`: Bổ sung `...(timeline.captionStyle ? { captionStyle: timeline.captionStyle } : {})` vào `raw` trong `buildPreviewManifest`. Nhờ đó, bất kỳ thay đổi nào về `captionStyle` (font chữ, cỡ chữ, preset CapCut, màu sắc, backdrop) trong `TextEffectPicker` lập tức kích hoạt `useMemo` tái tạo `manifest` và phản ánh tức thì lên khung phát Remotion Player.
+- **Kết quả kiểm định (Validation Results)**:
+  - `npm run typecheck`: Passed 100% không lỗi trên cả 3 workspaces (`server`, `web`, `remotion-engine`).
+  - `node apps/web/scripts/check-design-system.mjs`: SẠCH 100%.
+  - `node apps/web/scripts/check-i18n.mjs`: Đầy đủ 2347/2347 key.
+  - `npm test -w engines/remotion`: 22/22 tests passed 100%.
+  - `npm run build`: Build thành công cả server và web.
+  - Đẩy mã nguồn lên nhánh `main` và kích hoạt deploy lên Coolify theo RULE 15 và chỉ đạo của người dùng.
+
+---
+
 ### [SESSION-2026-11-17-22:30] Tích Hợp Thêm Phông Chữ Viết Tay "HLT-Sneaker-Script" Vào Hệ Thống Biên Tập & Render Video
 
 - **Thời gian**: 2026-11-17 22:30 (Múi giờ +07:00)

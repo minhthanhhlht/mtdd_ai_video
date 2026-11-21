@@ -253,6 +253,7 @@ export function buildPreviewManifest({
     subtitles: timeline.subtitles ?? [],
     // schema chỉ nhận object hoặc thiếu hẳn - null nghĩa là "mặc định"
     ...(timeline.subtitleStyle ? { subtitleStyle: timeline.subtitleStyle } : {}),
+    ...(timeline.captionStyle ? { captionStyle: timeline.captionStyle } : {}),
     overlays: timeline.overlays ?? [],
     layers,
     watermark: preview.watermark && !gone(preview.watermark.file) ? preview.watermark : null,
