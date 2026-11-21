@@ -109,6 +109,7 @@ import {
   type Selection,
 } from "./ops";
 import { usePlayheadFrame } from "./playback";
+import { useFonts } from "@/lib/fonts";
 import { TextEffectPicker } from "./TextEffectPicker";
 import { TYPING_COALESCE_MS } from "./store";
 import { sceneDurationFrames, type SceneSpan } from "./timing";
@@ -1046,19 +1047,7 @@ function SubtitleForm({
   const id = `sub-${index}`;
   const style = timeline.subtitleStyle ?? {};
   const styleKey = (field: string) => typing(`subtitleStyle:${field}`);
-  const fonts = SUBTITLE_FONTS;
-  const fontLabel = (f: (typeof SUBTITLE_FONTS)[number]): string => {
-    switch (f) {
-      case "vietnamese":
-        return t("tv.font.vietnamese");
-      case "sans":
-        return t("tv.font.sans");
-      case "serif":
-        return t("tv.font.serif");
-      case "mono":
-        return t("tv.font.mono");
-    }
-  };
+  const fonts = useFontOptions();
   const font = typeof style.fontFamily === "string" ? style.fontFamily : "vietnamese";
 
   return (
@@ -1098,10 +1087,10 @@ function SubtitleForm({
             value={font}
             onChange={(e) => edit((tl) => setSubtitleStyle(tl, { fontFamily: e.target.value }))}
           >
-            {!fonts.some((f) => f === font) && <option value={font}>{font}</option>}
+            {!fonts.some((f) => f.value === font) && <option value={font}>{font}</option>}
             {fonts.map((f) => (
-              <option key={f} value={f}>
-                {fontLabel(f)}
+              <option key={f.value} value={f.value}>
+                {f.label}
               </option>
             ))}
           </select>
@@ -2182,7 +2171,8 @@ function LayerForm({ layer, actions }: { layer: TimelineLayer; actions: Inspecto
 
 function useFontOptions(): { value: string; label: string }[] {
   const { t } = useT();
-  return SUBTITLE_FONTS.map((f) => {
+  const { fonts } = useFonts();
+  const standard: { value: string; label: string }[] = SUBTITLE_FONTS.map((f) => {
     switch (f) {
       case "vietnamese":
         return { value: f, label: t("tv.font.vietnamese") };
@@ -2194,6 +2184,11 @@ function useFontOptions(): { value: string; label: string }[] {
         return { value: f, label: t("tv.font.mono") };
     }
   });
+  const custom = fonts.map((f) => ({
+    value: f.id,
+    label: f.name,
+  }));
+  return [...standard, ...custom.filter((c) => !standard.some((s) => s.value === c.value))];
 }
 
 const FONT_WEIGHTS = ["400", "600", "700", "800"] as const;

@@ -11,6 +11,8 @@ import { useMediaSrc, type MediaResolver } from "../media";
 import { cueBoxAttrs, cueOffsetCss, cueScaleOf } from "./cueTransform";
 import { fadeInOut } from "./fade";
 import {
+  ALL_FONTS,
+  allFontsFaceCss,
   useVietnameseFont,
   VIETNAMESE_FONT_FAMILY,
   vietnameseFontFaceCss,
@@ -80,7 +82,15 @@ export const DEFAULT_SUBTITLE_FONT = "vietnamese";
 /** Id lạ (hoặc bỏ trống) rơi về font tiếng Việt, KHÔNG rơi về không có gì */
 export function resolveSubtitleFont(id?: string): SubtitleFont {
   const key = (id ?? "").trim().toLowerCase();
-  return SUBTITLE_FONTS[key] ?? SUBTITLE_FONTS[DEFAULT_SUBTITLE_FONT];
+  if (SUBTITLE_FONTS[key]) return SUBTITLE_FONTS[key];
+  const clean = key.replace(/[^a-z0-9]/g, "");
+  if (ALL_FONTS[clean]) {
+    return {
+      stack: ALL_FONTS[clean].fallback,
+      faceCss: allFontsFaceCss,
+    };
+  }
+  return SUBTITLE_FONTS[DEFAULT_SUBTITLE_FONT];
 }
 
 // ---------------------------------------------------------------- mặc định

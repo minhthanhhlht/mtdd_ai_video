@@ -13,7 +13,7 @@ import type { Layer } from "../manifest";
 import { useMediaErrorProps, useMediaSrc } from "../media";
 import { ColorBox } from "./ColorBox";
 import { resolveSubtitleFont } from "./SubtitleTrack";
-import { useVietnameseFont } from "./vietnameseFont";
+import { useAllFonts } from "./vietnameseFont";
 import {
   HaloLight,
   RecViewfinder,
@@ -164,11 +164,11 @@ const LayerItem: React.FC<{ layer: Layer }> = ({ layer }) => {
 };
 
 const TextContent: React.FC<{ layer: Layer }> = ({ layer }) => {
-  useVietnameseFont();
+  const st = layer.style ?? {};
+  useAllFonts(st.fontFamily);
   const filterId = safeFilterId(useId());
   const { width, height } = useVideoConfig();
   const mediaSrc = useMediaSrc();
-  const st = layer.style ?? {};
   const font = resolveSubtitleFont(st.fontFamily);
   const fontSize = st.fontSizePx ?? defaultFontSizePx(width, height);
   const text = (

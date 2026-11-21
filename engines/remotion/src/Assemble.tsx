@@ -12,6 +12,7 @@ import { SceneClip } from "./components/SceneClip";
 import { SfxTrack } from "./components/SfxTrack";
 import { SubtitleTrack } from "./components/SubtitleTrack";
 import { Transition, type TransitionSide } from "./components/Transition";
+import { allFontsFaceCss } from "./components/vietnameseFont";
 import { useMediaErrorProps, useMediaSrc } from "./media";
 
 /**
@@ -59,6 +60,7 @@ export const Assemble: React.FC<Manifest> = (manifest) => {
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#101113" }}>
+      <style>{allFontsFaceCss(mediaSrc)}</style>
       {sequences}
 
       {/* Layer chồng (ảnh/video PiP/chữ/khối) - TRÊN scene, DƯỚI highlight/phụ

@@ -6,6 +6,40 @@
 
 ---
 
+### [SESSION-2026-11-21-10:35] Đồng Bộ Toàn Bộ Phông Chữ & Kiểm Tra Tác Động Tức Thì Của Mọi Track Trên Timeline Vào Khung Video
+
+- **Thời gian**: 2026-11-21 10:35 (Múi giờ +07:00)
+- **Yêu cầu của người dùng (User Request)**:
+  - "Hãy kiểm tra lại tất cả phần chỉnh sửa ở timeline phải được áp dụng ngay ở video chỉnh sửa"
+- **Phân tích kỹ thuật & Tối ưu hóa toàn diện**:
+  1. **Khảo sát toàn bộ các track trên Timeline**:
+     - *Scene Track*: Tốc độ (`speed`), cắt ngắn (`trim startAt/endAt`), chế độ lấp đầy (`fit`), biến đổi vị trí/cỡ/xoay (`transform`), hiệu ứng màu (`color`), cắt khung (`crop`), phóng thu (`zoom`), chuyển cảnh (`transition`) đều được `SceneClip.tsx` và `Assemble.tsx` áp dụng ngay lập tức khi timeline state cập nhật.
+     - *Audio / SFX / Music*: Âm lượng, thời điểm `atFrame`, fade in/out, ducking giọng đọc đều được kết nối trực tiếp vào `Audio`, `SfxTrack`, `MusicTrack`.
+     - *Overlay / Highlight*: Từ khóa, tier, vị trí `transform`, thời gian đều được `HighlightTrack.tsx` cập nhật tức thì.
+     - *Caption Track*: Đã kết nối `captionStyle` vào `PreviewPlayer.tsx` ở phiên trước.
+  2. **Phát hiện & Khắc phục thiếu sót ở tầng phông chữ toàn cục**:
+     - *Thiếu @font-face ở tầng Root*: Thẻ `<style>{allFontsFaceCss(mediaSrc)}</style>` trước đây chỉ được đặt trong `<CaptionTrack />`. Nếu một project không có caption (hoặc tắt caption), toàn bộ DOM của Remotion không có định nghĩa `@font-face` cho Montserrat, Be Vietnam Pro, Lexend, Space Grotesk, HLT Sneaker Script và các custom font.
+     - Đã chuyển `<style>{allFontsFaceCss(mediaSrc)}</style>` lên trực tiếp trong root `<AbsoluteFill>` của `Assemble.tsx` để tất cả các layer, scene, subtitle đều có quyền sử dụng toàn bộ phông chữ.
+  3. **Mở rộng hỗ trợ phông chữ cho Text Layer & Subtitles**:
+     - `engines/remotion/src/components/SubtitleTrack.tsx`: Nâng cấp hàm `resolveSubtitleFont(id)` để tra cứu `ALL_FONTS` (hỗ trợ `hltsneakerscript`, `montserrat`, `bevietnampro`, `lexend`, `spacegrotesk` và mọi font tải lên thay vì chỉ giới hạn 4 họ font hệ thống cứng).
+     - `engines/remotion/src/components/LayerTrack.tsx`: Cập nhật `TextContent` sử dụng `useAllFonts(st.fontFamily)` để Remotion chờ font nạp xong trước khi vẽ frame layer chữ.
+     - `apps/web/src/components/editor/Inspector.tsx`: Nâng cấp `useFontOptions()` tích hợp danh sách font động từ `useFonts()`, áp dụng cho cả form Text Layer (`TextStyleSection`) lẫn Subtitle (`SubtitleForm`), cho phép người dùng chọn bất kỳ font nào trong thư viện cho các khối chữ và phụ đề dịch.
+- **Danh sách tệp tin tác động (Files Changed)**:
+  - `engines/remotion/src/Assemble.tsx`
+  - `engines/remotion/src/components/SubtitleTrack.tsx`
+  - `engines/remotion/src/components/LayerTrack.tsx`
+  - `apps/web/src/components/editor/Inspector.tsx`
+  - `SESSION_LOG.md`
+- **Kết quả kiểm định (Validation Results)**:
+  - `npm run typecheck`: Passed 100% không lỗi across 3 workspaces.
+  - `node apps/web/scripts/check-design-system.mjs`: SẠCH 100%.
+  - `node apps/web/scripts/check-i18n.mjs`: Đầy đủ 2347/2347 key.
+  - `npm test -w engines/remotion`: 22/22 tests passed 100%.
+  - `npm run build`: Build thành công cả server và web.
+  - Đẩy mã nguồn lên nhánh `main` và kích hoạt deploy lên Coolify theo RULE 15.
+
+---
+
 ### [SESSION-2026-11-21-10:20] Khắc Phục Lỗi Chọn Phông Chữ Không Áp Dụng Ngay Vào Trình Phát Remotion Trong Video Editor
 
 - **Thời gian**: 2026-11-21 10:20 (Múi giờ +07:00)
